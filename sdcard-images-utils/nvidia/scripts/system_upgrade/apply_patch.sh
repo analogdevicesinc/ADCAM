@@ -3,21 +3,22 @@
 set -x
 
 ROOTDIR=`pwd`
+USER_HOME=$(eval echo "~$SUDO_USER")
 
 function setup_workspace_directory()
 {
-	# Check if ${HOME}/Workspace exists
-	if [ ! -d "${HOME}/Workspace" ]; then
+	# Check if ${USER_HOME}/Workspace exists
+	if [ ! -d "${USER_HOME}/Workspace" ]; then
 		echo "Workspace directory doesn't exists"
 		echo "Create the Workspace directory"
-		mkdir -p ${HOME}/Workspace
+		mkdir -p ${USER_HOME}/Workspace
 	fi
 
 	# Delete the existing ToF repo on the device.
-	rm -rf ${HOME}/Workspace/ToF
+	rm -rf ${USER_HOME}/Workspace/ToF
 
 	# Copy the ToF and other directory to the ~/Workspace location.
-	cp -rf $ROOTDIR/ToF ${HOME}/Workspace/
+	cp -rf $ROOTDIR/ToF ${USER_HOME}/Workspace/
 
 	# Stop existing services running on the NVIDIA ToF device
 	for service in network-gadget; do
@@ -27,8 +28,8 @@ function setup_workspace_directory()
 	done
 }
 
-CONFIG_LIB_PATH="${HOME}/Workspace/libs/libtofi_config.so"
-COMPUTE_LIB_PATH="${HOME}/Workspace/libs/libtofi_compute.so"
+CONFIG_LIB_PATH="${USER_HOME}/Workspace/libs/libtofi_config.so"
+COMPUTE_LIB_PATH="${USER_HOME}/Workspace/libs/libtofi_compute.so"
 
 function check_sdk_build_pre_req()
 {
@@ -51,7 +52,7 @@ function build_sdk()
 {
 	pushd .
 	echo "Build process started"
-	cd ${HOME}/Workspace/ToF
+	cd ${USER_HOME}/Workspace/ToF
 	rm -rf build
 	mkdir build && cd build
 	cmake -DNVIDIA=1 -DWITH_EXAMPLES=on -DCMAKE_PREFIX_PATH="/opt/glog;/opt/protobuf;/opt/websockets" -DCMAKE_BUILD_TYPE=Release .. -Wno-dev
@@ -63,13 +64,11 @@ function build_sdk()
 function update_server()
 {
 	sudo systemctl stop  network-gadget
-	sudo cp ${HOME}/Workspace/ToF/build/apps/server/aditof-server /usr/share/systemd/
+	sudo cp ${USER_HOME}/Workspace/ToF/build/apps/server/aditof-server /usr/share/systemd/
 }
 
 function apply_ubuntu_overlay()
 {
-        echo "Updating dhcpd.conf"
-        sudo cp $ROOTDIR/ubuntu_overlay/opt/nvidia/l4t-usb-device-mode/dhcpd.conf 		/opt/nvidia/l4t-usb-device-mode/
 
 	#Set the MTU size to 15000 by default
         echo "Configuring the MTU size to 15000 by default"
@@ -86,7 +85,8 @@ function apply_ubuntu_overlay()
 	sudo cp $ROOTDIR/ubuntu_overlay/usr/share/systemd/*.sh		/usr/share/systemd/
 
 	echo "Copy Tools directory"
-	cp -rf $ROOTDIR/ubuntu_overlay/Tools/ ${HOME}/Workspace/
+	mkdir -p ${USER_HOME}/Workspace
+	cp -rf $ROOTDIR/ubuntu_overlay/Tools ${USER_HOME}/Workspace/
 
 }
 
@@ -140,7 +140,7 @@ function start_services()
 	sudo systemctl reload NetworkManager
 	sudo systemctl enable systemd-networkd
 	sudo systemctl start  systemd-networkd
-	#sudo cp ${HOME}/Workspace/ToF/build/apps/server/aditof-server /usr/share/systemd/
+	#sudo cp ${USER_HOME}/Workspace/ToF/build/apps/server/aditof-server /usr/share/systemd/
 	sudo systemctl enable network-gadget
 	sudo systemctl start network-gadget
 	sudo systemctl enable adi-tof
