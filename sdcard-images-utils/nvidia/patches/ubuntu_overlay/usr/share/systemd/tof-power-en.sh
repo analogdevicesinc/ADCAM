@@ -82,6 +82,43 @@ if [[ $MODULE == "adi_dual_adsd3500_adsd3100" ]]; then
 		echo out > /sys/class/gpio/PH.06/direction
 	fi
 
+	# Export ISP_BS3/ISP_INT pin as input
+	if [ ! -d /sys/class/gpio/gpio304 ]
+	then
+		echo 304 > /sys/class/gpio/export
+		echo in > /sys/class/gpio/gpio304/direction
+	fi
+
+	# Export NET HOST_IO_SEL pin as output
+	if [ ! -d /sys/class/gpio/gpio305 ]
+	then
+		echo 305 > /sys/class/gpio/export
+		echo out > /sys/class/gpio/gpio305/direction
+	fi
+
+	# Export HOST_IO_DIR pin as output
+	if [ ! -d /sys/class/gpio/gpio308 ]
+	then
+		echo 308 > /sys/class/gpio/export
+		echo out > /sys/class/gpio/gpio308/direction
+	fi
+
+	# Export FSYNC_DIR pin as output
+	if [ ! -d /sys/class/gpio/gpio311 ]
+	then
+		echo 311 > /sys/class/gpio/export
+		echo out > /sys/class/gpio/gpio311/direction
+	fi
+
+	# Set NET HOST_IO_SEL: EXT_FSYNC = 0 / ISP_INT = 1
+	echo 1 > /sys/class/gpio/gpio305/value
+
+	#Set HOST_IO_DIR: EXT_FSYNC = 0 / ISP_INT = 1
+	echo 1 > /sys/class/gpio/gpio308/value
+
+	#Set FSYNC_DIR: External = 0 / Internal = 1
+	echo 1 > /sys/class/gpio/gpio311/value
+
 	#Pull ADSD3500 reset low
 	sudo echo 0 > /sys/class/gpio/PH.06/value
 
@@ -97,19 +134,11 @@ if [[ $MODULE == "adi_dual_adsd3500_adsd3100" ]]; then
 	#I2CM_SET
 	sudo gpioset 2 3=0
 
-	#NET HOST_IO_SEL
-	#Set 0: EXT_FSYNC / 1: ISP_INT
-	sudo gpioset 2 5=1
-
 	#ISP_BS0
 	sudo gpioset 2 6=0
 
 	#ISP_BS1
 	sudo gpioset 2 7=0
-
-	#HOST_IO_DIR
-	#Set 0: EXT_FSYNC / 1: ISP_INT
-	sudo gpioset 2 8=1
 
 	#ISP_BS4
 	sudo gpioset 2 9=0
