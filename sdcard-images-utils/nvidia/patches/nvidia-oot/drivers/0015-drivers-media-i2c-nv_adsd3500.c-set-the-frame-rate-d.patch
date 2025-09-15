@@ -1,0 +1,41 @@
+From 425538ec9e03a68e7380528e2cad0c0c97a42082 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 9 Sep 2025 19:52:23 +0530
+Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: set the frame rate during
+ the pwm trigger enable
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/nv_adsd3500.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/i2c/nv_adsd3500.c b/drivers/media/i2c/nv_adsd3500.c
+index a7f50e11..4d6065d7 100644
+--- a/drivers/media/i2c/nv_adsd3500.c
++++ b/drivers/media/i2c/nv_adsd3500.c
+@@ -951,7 +951,12 @@ static int adsd3500_set_fsync_trigger(struct adsd3500 *adsd3500, s32 val){
+ 		state.polarity = PWM_POLARITY_NORMAL;
+ 		ret = pwm_apply_state(adsd3500->pwm_fsync, &state);
+ 		if(ret){
+-			dev_err(&client->dev, "Failed to change the PWM state\n");
++			dev_err(&client->dev, "Failed to change the PWM state polarity\n");
++		}
++
++		ret = adsd3500_set_frame_rate(adsd3500, adsd3500->framerate);
++		if(ret){
++			dev_err(&client->dev, "Failed to set the frame rate\n");
+ 		}
+ 
+ 		ret = regmap_write(adsd3500->regmap, ENABLE_FSYNC_TRIGGER, FSYNC_HIZ);
+@@ -966,7 +971,7 @@ static int adsd3500_set_fsync_trigger(struct adsd3500 *adsd3500, s32 val){
+ 
+ 		ret = pwm_apply_state(adsd3500->pwm_fsync, &state);
+ 		if(ret) {
+-			dev_err(&client->dev, "Failed to change the PWM state\n");
++			dev_err(&client->dev, "Failed to change the PWM state polarity\n");
+ 		}
+ 
+ 		ret = adsd3500_configure_interrupt(adsd3500);
+-- 
+2.25.1
+
