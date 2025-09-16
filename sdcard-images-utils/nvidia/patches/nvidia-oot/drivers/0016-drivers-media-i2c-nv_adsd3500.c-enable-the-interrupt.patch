@@ -1,0 +1,129 @@
+From ef9050af3c2417058853e696670b6221e73c4b38 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 16 Sep 2025 14:32:43 +0530
+Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: enable the interrupt mode
+ as default configuration
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/nv_adsd3500.c | 33 +++++++++++++++++++--------------
+ 1 file changed, 19 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/media/i2c/nv_adsd3500.c b/drivers/media/i2c/nv_adsd3500.c
+index 4d6065d7..4f573102 100644
+--- a/drivers/media/i2c/nv_adsd3500.c
++++ b/drivers/media/i2c/nv_adsd3500.c
+@@ -691,7 +691,7 @@ static const struct v4l2_ctrl_config adsd3500_ctrls[] = {
+ 		.id             = V4L2_CID_ADSD3500_FSYNC_TRIGGER,
+ 		.name           = "Fsync Trigger",
+ 		.type           = V4L2_CTRL_TYPE_INTEGER,
+-		.def            = 0,
++		.def            = 1,
+ 		.min            = 0,
+ 		.max            = 1,
+ 		.step           = 1,
+@@ -791,9 +791,10 @@ static int adsd3500_start_streaming(struct adsd3500 *adsd3500)
+ 
+ 	if(adsd3500->pwm_fsync != NULL && adsd3500->curr_sync_mode == PWM_TRIGGER){
+ 		ret = pwm_enable(adsd3500->pwm_fsync);
+-		if (ret)
++		if (ret){
+ 			dev_err(adsd3500->dev, "Could not enable FSYNC PWM\n");
+-		return ret;
++			return ret;
++		}
+ 	}
+ 
+ 	ret = regmap_write(adsd3500->regmap, STREAM_ON_CMD, STREAM_ON_VAL);
+@@ -886,7 +887,7 @@ static int adsd3500_configure_interrupt(struct adsd3500 *adsd3500){
+ 	struct device_node *np = client->dev.of_node;
+ 	int gpio, ret = 0;
+ 
+-	dev_info(dev, "Entered: %s\n", __func__);
++	dev_dbg(dev, "Entered: %s\n", __func__);
+ 	gpio = of_get_named_gpio(np, "interrupt-gpios", 0);
+ 	if (!gpio_is_valid(gpio)){
+ 		dev_err(&client->dev, "interrupt-gpios not found %d\n", gpio);
+@@ -895,7 +896,7 @@ static int adsd3500_configure_interrupt(struct adsd3500 *adsd3500){
+ 	adsd3500->gpio = gpio;
+ 
+ 	ret = gpio_request(adsd3500->gpio, "adsd3500_irq");
+-	if (ret){
++	if (ret < 0){
+ 		dev_err(&client->dev, "Unable to get adsd3500 gpio\n");
+ 		return ret;
+ 	}
+@@ -915,8 +916,9 @@ static int adsd3500_configure_interrupt(struct adsd3500 *adsd3500){
+ 
+ 	ret = request_irq(adsd3500->irq, adsd3500_irq_handler,
+ 			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "adsd3500", adsd3500);
+-	if (ret) {
++	if (ret < 0) {
+ 		dev_err(&client->dev, "Failed to request adsd3500 irq\n");
++		return ret;
+ 	}
+ 
+ 	return ret;
+@@ -935,11 +937,11 @@ static int adsd3500_set_fsync_trigger(struct adsd3500 *adsd3500, s32 val){
+ 		return -ENODEV;
+ 	}
+ 
+-	dev_info(dev, "Entered: %s Value: %d\n", __func__, val);
++	dev_dbg(dev, "Entered: %s Value: %d\n", __func__, val);
+ 	adsd3500->curr_sync_mode = val;
+ 
+ 	if(adsd3500->curr_sync_mode == PWM_TRIGGER){
+-		dev_info(dev, "Enable frame sync using pwm trigger\n");
++		dev_dbg(dev, "Enable frame sync using pwm trigger\n");
+ 		if(IS_ERR(adsd3500->pwm_fsync)){
+ 			dev_err(&client->dev, "Failed to get the pwm device\n");
+ 			goto error;
+@@ -961,11 +963,11 @@ static int adsd3500_set_fsync_trigger(struct adsd3500 *adsd3500, s32 val){
+ 
+ 		ret = regmap_write(adsd3500->regmap, ENABLE_FSYNC_TRIGGER, FSYNC_HIZ);
+ 		if (ret < 0){
+-			dev_err(adsd3500->dev, "Write of ENABLE_FSYNC_TRIGGER command failed.\n");
++			dev_err(adsd3500->dev, "Write of enable fsync external trigger command failed.\n");
+ 		}
+ 	}
+ 	else if(adsd3500->curr_sync_mode == INTR_TRIGGER){
+-		dev_info(dev, "Enable interrupt trigger\n");
++		dev_dbg(dev, "Enable interrupt trigger\n");
+ 		pwm_init_state(adsd3500->pwm_fsync, &state);
+ 		state.polarity = PWM_POLARITY_INVERSED;
+ 
+@@ -981,7 +983,7 @@ static int adsd3500_set_fsync_trigger(struct adsd3500 *adsd3500, s32 val){
+ 
+ 		ret = regmap_write(adsd3500->regmap, ENABLE_FSYNC_TRIGGER, FSYNC_START);
+ 		if (ret < 0){
+-			dev_err(adsd3500->dev, "Write of ENABLE_FSYNC_TRIGGER command failed.\n");
++			dev_err(adsd3500->dev, "Write of enable fsync internal trigger command failed.\n");
+ 		}
+ 	}
+ 	else{
+@@ -1043,9 +1045,6 @@ static int adsd3500_ctrls_init(struct adsd3500 *priv)
+ 	//Initialize by default to 4 (RAW12, 12 bpp)
+ 	v4l2_ctrl_s_ctrl(priv->ctrls[5], 4);
+ 
+-	//Initialize by default to interrupt trigger
+-	v4l2_ctrl_s_ctrl(priv->ctrls[8], INTR_TRIGGER);
+-
+ 	return 0;
+ 
+ error:
+@@ -1268,6 +1267,12 @@ static int adsd3500_probe(struct i2c_client *client,
+ 		return ret;
+ 	}
+ 
++	if(priv->pwm_fsync != NULL){
++		ret = adsd3500_set_fsync_trigger(priv, INTR_TRIGGER);
++		if(ret < 0)
++			dev_err(&client->dev, "Failed to initalize interrupt\n");
++	}
++
+ 	priv->sd->internal_ops = &adsd3500_subdev_internal_ops;
+ 	priv->sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+ #if defined(CONFIG_MEDIA_CONTROLLER)
+-- 
+2.25.1
+
