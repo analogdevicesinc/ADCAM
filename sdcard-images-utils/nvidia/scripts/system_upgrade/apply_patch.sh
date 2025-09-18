@@ -128,8 +128,8 @@ function update_kernel()
 		sudo cp /boot/Image /boot/Image.backup
 	fi
 	mkdir test && tar -xjf kernel_supplements.tbz2 -C test > /dev/null 2>&1
-	sudo mkdir -p /boot/ADI/
-	sudo cp Image /boot/ADI/
+	sudo mkdir -p /boot/adi/
+	sudo cp Image /boot/adi/
 	sudo cp -rf dtb/* /boot/
 	cd test/lib/modules/
 	sudo cp -rf 5.15.148-adi-tegra /lib/modules/
@@ -175,7 +175,7 @@ function add_boot_label()
 	echo "Add the ADSD3500+ADSD3100 label"
 	echo "LABEL ADSD3500+ADSD3100" >> ${extlinux_conf_file}
 	echo "      MENU LABEL ADSD3500: <CSI ToF Camera ADSD3100>" >> ${extlinux_conf_file}
-	echo "      LINUX /boot/ADI/Image" >> ${extlinux_conf_file}
+	echo "      LINUX /boot/adi/Image" >> ${extlinux_conf_file}
 	echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
 	echo "      OVERLAYS /boot/tegra234-p3767-camera-p3768-adsd3500.dtbo" >> ${extlinux_conf_file}
 	echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
@@ -185,7 +185,7 @@ function add_boot_label()
 	echo "Add the ADSD3500-DUAL+ADSD3100 label"
         echo "LABEL ADSD3500-DUAL+ADSD3100" >> ${extlinux_conf_file}
         echo "      MENU LABEL ADSD3500-DUAL: <CSI ToF Camera ADSD3100>" >> ${extlinux_conf_file}
-        echo "      LINUX /boot/ADI/Image" >> ${extlinux_conf_file}
+        echo "      LINUX /boot/adi/Image" >> ${extlinux_conf_file}
         echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
         echo "      OVERLAYS /boot/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo" >> ${extlinux_conf_file}
         echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
