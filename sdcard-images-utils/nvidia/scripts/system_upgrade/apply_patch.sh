@@ -127,9 +127,10 @@ function update_kernel()
 		sudo cp /boot/Image /boot/Image.backup
 	fi
 	mkdir test && tar -xjf kernel_supplements.tbz2 -C test > /dev/null 2>&1
+	sudo rm -rf /boot/adi
 	sudo mkdir -p /boot/adi/
-	sudo cp Image /boot/adi/
-	sudo cp -rf dtb/* /boot/
+	sudo cp Image /boot/adi/Image
+	sudo cp -rf tegra234-p3767-camera-p3768-*.dtbo /boot/adi/
 	cd test/lib/modules/
 	sudo cp -rf 5.15.148-adi-tegra /lib/modules/
 	popd
@@ -176,7 +177,7 @@ function add_boot_label()
 	echo "      MENU LABEL ADSD3500: <CSI ToF Camera ADSD3100>" >> ${extlinux_conf_file}
 	echo "      LINUX /boot/adi/Image" >> ${extlinux_conf_file}
 	echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
-	echo "      OVERLAYS /boot/tegra234-p3767-camera-p3768-adsd3500.dtbo" >> ${extlinux_conf_file}
+	echo "      OVERLAYS /boot/adi/tegra234-p3767-camera-p3768-adsd3500.dtbo" >> ${extlinux_conf_file}
 	echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
 	echo "      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
 	echo " " >> ${extlinux_conf_file}
@@ -186,7 +187,7 @@ function add_boot_label()
         echo "      MENU LABEL ADSD3500-DUAL: <CSI ToF Camera ADSD3100>" >> ${extlinux_conf_file}
         echo "      LINUX /boot/adi/Image" >> ${extlinux_conf_file}
         echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
-        echo "      OVERLAYS /boot/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo" >> ${extlinux_conf_file}
+        echo "      OVERLAYS /boot/adi/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo" >> ${extlinux_conf_file}
         echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
         echo "      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
         echo " " >> ${extlinux_conf_file}

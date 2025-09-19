@@ -145,8 +145,9 @@ function build_kernel_Image()
 	echo "Copy kernel Image"
 	cp $ROOTDIR/build/Linux_for_Tegra/source/modules/boot/Image $PATCH_DIR/
 
-	echo "Copy DTB"
-	cp -r $ROOTDIR/build/Linux_for_Tegra/source/modules/dtb   $PATCH_DIR
+	echo "Copy DTB Overlay"
+	cp -r $ROOTDIR/build/Linux_for_Tegra/source/modules/dtb/tegra234-p3767-camera-p3768-adsd3500.dtbo   			$PATCH_DIR
+	cp -r $ROOTDIR/build/Linux_for_Tegra/source/modules/dtb/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo   	$PATCH_DIR
 
 	echo "Copy kernel modules"
 	cd $ROOTDIR/build/Linux_for_Tegra/source/modules
@@ -186,9 +187,9 @@ function clone_sdk()
 
 function main()
 {
-	configure_toolchain
-	download_bsp_source
-	download_linux_kernel
+	#configure_toolchain
+	#download_bsp_source
+	#download_linux_kernel
 	apply_git_format_patches
 	build_kernel_Image
 	copy_ubuntu_overlay
