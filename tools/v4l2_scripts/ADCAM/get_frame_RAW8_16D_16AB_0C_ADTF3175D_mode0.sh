@@ -8,4 +8,4 @@ v4l2-ctl --set-ctrl=ab_bits=6 -d /dev/v4l-subdev1
 v4l2-ctl --set-ctrl=confidence_bits=0 -d /dev/v4l-subdev1
 v4l2-ctl --set-ctrl=ab_averaging=0 -d /dev/v4l-subdev1
 v4l2-ctl --set-ctrl=depth_enable=1 -d /dev/v4l-subdev1
-v4l2-ctl --device /dev/video0 --set-fmt-video=width=1024,height=4096,pixelformat=BA81 --stream-mmap --stream-to=mode0_dual_1024x4096_BA81.bin --stream-count=$nr_frames
+v4l2-ctl --device /dev/video0 --set-fmt-video=width=1024,height=4096,pixelformat=RGGB --stream-mmap --stream-to=mode0.bin --stream-count=$nr_frames
