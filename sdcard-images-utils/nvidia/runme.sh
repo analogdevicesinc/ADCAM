@@ -187,9 +187,9 @@ function clone_sdk()
 
 function main()
 {
-	#configure_toolchain
-	#download_bsp_source
-	#download_linux_kernel
+	configure_toolchain
+	download_bsp_source
+	download_linux_kernel
 	apply_git_format_patches
 	build_kernel_Image
 	copy_ubuntu_overlay
