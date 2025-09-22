@@ -153,9 +153,20 @@ function start_services()
 
 extlinux_conf_file="/boot/extlinux/extlinux.conf"
 
+function truncate_file() {
+  if [[ ! -f "$extlinux_conf_file" ]]; then
+    echo "File not found!"
+    return 1
+  fi
+
+  sed -i '30,$d' "$extlinux_conf_file"
+
+  echo "Set the default label name to primary"
+  sed -i "s/^DEFAULT .*/DEFAULT primary/" "$extlinux_conf_file"
+}
+
 function get_root_count()
 {
-	sudo cp /boot/extlinux/extlinux.conf.nv-update-extlinux-backup /boot/extlinux/extlinux.conf
 	count_value="$(grep -c "root=/dev/mmcblk0p1" ${extlinux_conf_file})"
 	echo "get_root_count = ${count_value}"
 }
@@ -216,6 +227,7 @@ function main()
 	#build_sdk
 	
 	echo "******* Update the Extlinux Conf file *******"
+	truncate_file
 	get_root_count
 	if [[ "${count_value}" == 1 ]]; then
 		add_boot_label
