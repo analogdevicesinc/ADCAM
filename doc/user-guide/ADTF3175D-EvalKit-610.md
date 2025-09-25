@@ -1459,12 +1459,14 @@ These should not be changed in the context of the eval kit unless explicitly ask
 * *errata1*: DO NOT CHANGE
 * *fsyncMode*: DO NOT A
 * *mipiOutputSpeed*: DO NOT CHANGE
+* *isdeskewEnabled*: DO NOT CHANGE
 * *enableTempCompensation*: DO NOT CHANGE
 * *enableEdgeConfidence*: DO NOT CHANGE
 ```
 	"errata1":	1,
 	"fsyncMode":	-1,
-	"mipiOutputSpeed":	-1,
+	"mipiOutputSpeed":	1,
+  "isdeskewEnabled": 1,
 	"enableTempCompensation":	-1,
 	"enableEdgeConfidence":	-1,
 ```

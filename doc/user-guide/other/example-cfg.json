@@ -1,7 +1,8 @@
 {
 	"errata1":	1,
 	"fsyncMode":	-1,
-	"mipiOutputSpeed":	-1,
+	"mipiOutputSpeed":	1,
+	"isdeskewEnabled": 1,
 	"enableTempCompensation":	-1,
 	"enableEdgeConfidence":	-1,
 	"0":	{
