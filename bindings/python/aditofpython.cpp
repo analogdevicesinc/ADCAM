@@ -495,6 +495,9 @@ PYBIND11_MODULE(aditofpython, m) {
             py::arg("fwVersion"), py::arg("fwHash"))
         .def("adsd3500SetMIPIOutputSpeed",
              &aditof::Camera::adsd3500SetMIPIOutputSpeed, py::arg("speed"))
+        .def("adsd3500SetEnableDeskewAtStreamOn",
+             &aditof::Camera::adsd3500SetEnableDeskewAtStreamOn,
+             py::arg("deskewEnable"))
         .def("adsd3500GetMIPIOutputSpeed",
              [](aditof::Camera &camera) {
                  uint16_t speed;
