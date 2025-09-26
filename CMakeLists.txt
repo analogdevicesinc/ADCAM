@@ -29,8 +29,7 @@ option(WITH_SUBMODULES "Use submodules to build the library" ON)
 set(SOM_TYPE "Single" CACHE STRING "Which SoM SDK is building for?")
 
 ######################### Target based Options ################################
-option(ON_NXP "Set to ON when building on NXP" OFF)
-option(ON_NVIDIA "Set to ON when building on NVIDIA" OFF)
+option(NVIDIA "Set to ON when building on NVIDIA" ON)
 option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" ON)
 option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" OFF)
 
@@ -85,7 +84,7 @@ set(LIBADITOF_SUBMODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libaditof)
 
 # Check whether we configure thgs for remote or we're on target
 set(SELECTED_PLATFORMS 0)
-set(ALL_PLATFORMS ON_NXP;ON_NVIDIA)
+set(ALL_PLATFORMS NVIDIA)
 foreach(platform IN LISTS ALL_PLATFORMS)
     if(${platform})
         math(EXPR SELECTED_PLATFORMS "${SELECTED_PLATFORMS}+1")
@@ -121,9 +120,7 @@ endif()
 
 
 # Add the device definition
-if(NXP)
-     add_definitions(-DNXP)
-elseif(NVIDIA)
+if(NVIDIA)
      add_definitions(-DNVIDIA)
 endif()
 
