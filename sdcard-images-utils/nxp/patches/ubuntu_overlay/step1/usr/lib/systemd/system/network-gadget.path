@@ -1,9 +1,0 @@
-[Unit]
-Description=Enable network when path is available
-
-[Path]
-PathExists=/run/usb_gadget_ready
-Unit=network-gadget.service
-
-[Install]
-WantedBy=multi-user.target
