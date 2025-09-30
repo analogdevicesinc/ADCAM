@@ -1,53 +1,30 @@
-# Analog Devices 3D ToF software suite 
+# ADCAM Camera Kit 
 
 ## Overview
-The **ADI ToF SDK** is a cross platform library for the Analog Devices depth cameras based on the ADSD3100 TOF Signal Processor. It provides support for data processing on the embedded processor platform as well as for USB, Ethernet, Offline or Wi-Fi to connect to a host computer. This flexibility enables evaluation across a wide range of use cases and environments.
 
-The SDK provides an API to control the ToF camera, AB stream and depth data. Windows support are built into the SDK as well as sample code and wrappers for various languages including Python and C/C++.
+This repository holds the code for the ADI ADCAM Camera Kit. The ADCAM Camera Kit is based on the ADI AD3175D Time-of-Flight Mega-Pixel imager and the ADSD3500 Depth ISP. The ADCAM hardware connects to the Jetson Orin Nano Dev Kit via MIPI. The only other connector is USB C for power. The ADCAM is designed to run on the NVIDIA Jetson Orin Nano Dev Kit. The ADCAM differs from the previous ADTF3175D Eval Kit in two key ways:
+
+* ADCAM utliizes two ADSD3500 Depth ISP. This removes the need for closed source depth processing libraries on the SoC. All depth computation, with the exception of radial to XYZ (point cloud generation) is done by the dual ADSD3500 hardware. Note, the radial to XYZ library is open source and available in the libaditof repo (see below).
+* Designed to run on the NVIDIA Jetson Orin Nano Dev Kit.
+
+This repostiory is dependent on the [ToF-drivers](https://github.com/analogdevicesinc/ToF-drivers/tree/main) and [libaditof](https://github.com/analogdevicesinc/libaditof/tree/main) repositories.
+
+* ToF-drivers: Contains the V4L2 Camera Sensor Driver for the ADSD3500 Depth ISP, device tree sources, and kernel patches - where needed.
+* libaditof: Contains the software development kit (SDK) for the ADCAM combination of ADSD3500 Depth ISP and ADI Time-of-Flight Imager.
 
 License : [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Platform details : [![Hardware](https://img.shields.io/badge/hardware-wiki-green.svg)]()
 
-## Supported Host Platforms
+## Supported Platforms
 
-For more details on building the SDK on a host platform please check the **User Guide** specified below:.
-
-| Operating System | Documentation | GitHub main status | Downloads |
-| --------- | ----------- | ----------- | ----------- |
-| Windows | [Build Instructions](scripts/windows) | [![Build status](https://dev.azure.com/AnalogDevices/3DToF-rework/_apis/build/status/analogdevicesinc.ToF?branchName=main)](https://dev.azure.com/AnalogDevices/3DToF-rework/_build?view=runs&branchFilter=3310) | [![ToF evaluation kit installer](https://img.shields.io/badge/release-ToF_evaluation_kit_installer-blue.svg)](https://github.com/analogdevicesinc/ToF/releases/latest) |
-| Linux | [Build Instructions](doc/itof/linux_build_instructions.md) | [![Build status](https://dev.azure.com/AnalogDevices/3DToF-rework/_apis/build/status/analogdevicesinc.ToF?branchName=main)](https://dev.azure.com/AnalogDevices/3DToF-rework/_build?view=runs&branchFilter=3310) | [![ToF evaluation kit installer](https://img.shields.io/badge/release-ToF_evaluation_kit_installer-blue.svg)](https://github.com/analogdevicesinc/ToF/releases/latest) |
+* [Jetson Orin Nano Dev Kit](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit/)
 
 ### Requirements
 
-Host Platform: 
+* JetPack 6.2.1 installed to the Micro SD card (note, support for installation to the SSD is coming soon). 
 
-* Windows 11 or
-* Ubuntu 22.04 or
-* Ubuntu 24.04
-
-Other
-* Python 3.10 on Windows and Ubuntu 22.04
-* Python 3.12 on Ubuntu 24.04
-
-## Supported Embedded Platforms
-
-For more details on building the SDK on an embedded platform please check the **User Guide** specified below:
-### ITOF camera
-| Operating system | Evaluation boards | Documentation | GitHub main status |
-| --------- | ----------- | ----------- | ----------- |
-| NXP | [EVAL-ADTF3175D-NXZ](https://wiki.analog.com/resources/eval/user-guides/eval-adtf3175d-nxz) | [Build instructions](doc/itof/nxp_build_instructions.md) | [![Build status](https://dev.azure.com/AnalogDevices/3DToF-rework/_apis/build/status/analogdevicesinc.ToF?branchName=main)](https://dev.azure.com/AnalogDevices/3DToF-rework/_build?view=runs&branchFilter=3310) |
-
-[How to write the SD card image onto the SD card?](doc/sdcard_burn.md)
-
-## SDK Documentation
-
-From an architectural point of view, the SDK consists of two layers. One layer is the high level API that allows clients to easily grab a camera object, configure it and request frames. The other layer is the low level API which exposes the interface through which low level operations can be made to the camera hardware.
-
-For more details about the SDK check the links below:
-
-[Building and installing the SDK](cmake/)
-
-## SDK Examples
+## Examples
 | Example | Language | Description |
 | --------- | ------------- | ----------- |
 | tof-viewer | <a href="examples/tof-viewer"> C++ </a> | Graphical User interface for visualising stream from depth camera |
@@ -76,9 +53,8 @@ For more details about the SDK check the links below:
 | libaditof | Submodule with SDK source code |
 | tools | Standalone applications |
 
----
-**Known issues**
+## Building the Eval Kit
 
-On a PC where Linux kernel version 5.13 is installed, a USB connected camera cannot be detected. The v4l device name that we expect is not being set properly. However it works for older and newer versions. 
+
 
 ---
