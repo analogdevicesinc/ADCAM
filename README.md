@@ -1,5 +1,11 @@
 # ADCAM Camera Kit
 
+## Latest Release
+
+* [Empty](https://github.com/analogdevicesinc/ADCAM/releases)
+* Release notes: [Empty](doc/releasenotes.md)
+* Documentation: [Empty](doc/user-guide/ADTF3175D-EvalKit-610.md) 
+
 ## Overview
 
 This repository contains the source code for the ADI **ADCAM Camera Kit**, which is built around the **ADTF3175D Time-of-Flight (ToF) Mega-Pixel imager** and the **ADSD3500 Depth ISP**.  
@@ -67,6 +73,8 @@ This repository depends on the following components:
 | tools | Standalone applications |
 
 ## Building the Eval Kit
+
+Note, prior to committing to the repo it is important to format the source code, see the [code formatting](doc/code-formatting.md) document.
 
 ### Standard Build
 
