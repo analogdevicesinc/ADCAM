@@ -1,28 +1,41 @@
-# ADCAM Camera Kit 
+# ADCAM Camera Kit
 
 ## Overview
 
-This repository holds the code for the ADI ADCAM Camera Kit. The ADCAM Camera Kit is based on the ADI AD3175D Time-of-Flight Mega-Pixel imager and the ADSD3500 Depth ISP. The ADCAM hardware connects to the Jetson Orin Nano Dev Kit via MIPI. The only other connector is USB C for power. The ADCAM is designed to run on the NVIDIA Jetson Orin Nano Dev Kit. The ADCAM differs from the previous ADTF3175D Eval Kit in two key ways:
+This repository contains the source code for the ADI **ADCAM Camera Kit**, which is built around the **ADTF3175D Time-of-Flight (ToF) Mega-Pixel imager** and the **ADSD3500 Depth ISP**.  
 
-* ADCAM utliizes two ADSD3500 Depth ISP. This removes the need for closed source depth processing libraries on the SoC. All depth computation, with the exception of radial to XYZ (point cloud generation) is done by the dual ADSD3500 hardware. Note, the radial to XYZ library is open source and available in the libaditof repo (see below).
-* Designed to run on the NVIDIA Jetson Orin Nano Dev Kit.
+The ADCAM hardware interfaces with the **NVIDIA Jetson Orin Nano Developer Kit** over **MIPI CSI-2** for image data, and uses **USB-C** solely for power. Unlike the earlier **ADTF3175D Evaluation Kit**, the ADCAM introduces two key improvements:
 
-This repostiory is dependent on the [ToF-drivers](https://github.com/analogdevicesinc/ToF-drivers/tree/main) and [libaditof](https://github.com/analogdevicesinc/libaditof/tree/main) repositories.
+* **Dual ADSD3500 Depth ISPs**  
+  Depth computation is fully handled by hardware, eliminating the need for proprietary SoC-based depth processing libraries. The only exception is the radial-to-XYZ (point cloud generation) step, which is implemented in the open-source [`libaditof`](https://github.com/analogdevicesinc/libaditof/tree/main) library.
+* **Optimized for Jetson Orin Nano**  
+  Designed specifically to operate on the NVIDIA Jetson Orin Nano Developer Kit platform.
 
-* ToF-drivers: Contains the V4L2 Camera Sensor Driver for the ADSD3500 Depth ISP, device tree sources, and kernel patches - where needed.
-* libaditof: Contains the software development kit (SDK) for the ADCAM combination of ADSD3500 Depth ISP and ADI Time-of-Flight Imager.
+This repository depends on the following components:
 
-License : [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+* [**ToF-drivers**](https://github.com/analogdevicesinc/ToF-drivers/tree/main)  
+  Provides the V4L2 camera sensor driver for the ADSD3500 Depth ISP, along with device tree sources and kernel patches as required.
+* [**libaditof**](https://github.com/analogdevicesinc/libaditof/tree/main)  
+  Provides the SDK supporting the ADCAM system, integrating ADSD3500 Depth ISP processing with the ADI ToF imager.
 
-Platform details : [![Hardware](https://img.shields.io/badge/hardware-wiki-green.svg)]()
+---
+
+## License and Documentation
+
+* License: [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
+* Hardware Documentation: [![Hardware](https://img.shields.io/badge/hardware-wiki-green.svg)]()
+
+---
 
 ## Supported Platforms
 
-* [Jetson Orin Nano Dev Kit](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit/)
+* [NVIDIA Jetson Orin Nano Developer Kit](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit/)
 
 ### Requirements
 
-* JetPack 6.2.1 installed to the Micro SD card (note, support for installation to the SSD is coming soon). 
+* **JetPack 6.2.1** installed on a microSD card  
+  (Support for SSD installation is planned and will be available in a future release.)
+
 
 ## Examples
 | Example | Language | Description |
@@ -49,12 +62,22 @@ Platform details : [![Hardware](https://img.shields.io/badge/hardware-wiki-green
 | drivers | Holds drivers for nxp and nvidia |
 | examples | Example code for the supported programming languages |
 | scripts | Useful development scripts |
-| sdcard-images-utils | Things required to build a SD card image for targets |
+| ToF-drivers | ADSD3500 V4L2 Camera Sensor device driver |
 | libaditof | Submodule with SDK source code |
 | tools | Standalone applications |
 
 ## Building the Eval Kit
 
+### Standard Build
 
+```
+git clone https://github.com/analogdevicesinc/ADCAM.git
+cd ADCAM
+git submodule update --init
+git checkout <branch or tag>
+mkdir build && cd build
+cmake ..
+make -j"$(nproc)"
+```
 
 ---
