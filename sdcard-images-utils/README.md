@@ -3,4 +3,4 @@
 ## Directory Structure
 | Directory | Description |
 | --------- | ----------- |
-| nxp | Utilities required to create SD card image for NXP platform |
+| nvidia | Utilities required to create collateral for the NVIDIA Jetson Orin Nano Dev Kit |
