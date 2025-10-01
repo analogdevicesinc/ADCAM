@@ -31,7 +31,7 @@ set(SOM_TYPE "Single" CACHE STRING "Which SoM SDK is building for?")
 ######################### Target based Options ################################
 option(NVIDIA "Set to ON when building on NVIDIA" ON)
 option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" OFF)
-option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" ON)
+option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" OFF)
 
 ################################## Git ########################################
 include(FindGit OPTIONAL)
