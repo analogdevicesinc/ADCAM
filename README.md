@@ -68,9 +68,9 @@ This repository depends on the following components:
 | drivers | Holds drivers for nxp and nvidia |
 | examples | Example code for the supported programming languages |
 | scripts | Useful development scripts |
-| ToF-drivers | ADSD3500 V4L2 Camera Sensor device driver |
-| libaditof | Submodule with SDK source code |
 | tools | Standalone applications |
+| ToF-drivers *(submodule)*| ADSD3500 V4L2 Camera Sensor device driver |
+| libaditof *(submodule)*| Submodule with SDK source code |
 
 ## Building the Eval Kit
 
