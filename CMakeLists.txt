@@ -20,18 +20,18 @@ set(VERSION "${ADITOF_VERSION_MAJOR}.${ADITOF_VERSION_MINOR}.${ADITOF_VERSION_PA
 option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
-option(WITH_NETWORK "Build network interface?" OFF)
-option(WITH_OFFLINE "Build offline interface?" OFF)
-option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" OFF)
-option(WITH_COMMAND_LINE_TOOLS "Build with command line tools?" ON)
-option(CI_BUILD "Build for CI" OFF)
-option(WITH_SUBMODULES "Use submodules to build the library" OFF)
-set(SOM_TYPE "Single" CACHE STRING "Which SoM SDK is building for?")
 
-######################### Target based Options ################################
+################################# FIXED #######################################
 option(NVIDIA "Set to ON when building on NVIDIA" ON)
+option(WITH_OFFLINE "Build offline interface?" OFF)
+option(WITH_SUBMODULES "Use submodules to build the library" OFF)
 option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" OFF)
-option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" OFF)
+option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" OFF)
+option(WITH_NETWORK "Build network interface?" OFF)
+option(WITH_COMMAND_LINE_TOOLS "Build with command line tools?" ON)
+option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" ON)
+option(CI_BUILD "Build for CI" OFF)
+set(SOM_TYPE "Single" CACHE STRING "Which SoM SDK is building for?")
 
 ################################## Git ########################################
 include(FindGit OPTIONAL)
