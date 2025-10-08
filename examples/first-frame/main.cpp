@@ -45,8 +45,6 @@
 #include <iostream>
 #include <map>
 
-
-
 using namespace aditof;
 
 static const char Help_Menu[] =
@@ -211,11 +209,12 @@ int main(int argc, char *argv[]) {
     aditof::CameraDetails cameraDetails;
     camera->getDetails(cameraDetails);
 
+#ifdef NXP
+
     LOG(INFO) << "SD card image version: " << cameraDetails.sdCardImageVersion;
     LOG(INFO) << "Kernel version: " << cameraDetails.kernelVersion;
     LOG(INFO) << "U-Boot version: " << cameraDetails.uBootVersion;
-
-
+#endif
 
     std::vector<uint8_t> availableModes;
     camera->getAvailableModes(availableModes);

@@ -1404,9 +1404,12 @@ void ADIMainWindow::InitCamera() {
     aditof::CameraDetails cameraDetails;
     camera->getDetails(cameraDetails);
 
+#ifdef NXP
+
     LOG(INFO) << "SD card image version: " << cameraDetails.sdCardImageVersion;
     LOG(INFO) << "Kernel version: " << cameraDetails.kernelVersion;
     LOG(INFO) << "U-Boot version: " << cameraDetails.uBootVersion;
+#endif
 
     camera->getAvailableModes(_cameraModes);
     sort(_cameraModes.begin(), _cameraModes.end());
