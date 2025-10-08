@@ -23,6 +23,7 @@
 
 #define IOCTL_TRIES 3
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
+#define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (0x009819d1)
 #define CTRL_SIZE 4099
 #define VER_MAJ 1
 #define VER_MIN 0
@@ -116,15 +117,15 @@ int main(int argc, char **argv) {
         data[1] = i >> 8;
         data[2] = i & 0xFF;
 
-        v4l2_ctrl_set(fd, 0x009819e1, data);
+        v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
         usleep(110 * 1000);
         if ((r_w == "R") && (i > 4)) {
             data[0] = 0;
             data[1] = data[4];
             data[2] = data[5];
-            v4l2_ctrl_set(fd, 0x009819e1, data);
+            v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
             usleep(110 * 1000);
-            v4l2_ctrl_get(fd, 0x009819e1, data);
+            v4l2_ctrl_get(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
 
             int read_len = (data[1] << 8) | data[2];
             for (int j = 0; j < read_len; j++)
@@ -134,9 +135,9 @@ int main(int argc, char **argv) {
             data[0] = 0;
             data[1] = 0;
             data[2] = 2;
-            v4l2_ctrl_set(fd, 0x009819e1, data);
+            v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
             usleep(110 * 1000);
-            v4l2_ctrl_get(fd, 0x009819e1, data);
+            v4l2_ctrl_get(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
 
             int read_len = 2;
 
