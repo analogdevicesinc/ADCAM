@@ -1,0 +1,49 @@
+From cc45e79054b486747d30f22fb5b6acd01d4630fd Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Wed, 8 Oct 2025 11:43:36 +0530
+Subject: [PATCH] overlay: adsd3500_dual: pinmux camera clock pin as
+ bidirectional and set i2c clock frequency to 1 MHz
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ ...3767-camera-p3768-dual-adsd3500-adsd3100.dts | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+index 75c13ac..2a73b14 100644
+--- a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
++++ b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+@@ -117,7 +117,7 @@
+ 					};
+ 				};
+ 				i2c@3180000 {
+-					clock-frequency = <100000>;
++					clock-frequency = <1000000>;
+ 					adsd3500@38 {
+ 						compatible = "adi,adsd3500";
+ 						/* I2C device address */
+@@ -687,6 +687,21 @@
+ 					#pwm-cells = <2>;
+ 					pwm-gpios = <&gpio TEGRA234_MAIN_GPIO(P, 0) GPIO_ACTIVE_HIGH>;
+ 				};
++				pinmux@2430000 {
++					pinctrl-names = "default";
++					pinctrl-0 = <&pinmux_default>;
++
++					pinmux_default: common {
++						extperiph1_clk_pp0 {
++							nvidia,pins = "extperiph1_clk_pp0";
++							nvidia,function = "rsvd2";
++							nvidia,pull = <TEGRA_PIN_PULL_NONE>;
++							nvidia,tristate = <TEGRA_PIN_DISABLE>;
++							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
++							nvidia,lpdr = <TEGRA_PIN_DISABLE>;
++						};
++					};
++				};
+ 			};
+ 		};
+ 	};
+-- 
+2.25.1
+
