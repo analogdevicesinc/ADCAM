@@ -129,7 +129,7 @@ if [[ $MODULE == "adi_dual_adsd3500_adsd3100" ]]; then
 	#EN_0P8
 	sudo gpioset 2 1=0
 
-	sleep 1
+	sleep 0.2
 
 	#I2CM_SET
 	sudo gpioset 2 3=0
@@ -146,18 +146,15 @@ if [[ $MODULE == "adi_dual_adsd3500_adsd3100" ]]; then
 	#ISP_BS5
 	sudo gpioset 2 10=0
 
-	#FSYNC_DIR
-	sudo gpioset 2 11=1
-
 	#EN_1P8
 	sudo gpioset 2 0=1
 
-	sleep 1
+	sleep 0.2
 
 	#EN_0P8
 	sudo gpioset 2 1=1
 
-	sleep 1
+	sleep 0.2
 
 	#EN_VSYS
 	sudo gpioset 2 14=1
@@ -167,7 +164,7 @@ if [[ $MODULE == "adi_dual_adsd3500_adsd3100" ]]; then
 
 	#EN_VAUX
 	sudo gpioset 2 12=1
-	sleep 1
+	sleep 0.2
 
 	#Pull ADSD3500 reset high
 	sudo echo 1 > /sys/class/gpio/PH.06/value

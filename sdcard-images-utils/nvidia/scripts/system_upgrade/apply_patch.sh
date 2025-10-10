@@ -76,7 +76,7 @@ function apply_ubuntu_overlay()
         sudo cp $ROOTDIR/ubuntu_overlay/etc/systemd/network/10-rndis0.network      		/etc/systemd/network/
 
         echo "Updating the usb device mode configuration"
-	sed -i 's/net_dhcp_lease_time=15/net_dhcp_lease_time=1500/' /opt/nvidia/l4t-usb-device-mode/nv-l4t-usb-device-mode-config.sh
+	sed -i 's/^net_dhcp_lease_time=15$/net_dhcp_lease_time=1500/' /opt/nvidia/l4t-usb-device-mode/nv-l4t-usb-device-mode-config.sh
 	grep -Fxq 'sudo ip link set l4tbr0 mtu 15000' /opt/nvidia/l4t-usb-device-mode/nv-l4t-usb-device-mode-start.sh || sed -i '255i sudo ip link set l4tbr0 mtu 15000' /opt/nvidia/l4t-usb-device-mode/nv-l4t-usb-device-mode-start.sh
 
 	echo "Copy all the service files"
@@ -88,6 +88,7 @@ function apply_ubuntu_overlay()
 	echo "Copy Tools directory"
 	mkdir -p ${USER_HOME}/Workspace
 	cp -rf $ROOTDIR/ubuntu_overlay/Tools ${USER_HOME}/Workspace/
+	sudo chown -R $USER:$USER ${USER_HOME}/Workspace
 
 }
 
