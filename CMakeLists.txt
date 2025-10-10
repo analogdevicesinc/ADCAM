@@ -29,9 +29,9 @@ option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" OFF)
 option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" OFF)
 option(WITH_NETWORK "Build network interface?" OFF)
 option(WITH_COMMAND_LINE_TOOLS "Build with command line tools?" ON)
-option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" ON)
+option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" OFF)
 option(CI_BUILD "Build for CI" OFF)
-set(SOM_TYPE "Single" CACHE STRING "Which SoM SDK is building for?")
+set(SOM_TYPE "Dual" CACHE STRING "Which SoM SDK is building for?")
 
 ################################## Git ########################################
 include(FindGit OPTIONAL)
