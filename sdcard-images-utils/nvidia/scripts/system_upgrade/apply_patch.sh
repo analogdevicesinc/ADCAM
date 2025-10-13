@@ -4,6 +4,8 @@ set -x
 
 ROOTDIR=`pwd`
 USER_HOME=$(eval echo "~$SUDO_USER")
+USER=$(hostname)
+echo $USER
 
 function setup_workspace_directory()
 {
@@ -145,8 +147,8 @@ function start_services()
 	sudo systemctl enable systemd-networkd
 	sudo systemctl start  systemd-networkd
 	#sudo cp ${USER_HOME}/Workspace/ToF/build/apps/server/aditof-server /usr/share/systemd/
-	sudo systemctl enable network-gadget
-	sudo systemctl start network-gadget
+	#sudo systemctl enable network-gadget
+	#sudo systemctl start network-gadget
 	sudo systemctl enable adi-tof
 	sudo systemctl start adi-tof
 
