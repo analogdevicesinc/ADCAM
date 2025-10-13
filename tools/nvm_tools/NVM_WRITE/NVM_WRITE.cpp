@@ -255,6 +255,23 @@ int main(int argc, char **argv)
 	std::cout << std::hex << std::endl;
 	std::cout << "Res " << nResidualCRC << std::endl;
 
+	//Send READ CHIP ID command
+        memset(data, 0, 19);
+        data[0] = 1;
+        data[1] = 0;
+        data[2] = 2;
+        data[3] = 01;
+        data[4] = 18;
+        retval = v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+        usleep(110 * 1000);
+        data[0] = 0;
+        data[1] = 0;
+        data[2] = 2;
+        v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+        usleep(110 * 1000);
+        v4l2_ctrl_get(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+
+        printf("Read Chip id: %02X %02X\n", data[3], data[4]);
 
 	//Send SWITCH TO BURST command
 	data[0] = 1;
