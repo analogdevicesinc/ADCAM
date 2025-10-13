@@ -118,7 +118,11 @@ else()
         add_definitions(-DSINGLE)
 endif()
 
-
+# define flag to show dlog
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message("Building in Debug mode")
+        add_definitions(-DNDEBUG)
+endif()
 # Add the device definition
 if(NVIDIA)
      add_definitions(-DNVIDIA)
