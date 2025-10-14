@@ -78,6 +78,29 @@ Note, prior to committing to the repo it is important to format the source code,
 
 ### Standard Build
 
+### Pre-requisites
+* CMake
+* g++
+* Python 3 - note, we are assuming Python 3.8 in this document, change as needed for your setup
+* OpenCV - for the examples
+* OpenGL - for the examples
+* Doxygen - for documentation generation
+* Graphviz - for documentation generation
+
+#### Installing the pre-requisites
+```console
+sudo apt update
+sudo apt install cmake g++ \
+     libopencv-contrib-dev libopencv-dev \
+     libgl1-mesa-dev libglfw3-dev \
+     doxygen graphviz
+```
+
+For Linux builds install the necessary version of Python dev libraries. For example for Ubuntu 24.04 with Python 3.12 as the default Python:
+```console
+sudo apt install python3.12-dev
+```
+### Building the SDK
 ```
 git clone https://github.com/analogdevicesinc/ADCAM.git
 cd ADCAM
@@ -85,7 +108,7 @@ git submodule update --init
 git checkout <branch or tag>
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j"$(nproc)"
+make -j4
 ```
 
 ---
