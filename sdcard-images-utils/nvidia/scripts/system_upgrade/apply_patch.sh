@@ -3,71 +3,6 @@
 set -x
 
 ROOTDIR=`pwd`
-USER_HOME=$(eval echo "~$SUDO_USER")
-USER=$(hostname)
-echo $USER
-
-function setup_workspace_directory()
-{
-	# Check if ${USER_HOME}/Workspace exists
-	if [ ! -d "${USER_HOME}/Workspace" ]; then
-		echo "Workspace directory doesn't exists"
-		echo "Create the Workspace directory"
-		mkdir -p ${USER_HOME}/Workspace
-	fi
-
-	# Delete the existing ToF repo on the device.
-	rm -rf ${USER_HOME}/Workspace/ToF
-
-	# Copy the ToF and other directory to the ~/Workspace location.
-	cp -rf $ROOTDIR/ToF ${USER_HOME}/Workspace/
-
-	# Stop existing services running on the NVIDIA ToF device
-	for service in network-gadget; do
-		if systemctl is-active --quiet "$service"; then
-			sudo systemctl stop "$service"
-		fi
-	done
-}
-
-CONFIG_LIB_PATH="${USER_HOME}/Workspace/libs/libtofi_config.so"
-COMPUTE_LIB_PATH="${USER_HOME}/Workspace/libs/libtofi_compute.so"
-
-function check_sdk_build_pre_req()
-{
-	if [ -r "$CONFIG_LIB_PATH" ]; then
-		echo "The shared library $CONFIG_LIB_PATH exists and is readable."
-	else
-		echo "The shared library $CONFIG_LIB_PATH does not exist or is not readable."
-		exit 1
-	fi
-
-	if [ -r "$COMPUTE_LIB_PATH" ]; then
-		echo "The shared library $COMPUTE_LIB_PATH exists and is readable."
-	else
-		echo "The shared library $COMPUTE_LIB_PATH does not exist or is not readable."
-		exit 1
-	fi
-}
-
-function build_sdk()
-{
-	pushd .
-	echo "Build process started"
-	cd ${USER_HOME}/Workspace/ToF
-	rm -rf build
-	mkdir build && cd build
-	cmake -DNVIDIA=1 -DWITH_EXAMPLES=on -DCMAKE_PREFIX_PATH="/opt/glog;/opt/protobuf;/opt/websockets" -DCMAKE_BUILD_TYPE=Release .. -Wno-dev
-	make -j4
-	echo "Build Completed!"
-	popd
-}
-
-function update_server()
-{
-	sudo systemctl stop  network-gadget
-	sudo cp ${USER_HOME}/Workspace/ToF/build/apps/server/aditof-server /usr/share/systemd/
-}
 
 function apply_ubuntu_overlay()
 {
@@ -86,11 +21,6 @@ function apply_ubuntu_overlay()
 
 	echo "Copy all the shell scripts"
 	sudo cp $ROOTDIR/ubuntu_overlay/usr/share/systemd/*.sh		/usr/share/systemd/
-
-	echo "Copy Tools directory"
-	mkdir -p ${USER_HOME}/Workspace
-	cp -rf $ROOTDIR/ubuntu_overlay/Tools ${USER_HOME}/Workspace/
-	sudo chown -R $USER:$USER ${USER_HOME}/Workspace
 
 }
 
@@ -146,9 +76,6 @@ function start_services()
 	sudo systemctl reload NetworkManager
 	sudo systemctl enable systemd-networkd
 	sudo systemctl start  systemd-networkd
-	#sudo cp ${USER_HOME}/Workspace/ToF/build/apps/server/aditof-server /usr/share/systemd/
-	#sudo systemctl enable network-gadget
-	#sudo systemctl start network-gadget
 	sudo systemctl enable adi-tof
 	sudo systemctl start adi-tof
 
@@ -221,13 +148,6 @@ function main()
 {
 	echo "******* Install Software Packages *******"
 	install_packages
-	
-	#echo "******* Setup ToF SDK repo *******"
-	#setup_workspace_directory
-	#check_sdk_build_pre_req
-	
-	#echo "******* Build the SDK *******"
-	#build_sdk
 	
 	echo "******* Update the Extlinux Conf file *******"
 	truncate_file
