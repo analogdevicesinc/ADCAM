@@ -37,7 +37,7 @@ from enum import Enum
 import sys
 import keyboard
 
-ip = "192.168.56.1" # Set to "192.168.56.1" if networking is used.
+ip = "" # Set to "192.168.56.1" if networking is used.
 mode = 3
 
 inWidth = 300
@@ -85,9 +85,12 @@ if __name__ == "__main__":
     system = tof.System()
 
     print("SDK version: ", tof.getApiVersion(), " | branch: ", tof.getBranchVersion(), " | commit: ", tof.getCommitVersion())
-
+    print("Default ip is : ", args.ip)
     cameras = []
-    status = system.getCameraList(cameras, "ip:"+args.ip)
+    if(args.ip != ""):
+        status = system.getCameraList(cameras, "ip:"+args.ip)
+    else:
+        status = system.getCameraList(cameras)
     if not status:
         print("system.getCameraList(): ", status)
 
