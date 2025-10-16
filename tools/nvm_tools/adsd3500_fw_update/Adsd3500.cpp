@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <vector>
+#include <thread>
 #include <fstream>
 #include <stdlib.h>
 #include <signal.h>
@@ -52,9 +53,27 @@ int signal_value = 0;
 int Update_Complete = 0;
 
 static uint32_t cal_crc32(uint32_t crc, unsigned char *buf, size_t len);
-Adsd3500::Adsd3500(std::string FileName) {
+Adsd3500::Adsd3500(std::string FileName, std::string Target) {
 	this->open_device();
-	this->updateAdsd3500Firmware(FileName);
+	if (strcmp(Target.c_str(), "master") == 0) {
+		this->updateAdsd3500Firmware(FileName);
+	}
+}
+
+bool validate_ext(std::string FileName, std::string Target) {
+	const char *dot = strrchr(FileName.c_str(), '.');
+	if (!dot || dot == FileName.c_str()) {
+		return false;
+	}
+
+	if (strcmp(Target.c_str(), "master") == 0) {
+		return strcmp(dot, ".bin") == 0;
+	}
+	else if (strcmp(Target.c_str(), "slave") == 0) {
+		return strcmp(dot, ".stream") == 0;
+	}
+
+	return false;
 }
 
 void ctrl_c_handler(int n, siginfo_t *info, void *unused)
@@ -298,12 +317,17 @@ bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
 	}
 
 	std::cout << std::endl;
-
-	sleep(1);
+	for(int i = 9; i >= 0; i--)
+	{
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::cout << "Waiting for "<< i <<" seconds"<<'\r';
+		fflush(stdout);
+	}
+	std::cout << std::endl;
 
 	status = read_cmd(0x0020, &Status_Command);
 	std::cout << std::hex;
-	std::cout << "Get status Command " << Status_Command << std::endl;
+	std::cout << "Get status Command " << std::uppercase << Status_Command << std::endl;
 
 	if( Status_Command != ADI_STATUS_FIRMWARE_UPDATE ){
 		std::cout << "Firmware update failed" << std::endl;
@@ -326,14 +350,14 @@ bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
 	}
 
 	std::cout << std::endl;
-        for(int i=6 ; i >= 0;i--)
-        {
-                sleep(1);
-                std::cout << "Waiting for "<< i <<" seconds"<<'\r';
-                fflush(stdout);
-        }
-
+	for(int i = 9; i >= 0; i--)
+	{
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::cout << "Waiting for "<< i <<" seconds"<<'\r';
+		fflush(stdout);
+	}
 	std::cout << std::endl;
+
 	Read_Chip_ID();
 	sleep(1);
 

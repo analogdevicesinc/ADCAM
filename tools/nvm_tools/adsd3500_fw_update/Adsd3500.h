@@ -34,9 +34,12 @@
 #include <memory>
 #include <string>
 #include <iostream>
+
+bool validate_ext(std::string FileName, std::string Target);
+
 class Adsd3500 {
 	public:
-		Adsd3500(std::string FileName);
+		Adsd3500(std::string FileName, std::string Target);
 
 	private:
 		int xioctl(int fd, int request, void* arg);
