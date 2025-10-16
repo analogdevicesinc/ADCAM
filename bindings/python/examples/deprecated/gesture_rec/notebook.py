@@ -3,6 +3,7 @@ from tkinter import ttk
 import aditofpython as tof
 import numpy as np
 import cv2 as cv
+import os
 from process import ProcessTab
 
 SMALL_SIGNAL_THRESHOLD = 100
@@ -14,11 +15,12 @@ MODE_OPTIONS = [
     "3"
 ]
 
-# Global variables for the program
+#Global variables for the program
 MODE_OPTIONS_CHOSEN = MODE_OPTIONS[0]
 IS_STREAM_ON = False
 IS_INITIALIZED = False
 VAR_IP = "192.168.56.1"
+REAL_IP = "192.168.56.1"
 
 DEPTH_THD = 1100  # 1000 mm
 
@@ -55,15 +57,15 @@ class GestureDemo(Frame):
         main_panel = Frame(self, name='demo')
         main_panel.pack(side=TOP, fill=BOTH, expand=Y)
 
-        # create the notebook
+#create the notebook
         nb = ttk.Notebook(main_panel, name='gesturedemo')
         nb.pack(fill=BOTH, expand=Y, padx=8, pady=8)
         self._create_video_tab(nb)
 
     def _create_video_tab(self, nb):
-        # frame to hold content
+#frame to hold content
         frame = Frame(nb, name='video')
-        # widgets to be displayed on Video tab
+#widgets to be displayed on Video tab
         msg = ["Capture an image for processing"]
         lbl = Label(frame, justify=LEFT, anchor=N,
                     text=''.join(msg))
@@ -90,7 +92,7 @@ class GestureDemo(Frame):
         btn_stop = Button(frame, text='Stop stream', underline=0,
                           command=lambda: self._stop_video())
 
-        # position and set resize behaviour
+#position and set resize behaviour
 
         lbl.grid(row=0, column=0)
         Label(frame, text="IP address: ").grid(row=1, column=0)
@@ -125,7 +127,7 @@ class GestureDemo(Frame):
         global MODE_OPTIONS_CHOSEN
         global IS_INITIALIZED
 
-        ip = ip.strip()
+        ip = ip.split(":")[0] + ":" + ip.split(":")[1].strip()
 
         print(ip)
 
@@ -139,7 +141,12 @@ class GestureDemo(Frame):
             tof.getCommitVersion())
 
         self.cameras = []
-        status = system.getCameraList(self.cameras, ip)
+        if ip.lower() == "ip:target":
+            status = system.getCameraList(self.cameras)
+        elif ip == ("ip:"+ REAL_IP):
+            status = system.getCameraList(self.cameras, ip)
+        else:
+            print("Invalid value")
         if not status:
             return
         print("system.getCameraList()", status)
@@ -187,7 +194,7 @@ class GestureDemo(Frame):
             if not status:
                 print("system.getDetails() failed with status: ", status)
 
-            # Enable noise reduction for better results
+#Enable noise reduction for better results
             self.cameras[0].setControl(
                 "noise_reduction_threshold",
                 str(SMALL_SIGNAL_THRESHOLD))
@@ -197,7 +204,7 @@ class GestureDemo(Frame):
             IS_STREAM_ON = True
 
             frame = tof.Frame()
-            # Test frame, for metadata
+#Test frame, for metadata
             status = self.cameras[0].requestFrame(frame)
             if not status:
                 print("cameras[0].requestFrame() failed with status: ", status)
@@ -208,7 +215,7 @@ class GestureDemo(Frame):
             width = metadata.width
             height = metadata.height
 
-            # camera_range = np.power(2,16)
+#camera_range = np.power(2, 16)
             depth_map = np.array(frame.getData("depth"), copy=False)
             depth_map[depth_map > DEPTH_THD] = DEPTH_THD
             camera_range = DEPTH_THD
@@ -216,14 +223,14 @@ class GestureDemo(Frame):
             process_results = []
 
             while IS_STREAM_ON:
-                # Capture frame-by-frame
+#Capture frame - by - frame
                 status = self.cameras[0].requestFrame(frame)
                 if not status:
                     print(
                         "cameras[0].requestFrame() failed with status: ",
                         status)
 
-                # Creation of the Depth image
+#Creation of the Depth image
                 depth_map = np.array(frame.getData("depth"), copy=False)
                 depth_map = depth_map[0: height, 0:width]
                 depth_map[depth_map > DEPTH_THD] = DEPTH_THD
@@ -234,7 +241,7 @@ class GestureDemo(Frame):
                 depth_map = distance_scale * depth_map
                 depth_map = np.uint8(depth_map)
 
-                # Image to display
+#Image to display
                 img = cv.applyColorMap(depth_map, cv.COLORMAP_RAINBOW)
                 cv.rectangle(img, self.box_start_point,
                              self.box_end_point, (0, 255, 0), 15)
@@ -252,7 +259,7 @@ class GestureDemo(Frame):
                 cv.namedWindow('Depth image', cv.WINDOW_AUTOSIZE)
                 cv.imshow('Depth image', img)
 
-                # if process_results != []:
+#if process_results != []:
                 process_results = self.update_display(process_results)
                 process_results.append(calc_process(depth_map))
 
@@ -262,7 +269,7 @@ class GestureDemo(Frame):
             cv.waitKey(1)
             cv.destroyWindow("Depth image")
             cv.waitKey(1)
-            # Needs to be destroyed twice due to TKinter logic
+#Needs to be destroyed twice due to TKinter logic
             cv.destroyWindow("Depth image")
             cv.waitKey(1)
 
