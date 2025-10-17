@@ -13,24 +13,36 @@
 #include <signal.h>
 #include "Adsd3500.h"
 #include "compute_crc.h"
-#define ADSD3500_CTRL_PACKET_SIZE 4099
-#define ADI_STATUS_FIRMWARE_UPDATE	0x000E
-#define USER_TASK _IOW('A',1,int32_t*)
-#define SIGETX 		44
+
+#define FLASH_PAGE_SIZE				256
+#define ADSD3500_CTRL_PACKET_SIZE 		4099
+#define WRITE_MASTER_FIRMWARE_COMMAND		0x04
+#define WRITE_SLAVE_FIRMWARE_COMMAND            0x2A
+#define GET_MASTER_FIRMWARE_COMMAND		0x01
+#define GET_SLAVE_FIRMWARE_COMMAND		0x04
+#define ADI_STATUS_FIRMWARE_UPDATE              0x000E
+#define SET_SWITCH_TO_BURST_MODE		0x0019
+#define GET_IMAGER_STATUS_CMD			0x0020
+#define RESET_ADSD3500_CMD			0x0024
+#define ADI_STATUS_SECOND_FIRMWARE_FLASH_UPDATE 0x0027
+#define GET_MASTER_CHIP_ID_CMD			0x0112
+#define GET_SLAVE_CHIP_ID_CMD			0x0116
+#define USER_TASK 				_IOW('A',1,int32_t*)
+#define SIGETX 					44
 
 #ifdef NVIDIA
-#define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (0x009819d1)
+#define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG 	(0x009819d1)
 #endif
 
 #ifdef NXP
-#define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (0x009819e1)
+#define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (	0x009819e1)
 #endif
 
 /* Seed value for CRC computation */
-#define ADI_ROM_CFG_CRC_SEED_VALUE                      (0xFFFFFFFFu)
+#define ADI_ROM_CFG_CRC_SEED_VALUE		(0xFFFFFFFFu)
 
 /* CRC32 Polynomial to be used for CRC computation */
-#define ADI_ROM_CFG_CRC_POLYNOMIAL                      (0x04C11DB7u)
+#define ADI_ROM_CFG_CRC_POLYNOMIAL		(0x04C11DB7u)
 
 typedef union
 {
@@ -56,8 +68,12 @@ static uint32_t cal_crc32(uint32_t crc, unsigned char *buf, size_t len);
 Adsd3500::Adsd3500(std::string FileName, std::string Target) {
 	this->open_device();
 	if (strcmp(Target.c_str(), "master") == 0) {
-		this->updateAdsd3500Firmware(FileName);
+		this->updateAdsd3500MasterFirmware(FileName);
 	}
+	else if (strcmp(Target.c_str(), "slave") == 0) {
+                this->updateAdsd3500SlaveFirmware(FileName);
+        }
+
 }
 
 bool validate_ext(std::string FileName, std::string Target) {
@@ -179,13 +195,13 @@ void Adsd3500::open_device() {
 	}
 }
 
-bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
+bool Adsd3500::updateAdsd3500MasterFirmware(const std::string& filePath)
 {
 	bool status = true;
 	uint8_t Wait_Time = 0;
 	uint16_t Status_Command;
-    uint32_t nResidualCRC = ADI_ROM_CFG_CRC_SEED_VALUE;
-	Read_Chip_ID();
+	uint32_t nResidualCRC = ADI_ROM_CFG_CRC_SEED_VALUE;
+	Read_Chip_ID(GET_MASTER_CHIP_ID_CMD);
 	sleep(1);
 
 	std::cout << std::dec ;
@@ -195,11 +211,8 @@ bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
 
 	std::cout << std::endl;
 	std::cout << "Before upgrading new firmware ";
-	Current_Firmware_Version();
+	Current_Firmware_Version(GET_MASTER_FIRMWARE_COMMAND);
 	sleep(1);
-
-	// Send FW content, each chunk is 256 bytes
-	const int flashPageSize = 256;
 
 	// Read the firmware binary file
 	std::ifstream fw_file(filePath, std::ios::binary);
@@ -215,7 +228,7 @@ bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
 	cmd_header_t fw_upgrade_header;
 	fw_upgrade_header.id8               = 0xAD;
 	fw_upgrade_header.chunk_size16      = 0x0100; // 256=0x100
-	fw_upgrade_header.cmd8              = 0x04;   // FW Upgrade CMD = 0x04
+	fw_upgrade_header.cmd8              = WRITE_MASTER_FIRMWARE_COMMAND;
 	fw_upgrade_header.total_size_fw32   = fw_len;
 	fw_upgrade_header.header_checksum32 = 0;
 
@@ -247,24 +260,24 @@ bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
 	}
 
 	int packetsToSend;
-	if ((fw_len % flashPageSize) != 0)
+	if ((fw_len % FLASH_PAGE_SIZE) != 0)
 	{
-		packetsToSend = (fw_len / flashPageSize + 1);
+		packetsToSend = (fw_len / FLASH_PAGE_SIZE + 1);
 	}
 	else
 	{
-		packetsToSend = (fw_len / flashPageSize);
+		packetsToSend = (fw_len / FLASH_PAGE_SIZE);
 	}
 
-	uint8_t data_out[flashPageSize];
+	uint8_t data_out[FLASH_PAGE_SIZE];
 
 	std::cout << std::endl;
 	std::cout << "Writing Firmware packets..."<< std::endl;
 	Update_Complete = 0;
 	for (int i = 0; i < packetsToSend; i++)
 	{
-		int start = flashPageSize * i;
-		int end   = flashPageSize * (i + 1);
+		int start = FLASH_PAGE_SIZE * i;
+		int end   = FLASH_PAGE_SIZE * (i + 1);
 
 		for (int j = start; j < end; j++)
 		{
@@ -277,7 +290,208 @@ bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
 				data_out[j - start] = 0x00;
 			}
 		}
-		status = write_payload(data_out, flashPageSize);
+		status = write_payload(data_out, FLASH_PAGE_SIZE);
+
+		if (!status)
+		{
+			std::cerr << "Failed to send packet number " << i << " out of " << packetsToSend << " packets!" << std::endl;
+			return status;
+		}
+
+		std::cout<<"Packet number: "<<i+1<<" / "<<packetsToSend<< '\r';
+		fflush(stdout);
+	}
+	std::cout << std::endl;
+	std::cout << std::endl;
+	std::cout << "Adsd3500 firmware updated succesfully!" << std::endl;
+
+
+	std::cout << std::endl;
+	std::cout<<"Waiting for the ADSD3500 kernel Driver signal "<<std::endl;
+
+	while(1){
+		if(Update_Complete != 0){
+			std::cout << "Received signal from ADSD3500 kernel driver" << std::endl;
+			break;
+		}
+		if(Wait_Time >= 30){
+			std::cout<<"ADSD3500 kernel driver signal timeout occured"<<std::endl;
+			status = read_cmd(GET_IMAGER_STATUS_CMD, &Status_Command);
+		    std::cout << std::hex;
+			std::cout << "Get status Command " << Status_Command << std::endl;
+
+			std::cout<<"Firmware update failed"<<std::endl;
+			close(debug_fd);
+			close(fd);
+			exit(EXIT_FAILURE);
+		}
+		Wait_Time++;
+		sleep(1);
+	}
+
+	std::cout << std::endl;
+	for(int i = 9; i >= 0; i--)
+	{
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::cout << "Waiting for "<< i <<" seconds"<<'\r';
+		fflush(stdout);
+	}
+	std::cout << std::endl;
+
+	status = read_cmd(GET_IMAGER_STATUS_CMD, &Status_Command);
+	std::cout << std::hex;
+	std::cout << "Get status Command " << std::uppercase << Status_Command << std::endl;
+
+	if( Status_Command != ADI_STATUS_FIRMWARE_UPDATE ){
+		std::cout << "Firmware update failed" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	sleep(2);
+
+	/*Soft Reset the ADSD3500*/
+	status = write_cmd(RESET_ADSD3500_CMD, 0x0000);
+	if (!status)
+	{
+		std::cout << std::endl;
+		std::cerr << "Failed to Soft Reset the ADSD3500!" << std::endl;
+		return status;
+	}
+	else{
+		std::cout << std::endl;
+		std::cout << "Firmware soft resetting...";
+	}
+
+	std::cout << std::endl;
+	for(int i = 9; i >= 0; i--)
+	{
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::cout << "Waiting for "<< i <<" seconds"<<'\r';
+		fflush(stdout);
+	}
+	std::cout << std::endl;
+
+	Read_Chip_ID(GET_MASTER_CHIP_ID_CMD);
+	sleep(1);
+
+	Switch_from_Standard_to_Burst();
+	sleep(1);
+
+	std::cout << std::endl;
+	std::cout << "After upgrading new firmware ";
+	Current_Firmware_Version(GET_MASTER_FIRMWARE_COMMAND);
+	sleep(1);
+
+	Switch_from_Burst_to_Standard();
+	sleep(1);
+
+	Read_Chip_ID(GET_MASTER_CHIP_ID_CMD);
+
+	close(debug_fd);
+	close(sfd);
+	close(fd);
+
+	return true;
+}
+
+bool Adsd3500::updateAdsd3500SlaveFirmware(const std::string& filePath)
+{
+
+	bool status = true;
+	uint8_t Wait_Time = 0;
+	uint16_t Status_Command;
+	uint32_t nResidualCRC = ADI_ROM_CFG_CRC_SEED_VALUE;
+
+	Read_Chip_ID(GET_SLAVE_CHIP_ID_CMD);
+	sleep(1);
+
+	std::cout << std::dec ;
+
+	Switch_from_Standard_to_Burst();
+	sleep(1);
+
+	std::cout << std::endl;
+	std::cout << "Before upgrading new firmware ";
+	Current_Firmware_Version(GET_SLAVE_FIRMWARE_COMMAND);
+	sleep(1);
+
+	// Read the firmware binary file
+	std::ifstream fw_file(filePath, std::ios::binary);
+	// copy all data into buffer
+	std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(fw_file), {});
+
+	uint32_t     fw_len     = buffer.size();
+	uint8_t*     fw_content = buffer.data();
+	char  fw_data[fw_len] ={0};
+
+	memcpy(fw_data,buffer.data(),buffer.size());
+
+	cmd_header_t fw_upgrade_header;
+	fw_upgrade_header.id8               = 0xAD;
+	fw_upgrade_header.chunk_size16      = 0x0100; // 256=0x100
+	fw_upgrade_header.cmd8              = WRITE_SLAVE_FIRMWARE_COMMAND;
+	fw_upgrade_header.total_size_fw32   = fw_len;
+	fw_upgrade_header.header_checksum32 = 0;
+
+	for (int i = 1; i < 8; i++)
+	{
+		fw_upgrade_header.header_checksum32 += fw_upgrade_header.cmd_header_byte[i];
+	}
+
+	crc_parameters_t crc_params;
+	crc_params.type = CRC_32bit;
+	crc_params.polynomial.polynomial_crc32_bit = ADI_ROM_CFG_CRC_POLYNOMIAL;
+	crc_params.initial_crc.crc_32bit = nResidualCRC;
+	crc_params.crc_compute_flags = IS_CRC_MIRROR;
+
+	crc_output_t res = compute_crc(&crc_params, buffer.data(), buffer.size());
+	nResidualCRC = ~res.crc_32bit;
+
+
+	fw_upgrade_header.crc_of_fw32 = (uint32_t)nResidualCRC;
+
+	uint8_t *ptr = (uint8_t *)&fw_upgrade_header;
+
+	status = write_payload(fw_upgrade_header.cmd_header_byte, 16);
+	if (!status)
+	{
+		std::cout << std::endl;
+		std::cerr << "Failed to send fw upgrade header" << std::endl;
+		return status;
+	}
+
+	int packetsToSend;
+	if ((fw_len % FLASH_PAGE_SIZE) != 0)
+	{
+		packetsToSend = (fw_len / FLASH_PAGE_SIZE + 1);
+	}
+	else
+	{
+		packetsToSend = (fw_len / FLASH_PAGE_SIZE);
+	}
+
+	uint8_t data_out[FLASH_PAGE_SIZE];
+
+	std::cout << std::endl;
+	std::cout << "Writing Firmware packets..."<< std::endl;
+	Update_Complete = 0;
+	for (int i = 0; i < packetsToSend; i++)
+	{
+		int start = FLASH_PAGE_SIZE * i;
+		int end   = FLASH_PAGE_SIZE * (i + 1);
+
+		for (int j = start; j < end; j++)
+		{
+			if (j < fw_len)
+			{
+				data_out[j - start] = fw_content[j];
+			}
+			else
+			{
+				data_out[j - start] = 0x00;
+			}
+		}
+		status = write_payload(data_out, FLASH_PAGE_SIZE);
 
 		if (!status)
 		{
@@ -316,28 +530,25 @@ bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
 		sleep(1);
 	}
 
-	std::cout << std::endl;
-	for(int i = 9; i >= 0; i--)
-	{
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-		std::cout << "Waiting for "<< i <<" seconds"<<'\r';
-		fflush(stdout);
-	}
-	std::cout << std::endl;
+	//exit(0);
+	sleep (2);
 
-	status = read_cmd(0x0020, &Status_Command);
+	Switch_from_Burst_to_Standard();
+	sleep(1);
+
+	status = read_cmd(GET_IMAGER_STATUS_CMD, &Status_Command);
 	std::cout << std::hex;
 	std::cout << "Get status Command " << std::uppercase << Status_Command << std::endl;
 
-	if( Status_Command != ADI_STATUS_FIRMWARE_UPDATE ){
-		std::cout << "Firmware update failed" << std::endl;
-		exit(EXIT_FAILURE);
+	if( Status_Command != ADI_STATUS_SECOND_FIRMWARE_FLASH_UPDATE){
+		std::cout << "Slave Firmware write failed" << std::endl;
+	}
+	else{
+		std::cout << "Slave Firmware Flash write completed and is successful." << std::endl;
 	}
 
-	sleep(2);
-
 	/*Soft Reset the ADSD3500*/
-	status = write_cmd(0x0024, 0x0000);
+	status = write_cmd(RESET_ADSD3500_CMD, 0x0000);
 	if (!status)
 	{
 		std::cout << std::endl;
@@ -346,7 +557,7 @@ bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
 	}
 	else{
 		std::cout << std::endl;
-		std::cout << "Firmware soft resetting...";
+		std::cout << "Firmware soft resetting..." << std::endl;
 	}
 
 	std::cout << std::endl;
@@ -358,7 +569,7 @@ bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
 	}
 	std::cout << std::endl;
 
-	Read_Chip_ID();
+	Read_Chip_ID(GET_SLAVE_CHIP_ID_CMD);
 	sleep(1);
 
 	Switch_from_Standard_to_Burst();
@@ -366,26 +577,29 @@ bool Adsd3500::updateAdsd3500Firmware(const std::string& filePath)
 
 	std::cout << std::endl;
 	std::cout << "After upgrading new firmware ";
-	Current_Firmware_Version();
+	Current_Firmware_Version(GET_SLAVE_FIRMWARE_COMMAND);
 	sleep(1);
 
 	Switch_from_Burst_to_Standard();
 	sleep(1);
 
-	Read_Chip_ID();
+	Read_Chip_ID(GET_SLAVE_CHIP_ID_CMD);
+
 
 	close(debug_fd);
 	close(sfd);
 	close(fd);
 
 	return true;
+
 }
-bool Adsd3500::Read_Chip_ID()
+
+bool Adsd3500::Read_Chip_ID(uint16_t reg_addr)
 {
 	bool status = true;
 	// Read Chip ID in STANDARD mode
 	uint16_t chip_id;
-	status = read_cmd(0x0112, &chip_id);
+	status = read_cmd(reg_addr, &chip_id);
 	if (!status)
 	{
 		std::cout << std::endl;
@@ -403,7 +617,7 @@ bool Adsd3500::Switch_from_Standard_to_Burst()
 	bool status = true;
 
 	// Switch to BURST mode.
-	status = write_cmd(0x0019, 0x0000);
+	status = write_cmd(SET_SWITCH_TO_BURST_MODE, 0x0000);
 	if (!status)
 	{
 		std::cout << std::endl;
@@ -436,7 +650,7 @@ bool Adsd3500::Switch_from_Burst_to_Standard()
 	}
 	return status;
 }
-bool Adsd3500::Current_Firmware_Version()
+bool Adsd3500::Current_Firmware_Version(uint8_t cmd)
 {
 
 	bool status = true;
@@ -445,6 +659,7 @@ bool Adsd3500::Current_Firmware_Version()
 
 	// Read Current Firmware version
 	uint8_t current_fw_version_command[] = {0xAD, 0x00, 0x2C, 0x05, 0x00, 0x00, 0x00, 0x00, 0x31, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
+	current_fw_version_command[12] = cmd;
 	status = read_burst_cmd(current_fw_version_command, sizeof(current_fw_version_command) / sizeof(current_fw_version_command[0]),Current_FW_Version);
 
 	snprintf(version, sizeof(version), "%d.%d.%d.%d", Current_FW_Version[0], Current_FW_Version[1], Current_FW_Version[2], Current_FW_Version[3]);
@@ -629,5 +844,4 @@ bool Adsd3500::read_burst_cmd(uint8_t* payload, uint16_t payload_len, uint8_t *d
 	printf("\n");
 	return true;
 }
-
 

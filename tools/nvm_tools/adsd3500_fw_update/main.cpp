@@ -10,6 +10,14 @@
 
 int main(int argc, char *argv[]) {
 
+	int user;
+	user = getuid();
+	if (user != 0)
+	{
+		std::cout << "Please run the application with sudo" << std::endl;
+		return 1;
+	}
+
 	if (argc != 3) {
 		fprintf(stderr, "Usage: %s <file> <master|slave>\n", argv[0]);
 		fprintf(stderr, "       .bin file for master target\n");
