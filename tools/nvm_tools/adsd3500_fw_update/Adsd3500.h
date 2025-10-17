@@ -54,11 +54,13 @@ class Adsd3500 {
 
 		bool Switch_from_Burst_to_Standard();
 
-		bool Current_Firmware_Version();
+		bool Current_Firmware_Version(uint8_t cmd);
 
-		bool Read_Chip_ID();
+		bool Read_Chip_ID(uint16_t reg_addr);
 
-		bool updateAdsd3500Firmware(const std::string &filePath);
+		bool updateAdsd3500MasterFirmware(const std::string &filePath);
+
+		bool updateAdsd3500SlaveFirmware(const std::string &filePath);
 
 		bool write_cmd(uint16_t cmd, uint16_t data);
 
