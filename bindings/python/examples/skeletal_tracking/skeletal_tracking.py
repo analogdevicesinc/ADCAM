@@ -1,0 +1,152 @@
+#
+# BSD 3-Clause License
+#
+# Copyright (c) 2019, Analog Devices, Inc.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+import aditofpython as tof
+import numpy as np
+import cv2 as cv
+import argparse
+from enum import Enum
+import sys
+import mediapipe as mp
+
+ip = "" # Set to "192.168.56.1" if networking is used.
+mode = 2
+
+inWidth = 300
+inHeight = 300
+WHRatio = inWidth / float(inHeight)
+inScaleFactor = 0.007843
+meanVal = 127.5
+thr = 0.2
+WINDOW_NAME = "Display Objects"
+WINDOW_NAME_DEPTH = "Display Objects Depth"
+
+
+# Initialize Mediapipe
+mp_pose = mp.solutions.pose
+pose = mp_pose.Pose()
+
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands()
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Script to run Skeletal tracking ')
+    parser.add_argument("--ip", default=ip, help="IP address of ToF Device")
+
+    args = parser.parse_args()
+
+    system = tof.System()
+
+    cameras = []
+    if args.ip:
+        status = system.getCameraList(cameras, "ip:"+ args.ip)
+    else:
+        status = system.getCameraList(cameras)
+    if not status:
+        print("system.getCameraList(): ", status)
+
+    camera1 = cameras[0]
+
+    status = camera1.initialize()
+    if not status:
+        print("camera1.initialize() failed with status: ", status)
+
+    modes = []
+    status = camera1.getAvailableModes(modes)
+    if not status:
+        print("system.getAvailableModes() failed with status: ", status)
+        
+    status = camera1.setMode(mode)
+    if not status:
+        print("camera1.setMode() failed with status:", status)
+    
+    status = camera1.start()
+    if not status:
+        print("camera1.start() failed with status:", status)
+   
+    camDetails = tof.CameraDetails()
+    status = camera1.getDetails(camDetails)
+    if not status:
+        print("system.getDetails() failed with status: ", status)
+
+    # Enable noise reduction for better results
+    smallSignalThreshold = 100
+
+    camera_range = 5000
+    bitCount = 9
+    frame = tof.Frame()
+
+    max_value_of_IR_pixel = 2 ** bitCount - 1
+    distance_scale_ir = 255.0 / max_value_of_IR_pixel
+    distance_scale = 255.0 / camera_range
+
+    while True:
+            
+        # Capture frame-by-frame
+        status = camera1.requestFrame(frame)
+        if not status:
+            print("camera1.requestFrame() failed with status: ", status)
+
+        ab_map = np.array(frame.getData("ab"), dtype="uint16", copy=False)
+
+        # Creation of the IR image
+        ab_map = distance_scale_ir * ab_map
+        ab_map = np.uint8(ab_map)
+        ab_map = cv.flip(ab_map, 1)
+        ab_map_rgb = cv.cvtColor(ab_map, cv.COLOR_GRAY2RGB)  
+        ab_map_bgr = cv.cvtColor(ab_map_rgb, cv.COLOR_RGB2BGR)
+        
+        # Process the frame with Mediapipe Pose and Hands
+        results_pose = pose.process(ab_map_rgb)
+        results_hands = hands.process(ab_map_rgb)
+        
+        # Check if any pose is detected
+        if results_pose.pose_landmarks:
+            # Draw connections between landmarks
+            mp.solutions.drawing_utils.draw_landmarks(ab_map_bgr, results_pose.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+        
+        # Check if any hand is detected
+        if results_hands.multi_hand_landmarks:
+            for hand_landmarks in results_hands.multi_hand_landmarks:
+                for landmark in hand_landmarks.landmark:
+                    x = int(landmark.x * ab_map_bgr.shape[1])
+                    y = int(landmark.y * ab_map_bgr.shape[0])
+                    z = cv.circle(ab_map_bgr, (x, y), 4, (0, 255, 0), -1)
+
+        cv.namedWindow(WINDOW_NAME, cv.WINDOW_AUTOSIZE)
+        cv.imshow(WINDOW_NAME, ab_map_bgr)
+
+        if cv.waitKey(1) >= 0:
+            break
+            
+    camera1.stop()
