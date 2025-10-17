@@ -38,7 +38,7 @@ import struct
 
 def help():
     print(f"{sys.argv[0]} usage:")
-    print(f"USB: {sys.argv[0]} <mode number>")
+    print(f"Target: {sys.argv[0]} <mode number>")
     print(f"Network connection: {sys.argv[0]} <mode number> <ip>")
     print()
     print("For example:")
@@ -63,12 +63,14 @@ if len(sys.argv) == 3:
     ip = "ip:" + ip
 elif len(sys.argv) == 2:
     mode = sys.argv[1]
-    print (f"Looking for camera on UVC.")
+    print (f"Looking for camera on Target.")
 else :
     print("Too many arguments provided!")
     exit(-2)
-
-status = system.getCameraList(cameras, ip)
+if ip:
+    status = system.getCameraList(cameras, ip)
+else:
+    status = system.getCameraList(cameras)
 print("system.getCameraList()", status)
 
 camera1 = cameras[0]
