@@ -14,7 +14,7 @@ if (NXP)
         $<TARGET_FILE:first-frame>
         $<TARGET_FILE:data_collect>
         DESTINATION ${CMAKE_INSTALL_BINDIR} )
-elseif(WIN32)
+else()
     install(PROGRAMS
         $<TARGET_FILE:first-frame>
         $<TARGET_FILE:data_collect>
