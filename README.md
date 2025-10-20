@@ -108,7 +108,7 @@ git submodule update --init
 git checkout <branch or tag>
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j4
+cmake --build . -j 6
 ```
 
 ---
