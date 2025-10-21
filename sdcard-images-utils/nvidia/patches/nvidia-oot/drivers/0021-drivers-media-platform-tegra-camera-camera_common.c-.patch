@@ -1,0 +1,78 @@
+From a0b0b5a9076805af39f3c07c01f833f9b79c3aee Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 21 Oct 2025 22:41:04 +0530
+Subject: [PATCH 2/2] drivers: media: platform: tegra: camera: camera_common.c:
+ convert the v4l2 pixel format from the media bus code.
+
+select mode based on width, height and pixelformat match first
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ .../platform/tegra/camera/camera_common.c     | 26 ++++++++++++++++---
+ 1 file changed, 23 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/tegra/camera/camera_common.c b/drivers/media/platform/tegra/camera/camera_common.c
+index 010c9965..59323269 100644
+--- a/drivers/media/platform/tegra/camera/camera_common.c
++++ b/drivers/media/platform/tegra/camera/camera_common.c
+@@ -160,6 +160,20 @@ static bool camera_common_verify_code(
+ 	return false;
+ }
+ 
++static u32 v4l2_pixfmt_from_code(u32 code)
++{
++	switch (code) {
++		case MEDIA_BUS_FMT_SRGGB8_1X8:
++			return V4L2_PIX_FMT_SRGGB8;
++		case MEDIA_BUS_FMT_SRGGB10_1X10:
++			return V4L2_PIX_FMT_SRGGB10;
++		case MEDIA_BUS_FMT_SRGGB12_1X12:
++			return V4L2_PIX_FMT_SRGGB12;
++		default:
++			return 0;
++	}
++}
++
+ int camera_common_g_ctrl(struct camera_common_data *s_data,
+ 			 struct v4l2_control *control)
+ {
+@@ -588,9 +602,11 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
+ 	struct tegra_channel *chan = v4l2_get_subdev_hostdata(sd);
+ 	struct v4l2_control hdr_control;
+ 	const struct camera_common_frmfmt *frmfmt;
++	struct sensor_image_properties *cur_props;
++	struct sensor_properties *sensor_props;
+ 	unsigned int mode_type = 0;
+ 	int err = 0;
+-	int i;
++	int i, pixelformat;
+ 
+ 	dev_dbg(sd->dev, "%s: size %i x %i\n", __func__,
+ 		 mf->width, mf->height);
+@@ -599,6 +615,7 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
+ 		return -EINVAL;
+ 
+ 	frmfmt = s_data->frmfmt;
++	sensor_props = &s_data->sensor_props;
+ 
+ 	/* check hdr enable ctrl */
+ 	hdr_control.id = TEGRA_CAMERA_CID_HDR_EN;
+@@ -635,10 +652,13 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
+ 			goto verify_code;
+ 		}
+ 	} else {
+-		/* select mode based on format match first */
++		/* select mode based on format and pixel code match first */
+ 		for (i = 0; i < s_data->numfmts; i++) {
++			cur_props = &sensor_props->sensor_modes[i].image_properties;
++			pixelformat = v4l2_pixfmt_from_code(mf->code);
+ 			if (mf->width == frmfmt[i].size.width &&
+-				mf->height == frmfmt[i].size.height) {
++				mf->height == frmfmt[i].size.height &&
++				cur_props->pixel_format == pixelformat) {
+ 				s_data->mode = frmfmt[i].mode;
+ 				s_data->mode_prop_idx = i;
+ 				s_data->fmt_width = mf->width;
+-- 
+2.25.1
+
