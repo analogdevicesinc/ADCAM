@@ -24,33 +24,6 @@ function apply_ubuntu_overlay()
 
 }
 
-function install_packages()
-{
-	sudo -s <<EOF
-        echo "Enter into the root shell"
-
-	echo "Install v4l-utils package"
-	apt-get install v4l-utils
-
-	echo "Install cmake package"
-	apt install cmake -y
-
-	echo "Install build-essential for C++ compilation tools"
-	apt install build-essential -y
-
-	echo "Install ZMQ libraries"
-	apt install libzmq3-dev
-
-	echo "Install OpenGL libraries"
-	apt install libglfw3-dev
-		
-        exit
-EOF
-    echo "Exited from the root shell"
-
-
-}
-
 function update_kernel()
 {
 	pushd .
@@ -146,9 +119,6 @@ function set_default_boot_label()
 
 function main()
 {
-	echo "******* Install Software Packages *******"
-	install_packages
-	
 	echo "******* Update the Extlinux Conf file *******"
 	truncate_file
 	get_root_count
