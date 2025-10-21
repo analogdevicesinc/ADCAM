@@ -1,0 +1,629 @@
+From dff1958e629c31e565ef2a57aada104b1e6548e0 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 21 Oct 2025 23:09:55 +0530
+Subject: [PATCH 2/2] overlay: adsd3500: changed bayer pixels pattern to "rggb"
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ .../tegra234-p3767-camera-p3768-adsd3500.dts  | 136 +++++++++---------
+ 1 file changed, 68 insertions(+), 68 deletions(-)
+
+diff --git a/overlay/tegra234-p3767-camera-p3768-adsd3500.dts b/overlay/tegra234-p3767-camera-p3768-adsd3500.dts
+index 11f38cc..070af02 100644
+--- a/overlay/tegra234-p3767-camera-p3768-adsd3500.dts
++++ b/overlay/tegra234-p3767-camera-p3768-adsd3500.dts
+@@ -12,7 +12,7 @@
+ 	jetson-header-name = "Jetson 24pin CSI Connector";
+ 	compatible = JETSON_COMPATIBLE_P3768;
+ 
+-	/* ADSD3500 sensor module on CSI PORT A / cam 1 */
++	/* ADSD3500 sensor module on CSI PORT A / cam 0 */
+ 	fragment@0 {
+ 		target-path = "/";
+ 		__overlay__ {
+@@ -238,7 +238,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "512";
+@@ -271,7 +271,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "512";
+@@ -304,7 +304,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "4096";
+@@ -337,7 +337,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1536";
+ 							active_h = "512";
+@@ -370,7 +370,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1792";
+ 							active_h = "512";
+@@ -403,7 +403,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "512";
+@@ -436,7 +436,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "2048";
+@@ -469,7 +469,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2304";
+ 							active_h = "512";
+@@ -502,7 +502,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2560";
+ 							active_h = "512";
+@@ -535,7 +535,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "640";
+@@ -568,7 +568,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "640";
+@@ -601,7 +601,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1536";
+ 							active_h = "640";
+@@ -634,7 +634,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "640";
+@@ -667,7 +667,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2560";
+ 							active_h = "640";
+@@ -700,7 +700,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "256";
+ 							active_h = "320";
+@@ -733,7 +733,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "320";
+@@ -766,7 +766,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "768";
+ 							active_h = "320";
+@@ -799,7 +799,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "320";
+@@ -832,7 +832,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1280";
+ 							active_h = "320";
+@@ -865,7 +865,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "3328";
+@@ -898,7 +898,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "3328";
+@@ -931,7 +931,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "2080";
+@@ -964,7 +964,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "1040";
+@@ -997,7 +997,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "2560";
+@@ -1030,7 +1030,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "1280";
+@@ -1063,7 +1063,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "1600";
+@@ -1096,7 +1096,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "800";
+@@ -1129,7 +1129,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "4096";
+@@ -1162,7 +1162,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "2048";
+@@ -1195,7 +1195,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "2560";
+@@ -1228,7 +1228,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "1280";
+@@ -1261,7 +1261,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "3072";
+@@ -1294,7 +1294,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "1536";
+@@ -1327,7 +1327,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "1920";
+@@ -1360,7 +1360,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "960";
+@@ -1393,7 +1393,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "3584";
+ 							active_h = "2048";
+@@ -1426,7 +1426,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1792";
+ 							active_h = "1024";
+@@ -1459,7 +1459,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1792";
+ 							active_h = "1920";
+@@ -1492,7 +1492,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "896";
+ 							active_h = "960";
+@@ -1525,7 +1525,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "3584";
+ 							active_h = "2048";
+@@ -1558,7 +1558,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1792";
+ 							active_h = "1024";
+@@ -1591,7 +1591,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1792";
+ 							active_h = "1280";
+@@ -1624,7 +1624,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "896";
+ 							active_h = "640";
+@@ -1657,7 +1657,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "4096";
+ 							active_h = "3072";
+@@ -1690,7 +1690,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "1536";
+@@ -1723,7 +1723,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "1920";
+@@ -1756,7 +1756,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "960";
+@@ -1789,7 +1789,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "6144";
+@@ -1822,7 +1822,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "3072";
+ 							active_h = "3072";
+@@ -1855,7 +1855,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "3072";
+ 							active_h = "3840";
+@@ -1888,7 +1888,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "1920";
+@@ -1921,7 +1921,7 @@
+ 							dynamic_pixel_bit_depth = "8";
+ 							csi_pixel_bit_depth = "8";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1536";
+ 							active_h = "1920";
+@@ -1954,7 +1954,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "4608";
+@@ -1987,7 +1987,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "2304";
+@@ -2020,7 +2020,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "1440";
+@@ -2053,7 +2053,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "3072";
+@@ -2086,7 +2086,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "1536";
+@@ -2119,7 +2119,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "1920";
+@@ -2152,7 +2152,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "960";
+@@ -2185,7 +2185,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "512";
+@@ -2218,7 +2218,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "512";
+ 							active_h = "640";
+@@ -2251,7 +2251,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "512";
+@@ -2284,7 +2284,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "1024";
+@@ -2317,7 +2317,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "3072";
+@@ -2350,7 +2350,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "1024";
+ 							active_h = "4096";
+@@ -2383,7 +2383,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "5376";
+@@ -2416,7 +2416,7 @@
+ 							dynamic_pixel_bit_depth = "12";
+ 							csi_pixel_bit_depth = "12";
+ 							mode_type = "bayer";
+-							pixel_phase = "bggr";
++							pixel_phase = "rggb";
+ 
+ 							active_w = "2048";
+ 							active_h = "3584";
+-- 
+2.25.1
+
