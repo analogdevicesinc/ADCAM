@@ -149,6 +149,7 @@ def get_scaling_values(cameraDetails):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description= 'Script to run Mask-RCNN object detection')
+    parser.add_argument('--ip', default=ip, help='IP address of ToF Device')
     parser.add_argument('--model', required=True, help='Path to a .pb file with weights.')
     parser.add_argument('--config', required=True, help='Path to a .pxtxt file contains network configuration.')
     parser.add_argument('--classes', required=True, help='Path to a text file with names of classes.')
@@ -176,7 +177,10 @@ if __name__ == "__main__":
     print("SDK version: ", tof.getApiVersion(), " | branch: ", tof.getBranchVersion(), " | commit: ", tof.getCommitVersion())
 
     cameras = []
-    status = system.getCameraList(cameras, ip)
+    if ip:
+        status = system.getCameraList(cameras, "ip:"+ ip)
+    else:
+        status = system.getCameraList(cameras)
     if not status:
         print("system.getCameraList() failed with status: ", status)
 

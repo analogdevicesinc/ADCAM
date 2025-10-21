@@ -48,7 +48,7 @@ frame_count = 0
 start_time = time.time()
 
 # Initialize Parameters
-ip = "192.168.56.1" # Set to "192.168.56.1" if networking is used.
+ip = "" # Set to "192.168.56.1" if networking is used.
 mode = 3
 image_width = 512
 image_height = 512
@@ -97,16 +97,25 @@ def TrackHandMovement(ab_image):
     if results_hands.multi_hand_landmarks:
         for hand_landmarks in results_hands.multi_hand_landmarks:
             for landmark in hand_landmarks.landmark:
-                x, y, z = int(landmark.x * ab_image.shape[1]), int(landmark.y * ab_image.shape[0]), landmark.z
+                x, y, z = int(landmark.x * ab_image.shape[1]), int(landmark.y * ab_image.shape[0]),
                 cv.circle(ab_image, (x, y), 8, (0, 255, 0), -1)
     return ab_image
 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser(
+        description='Script to run Skeletal tracking ')
+    parser.add_argument("--ip", default=ip, help="IP address of ToF Device")
+
+    args = parser.parse_args()
+
     system = tof.System()
 
     cameras = []
-    status = system.getCameraList(cameras, "ip:"+ip)
+    if args.ip:
+        status = system.getCameraList(cameras, "ip:"+args.ip)
+    else:
+        status = system.getCameraList(cameras, "")
     if not status:
         print("system.getCameraList(): ", status)
 
@@ -226,6 +235,9 @@ if __name__ == "__main__":
         visualizer.update_geometry(point_cloud)
         visualizer.poll_events()
         visualizer.update_renderer()
+
+        # show the AB image for reference
+        cv.imshow("AB Image", ab_image_rgb)
 
         if cv.waitKey(1) != -1:  # Check if a key is pressed
             print("Exiting the loop.: ")

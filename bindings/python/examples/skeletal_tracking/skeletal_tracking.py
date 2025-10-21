@@ -37,8 +37,8 @@ from enum import Enum
 import sys
 import mediapipe as mp
 
-ip = "192.168.56.1" # Set to "192.168.56.1" if networking is used.
-mode = 3
+ip = "" # Set to "192.168.56.1" if networking is used.
+mode = 2
 
 inWidth = 300
 inHeight = 300
@@ -59,10 +59,19 @@ hands = mp_hands.Hands()
 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser(
+        description='Script to run Skeletal tracking ')
+    parser.add_argument("--ip", default=ip, help="IP address of ToF Device")
+
+    args = parser.parse_args()
+
     system = tof.System()
 
     cameras = []
-    status = system.getCameraList(cameras, "ip:"+ip)
+    if args.ip:
+        status = system.getCameraList(cameras, "ip:"+ args.ip)
+    else:
+        status = system.getCameraList(cameras)
     if not status:
         print("system.getCameraList(): ", status)
 
@@ -123,14 +132,16 @@ if __name__ == "__main__":
         
         # Check if any pose is detected
         if results_pose.pose_landmarks:
-        	# Draw connections between landmarks
-        	mp.solutions.drawing_utils.draw_landmarks(ab_map_bgr, results_pose.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+            # Draw connections between landmarks
+            mp.solutions.drawing_utils.draw_landmarks(ab_map_bgr, results_pose.pose_landmarks, mp_pose.POSE_CONNECTIONS)
         
         # Check if any hand is detected
         if results_hands.multi_hand_landmarks:
-        	for hand_landmarks in results_hands.multi_hand_landmarks:
-        		for landmark in hand_landmarks.landmark:
-        			x, y, z = int(landmark.x * ab_map_bgr.shape[1]), int(landmark.y * ab_map_bgr.shape[0]), landmark.zcv.circle(ab_map_bgr, (x, y), 8, (0, 255, 0), -1)
+            for hand_landmarks in results_hands.multi_hand_landmarks:
+                for landmark in hand_landmarks.landmark:
+                    x = int(landmark.x * ab_map_bgr.shape[1])
+                    y = int(landmark.y * ab_map_bgr.shape[0])
+                    z = cv.circle(ab_map_bgr, (x, y), 4, (0, 255, 0), -1)
 
         cv.namedWindow(WINDOW_NAME, cv.WINDOW_AUTOSIZE)
         cv.imshow(WINDOW_NAME, ab_map_bgr)

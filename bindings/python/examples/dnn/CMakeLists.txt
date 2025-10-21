@@ -23,3 +23,13 @@ if(NOT EXISTS "${MODEL_PATH}")
 endif()
 
 file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/dnn.py" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dnn.py
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                   ${CMAKE_CURRENT_SOURCE_DIR}/dnn.py
+                   ${CMAKE_CURRENT_BINARY_DIR}/dnn.py
+                   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dnn.py
+)
+
+add_custom_target(copy_dnn ALL 
+                  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dnn.py
+)               

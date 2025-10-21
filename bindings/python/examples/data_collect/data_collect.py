@@ -48,7 +48,7 @@ mode_help_message = """Valid mode (-m) options are:
         Note: --m argument supports index (Default: 0) """
 
 
-Ip= '192.168.56.1'
+Ip= ''
 imager_configurations = ["standard", "standard-raw", "custom", "custom-raw"]
 if __name__ == '__main__':
     parser = argparse.ArgumentParser( formatter_class=argparse.RawTextHelpFormatter,
