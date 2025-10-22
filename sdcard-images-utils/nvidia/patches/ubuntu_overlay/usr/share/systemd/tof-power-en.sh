@@ -73,13 +73,13 @@ fi
 
 if [[ $MODULE == "adi_dual_adsd3500_adsd3100" ]]; then
 	echo "Module name: $MODULE"
-	echo "export CAM0_PWDN and set direction as output"
+	echo "export CAM1_PWDN and set direction as output"
 
 	# export ADSD3500 reset Pin
-	if [ ! -d /sys/class/gpio/PH.06 ]
+	if [ ! -d /sys/class/gpio/PAC.00 ]
 	then
-		echo 397 > /sys/class/gpio/export
-		echo out > /sys/class/gpio/PH.06/direction
+		echo 486 > /sys/class/gpio/export
+		echo out > /sys/class/gpio/PAC.00/direction
 	fi
 
 	# Export ISP_BS3/ISP_INT pin as input
@@ -120,7 +120,7 @@ if [[ $MODULE == "adi_dual_adsd3500_adsd3100" ]]; then
 	echo 1 > /sys/class/gpio/gpio311/value
 
 	#Pull ADSD3500 reset low
-	sudo echo 0 > /sys/class/gpio/PH.06/value
+	sudo echo 0 > /sys/class/gpio/PAC.00/value
 
 	#Disable the the supply voltage
 	#EN_1P8
@@ -167,7 +167,7 @@ if [[ $MODULE == "adi_dual_adsd3500_adsd3100" ]]; then
 	sleep 0.2
 
 	#Pull ADSD3500 reset high
-	sudo echo 1 > /sys/class/gpio/PH.06/value
+	sudo echo 1 > /sys/class/gpio/PAC.00/value
 
 	echo "ToF power sequence completed"
 fi
