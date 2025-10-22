@@ -175,16 +175,6 @@ function sw_version_info()
 	mv $SW_VERSION_FILE $PATCH_DIR
 }
 
-function clone_sdk()
-{
-	pushd .
-	cd $PATCH_DIR
-	git clone --branch $BRANCH https://github.com/analogdevicesinc/ToF.git
-	cd ToF
-	git submodule update --init --recursive
-	popd
-}
-
 function main()
 {
 	configure_toolchain
@@ -193,7 +183,6 @@ function main()
 	apply_git_format_patches
 	build_kernel_Image
 	copy_ubuntu_overlay
-	#clone_sdk
 	sw_version_info
 	cp $ROOTDIR/scripts/system_upgrade/apply_patch.sh $PATCH_DIR
 	cd $ROOTDIR/build
