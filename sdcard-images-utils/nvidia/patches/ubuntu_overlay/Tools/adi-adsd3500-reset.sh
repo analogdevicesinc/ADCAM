@@ -6,9 +6,9 @@ if [[ $EUID > 0 ]]; then
         exit
 fi
 
-sudo echo 0 > /sys/class/gpio/PH.06/value
+sudo echo 0 > /sys/class/gpio/PAC.00/value
 
 sleep 1
 
-sudo echo 1 > /sys/class/gpio/PH.06/value
+sudo echo 1 > /sys/class/gpio/PAC.00/value
 
