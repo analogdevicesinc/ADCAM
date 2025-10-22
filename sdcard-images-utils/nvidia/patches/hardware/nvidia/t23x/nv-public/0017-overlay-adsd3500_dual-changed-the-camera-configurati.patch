@@ -1,0 +1,773 @@
+From b036c458a352f6cab1148574326b7e15f9169c1c Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Wed, 22 Oct 2025 16:27:25 +0530
+Subject: [PATCH] overlay: adsd3500_dual: changed the camera configuration from
+ CAM0 to CAM1
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ ...67-camera-p3768-dual-adsd3500-adsd3100.dts | 232 +++++++-----------
+ 1 file changed, 92 insertions(+), 140 deletions(-)
+
+diff --git a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+index 290ae8c..b7db58d 100644
+--- a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
++++ b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+@@ -7,12 +7,14 @@
+ #include <dt-bindings/pinctrl/pinctrl-tegra.h>
+ #include <dt-bindings/tegra234-p3767-0000-common.h>
+ 
++#define CAM_I2C_MUX     TEGRA234_AON_GPIO(CC, 3)
++
+ / {
+ 	overlay-name = "Camera DUAL ADSD3500";
+ 	jetson-header-name = "Jetson 24pin CSI Connector";
+ 	compatible = JETSON_COMPATIBLE_P3768;
+ 
+-	/* DUAL ADSD3500 sensor module on CSI PORT A / cam 0 */
++	/* DUAL ADSD3500 sensor module on CSI PORT C / cam 1 */
+ 	fragment@0 {
+ 		target-path = "/";
+ 		__overlay__ {
+@@ -24,7 +26,7 @@
+ 					vi_port0: port@0 {
+ 							reg = <0>;
+ 							adsd3500_vi_in0: endpoint {
+-								port-index = <1>;
++								port-index = <2>;
+ 								bus-width = <2>;
+ 								remote-endpoint = <&adsd3500_csi_out0>;
+ 							};
+@@ -101,7 +103,7 @@
+ 								csi_chan0_port0: port@0 {
+ 									reg = <0>;
+ 									adsd3500_csi_in0: endpoint@0 {
+-										port-index = <1>;
++										port-index = <2>;
+ 										bus-width = <2>;
+ 										remote-endpoint = <&adsd3500_out0>;
+ 										};
+@@ -133,7 +135,7 @@
+ 						sensor_model ="adsd3500";
+ 						/* Define any required hw resources needed by driver */
+ 						/* ie. clocks, io pins, power sources */
+-						interrupt-gpios = <&gpio TEGRA234_MAIN_GPIO(P, 0) GPIO_ACTIVE_LOW>;
++						interrupt-gpios = <&gpio TEGRA234_MAIN_GPIO(P, 1) GPIO_ACTIVE_LOW>;
+ 						pwms = <&pwm 0 50000000>;
+ 						pwm-names = "fsync";
+ 
+@@ -232,8 +234,7 @@
+ 						mode0 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -265,8 +266,7 @@
+ 						mode1 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -298,8 +298,7 @@
+ 						mode2 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -331,8 +330,7 @@
+ 						mode3 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -364,8 +362,7 @@
+ 						mode4 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -397,8 +394,7 @@
+ 						mode5 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -430,8 +426,7 @@
+ 						mode6 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -463,8 +458,7 @@
+ 						mode7 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -496,8 +490,7 @@
+ 						mode8 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -529,8 +522,7 @@
+ 						mode9 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -562,8 +554,7 @@
+ 						mode10 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -595,8 +586,7 @@
+ 						mode11 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -628,8 +618,7 @@
+ 						mode12 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -661,8 +650,7 @@
+ 						mode13 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -694,8 +682,7 @@
+ 						mode14 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -727,8 +714,7 @@
+ 						mode15 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -760,8 +746,7 @@
+ 						mode16 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -793,8 +778,7 @@
+ 						mode17 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -826,8 +810,7 @@
+ 						mode18 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -859,8 +842,7 @@
+ 						mode19 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -892,8 +874,7 @@
+ 						mode20 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -925,8 +906,7 @@
+ 						mode21 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -958,8 +938,7 @@
+ 						mode22 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -991,8 +970,7 @@
+ 						mode23 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1024,8 +1002,7 @@
+ 						mode24 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1057,8 +1034,7 @@
+ 						mode25 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1090,8 +1066,7 @@
+ 						mode26 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1123,8 +1098,7 @@
+ 						mode27 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1156,8 +1130,7 @@
+ 						mode28 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1189,8 +1162,7 @@
+ 						mode29 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1222,8 +1194,7 @@
+ 						mode30 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1255,8 +1226,7 @@
+ 						mode31 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1288,8 +1258,7 @@
+ 						mode32 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1321,8 +1290,7 @@
+ 						mode33 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1354,8 +1322,7 @@
+ 						mode34 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1387,8 +1354,7 @@
+ 						mode35 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1420,8 +1386,7 @@
+ 						mode36 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1453,8 +1418,7 @@
+ 						mode37 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1486,8 +1450,7 @@
+ 						mode38 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1519,8 +1482,7 @@
+ 						mode39 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1552,8 +1514,7 @@
+ 						mode40 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1585,8 +1546,7 @@
+ 						mode41 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1618,8 +1578,7 @@
+ 						mode42 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1651,8 +1610,7 @@
+ 						mode43 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1684,8 +1642,7 @@
+ 						mode44 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1717,8 +1674,7 @@
+ 						mode45 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1750,8 +1706,7 @@
+ 						mode46 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1783,8 +1738,7 @@
+ 						mode47 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1816,8 +1770,7 @@
+ 						mode48 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1849,8 +1802,7 @@
+ 						mode49 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1882,8 +1834,7 @@
+ 						mode50 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1915,8 +1866,7 @@
+ 						mode51 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1948,8 +1898,7 @@
+ 						mode52 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -1981,8 +1930,7 @@
+ 						mode53 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -2014,8 +1962,7 @@
+ 						mode54 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -2047,8 +1994,7 @@
+ 						mode55 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -2080,8 +2026,7 @@
+ 						mode56 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -2113,8 +2058,7 @@
+ 						mode57 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -2146,8 +2090,7 @@
+ 						mode58 {
+ 							mclk_khz = "104250";
+ 							num_lanes = "2";
+-							tegra_sinterface = "serial_b";
+-							lane_polarity = "6";
++							tegra_sinterface = "serial_c";
+ 							phy_mode = "DPHY";
+ 							discontinuous_clk = "yes";
+ 							dpcm_enable = "false";
+@@ -2179,8 +2122,7 @@
+ 						mode59 {
+                                                         mclk_khz = "104250";
+                                                         num_lanes = "2";
+-                                                        tegra_sinterface = "serial_b";
+-                                                        lane_polarity = "6";
++                                                        tegra_sinterface = "serial_c";
+                                                         phy_mode = "DPHY";
+                                                         discontinuous_clk = "yes";
+                                                         dpcm_enable = "false";
+@@ -2212,8 +2154,7 @@
+ 						mode60 {
+                                                         mclk_khz = "104250";
+                                                         num_lanes = "2";
+-                                                        tegra_sinterface = "serial_b";
+-                                                        lane_polarity = "6";
++                                                        tegra_sinterface = "serial_c";
+                                                         phy_mode = "DPHY";
+                                                         discontinuous_clk = "yes";
+                                                         dpcm_enable = "false";
+@@ -2245,8 +2186,7 @@
+ 						mode61 {
+                                                         mclk_khz = "104250";
+                                                         num_lanes = "2";
+-                                                        tegra_sinterface = "serial_b";
+-                                                        lane_polarity = "6";
++                                                        tegra_sinterface = "serial_c";
+                                                         phy_mode = "DPHY";
+                                                         discontinuous_clk = "yes";
+                                                         dpcm_enable = "false";
+@@ -2278,8 +2218,7 @@
+ 						mode62 {
+                                                         mclk_khz = "104250";
+                                                         num_lanes = "2";
+-                                                        tegra_sinterface = "serial_b";
+-                                                        lane_polarity = "6";
++                                                        tegra_sinterface = "serial_c";
+                                                         phy_mode = "DPHY";
+                                                         discontinuous_clk = "yes";
+                                                         dpcm_enable = "false";
+@@ -2311,8 +2250,7 @@
+ 						mode63 {
+                                                         mclk_khz = "104250";
+                                                         num_lanes = "2";
+-                                                        tegra_sinterface = "serial_b";
+-                                                        lane_polarity = "6";
++                                                        tegra_sinterface = "serial_c";
+                                                         phy_mode = "DPHY";
+                                                         discontinuous_clk = "yes";
+                                                         dpcm_enable = "false";
+@@ -2344,8 +2282,7 @@
+ 						mode64 {
+                                                         mclk_khz = "104250";
+                                                         num_lanes = "2";
+-                                                        tegra_sinterface = "serial_b";
+-                                                        lane_polarity = "6";
++                                                        tegra_sinterface = "serial_c";
+                                                         phy_mode = "DPHY";
+                                                         discontinuous_clk = "yes";
+                                                         dpcm_enable = "false";
+@@ -2377,8 +2314,7 @@
+ 						mode65 {
+                                                         mclk_khz = "104250";
+                                                         num_lanes = "2";
+-                                                        tegra_sinterface = "serial_b";
+-                                                        lane_polarity = "6";
++                                                        tegra_sinterface = "serial_c";
+                                                         phy_mode = "DPHY";
+                                                         discontinuous_clk = "yes";
+                                                         dpcm_enable = "false";
+@@ -2410,8 +2346,7 @@
+ 						mode66 {
+                                                         mclk_khz = "104250";
+                                                         num_lanes = "2";
+-                                                        tegra_sinterface = "serial_b";
+-                                                        lane_polarity = "6";
++                                                        tegra_sinterface = "serial_c";
+                                                         phy_mode = "DPHY";
+                                                         discontinuous_clk = "yes";
+                                                         dpcm_enable = "false";
+@@ -2447,7 +2382,7 @@
+ 								reg = <0>;
+ 								adsd3500_out0: endpoint {
+ 									status = "okay";
+-									port-index = <1>;
++									port-index = <2>;
+ 									bus-width = <2>;
+ 									remote-endpoint = <&adsd3500_csi_in0>;
+ 								};
+@@ -2467,7 +2402,7 @@
+ 					status = "okay";
+ 					compatible = "pwm-gpio";
+ 					#pwm-cells = <2>;
+-					pwm-gpios = <&gpio TEGRA234_MAIN_GPIO(P, 0) GPIO_ACTIVE_HIGH>;
++					pwm-gpios = <&gpio TEGRA234_MAIN_GPIO(P, 1) GPIO_ACTIVE_HIGH>;
+ 				};
+ 				pinmux@2430000 {
+ 					pinctrl-names = "default";
+@@ -2482,6 +2417,23 @@
+ 							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+ 							nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+ 						};
++						extperiph2_clk_pp1 {
++                                                        nvidia,pins = "extperiph2_clk_pp1";
++                                                        nvidia,function = "rsvd2";
++                                                        nvidia,pull = <TEGRA_PIN_PULL_NONE>;
++                                                        nvidia,tristate = <TEGRA_PIN_DISABLE>;
++                                                        nvidia,enable-input = <TEGRA_PIN_ENABLE>;
++                                                        nvidia,lpdr = <TEGRA_PIN_DISABLE>;
++                                                };
++
++					};
++				};
++				gpio@c2f0000 {
++					cam-i2c-mux-select {
++						gpio-hog;
++						output-high;
++						gpios = <CAM_I2C_MUX 0>;
++						label = "cam_i2c_mux";
+ 					};
+ 				};
+ 			};
+-- 
+2.25.1
+
