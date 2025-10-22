@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.0)
 function(PopulateforPython targetdir)
     add_subdirectory(${targetdir})
     
-    file(GLOB PythonSources "${CMAKE_CURRENT_BINARY_DIR}/${targetdir}/*.py")
+    file(GLOB PythonSources "${CMAKE_CURRENT_SOURCE_DIR}/${targetdir}/*.py")
     
     if(WIN32)
         add_custom_command( TARGET aditofpython POST_BUILD

@@ -96,9 +96,9 @@ sudo apt install cmake g++ \
      doxygen graphviz
 ```
 
-For Linux builds install the necessary version of Python dev libraries. For example for Ubuntu 24.04 with Python 3.12 as the default Python:
+For Linux builds install the necessary version of Python dev libraries. For example for Ubuntu 22.04 with Python 3.10 as the default Python:
 ```console
-sudo apt install python3.12-dev
+sudo apt install python3.10-dev
 ```
 ### Building the SDK
 ```
@@ -108,7 +108,7 @@ git submodule update --init
 git checkout <branch or tag>
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j4
+cmake --build . -j 6
 ```
 
 ---
