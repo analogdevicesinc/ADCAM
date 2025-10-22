@@ -28,6 +28,9 @@ fi
 
 ROOTDIR=`pwd`
 BR_COMMIT=`git log -1 --pretty=format:%h`
+TOOLCHAIN_URL="https://developer.download.nvidia.com/embedded/L4T/bootlin/aarch64--glibc--stable-final.tar.gz"
+JETSON_LINUX_URL="https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.4/release/Jetson_Linux_r36.4.4_aarch64.tbz2"
+RELEASE_TAG="jetson_36.4.4"
 
 PATCH_DIR=$ROOTDIR/build/NVIDIA_ToF_ADSD3500_REL_PATCH_$(date +"%d%b%y")
 mkdir -p $PATCH_DIR
@@ -39,7 +42,7 @@ function configure_toolchain()
         mkdir -p build
         cd $ROOTDIR/build
         echo "Download the toolchain"
-        wget https://developer.download.nvidia.com/embedded/L4T/bootlin/aarch64--glibc--stable-final.tar.gz
+	wget "$TOOLCHAIN_URL"
         cd $ROOTDIR/build
         mkdir -p aarch64--glibc--stable-final
         echo "Extract the toolchain"
@@ -50,8 +53,8 @@ function configure_toolchain()
 
 function download_bsp_source()
 {
-        echo "Download and Extract the NVIDIA Jetson Linux 36.4.3 BSP Driver package"
-        wget -q -O- https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.3/release/Jetson_Linux_R36.4.3_aarch64.tbz2 | tar xj
+        echo "Download and Extract the NVIDIA Jetson Linux 36.4.4 BSP Driver package"
+	wget -q -O- "$JETSON_LINUX_URL" | tar xj
         echo "Clone the NVIDIA L4T linux kernel sources"
         cd Linux_for_Tegra/
         pushd .
@@ -59,11 +62,11 @@ function download_bsp_source()
 
 function download_linux_kernel()
 {
-        echo "Clone the NVIDIA L4T_36_4_3 linux kernel sources"
+        echo "Clone the NVIDIA L4T_36_4_4 linux kernel sources"
         cd source
-        ./source_sync.sh -t jetson_36.4.3
+	./source_sync.sh -t "$RELEASE_TAG"
         popd
-        echo "Build environmental setup Completed for Jetpack 6.2 !!!"
+        echo "Build environmental setup Completed for Jetpack 6.2.1 !!!"
 }
 
 function apply_git_format_patches()
@@ -76,7 +79,7 @@ function apply_git_format_patches()
 			echo "Applying nv-public directory\n\n"
 			pushd .
 			cd $ROOTDIR/build/Linux_for_Tegra/source/hardware/nvidia/t23x/nv-public/
-			git reset --hard origin/l4t/l4t-r36.4.2
+			git reset --hard origin/l4t/l4t-r36.4.4
 			git am $ROOTDIR/patches/hardware/nvidia/t23x/nv-public/*.patch
 			popd
 
@@ -84,7 +87,7 @@ function apply_git_format_patches()
 			echo "Applying kernel-jammy-src directory patches\n\n"
 			pushd .
 			cd $ROOTDIR/build/Linux_for_Tegra/source/kernel/kernel-jammy-src/
-			git reset --hard jetson_36.4.3
+			git reset --hard jetson_36.4.4
 			git am $ROOTDIR/patches/kernel/kernel-jammy-src/*.patch
 			popd
 
@@ -92,7 +95,7 @@ function apply_git_format_patches()
 			echo "Applying nvidia/drivers directory patches\n\n"
 			pushd .
 			cd $ROOTDIR/build/Linux_for_Tegra/source/nvidia-oot/drivers/
-			git reset --hard origin/l4t/l4t-r36.4.2
+			git reset --hard jetson_36.4.4
 			git am $ROOTDIR/patches/nvidia-oot/drivers/*.patch
 			popd
 
