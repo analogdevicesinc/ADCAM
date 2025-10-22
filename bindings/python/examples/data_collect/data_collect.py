@@ -31,10 +31,20 @@
 #
 import aditofpython as tof
 import argparse
-import os 
-import os.path
+import numpy as np
+import matplotlib.pyplot as plt
 import sys
+import os
 import time
+
+def help():
+    print(f"{sys.argv[0]} usage:")
+    print(f"Target: {sys.argv[0]} <mode number>")
+    print(f"Network connection: {sys.argv[0]} <mode number> <ip>")
+    print()
+    print("For example:")
+    print(f"python {sys.argv[0]} 0 192.168.56.1")
+    exit(1)
 
 mode_help_message = """Valid mode (-m) options are:
         0: short-range native;
@@ -46,13 +56,10 @@ mode_help_message = """Valid mode (-m) options are:
         6: short-range mixed;
         
         Note: --m argument supports index (Default: 0) """
-
-
-Ip= ''
+Ip = ''
 imager_configurations = ["standard", "standard-raw", "custom", "custom-raw"]
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser( formatter_class=argparse.RawTextHelpFormatter,
-        description='Script to run data collect python script')
+    parser = argparse.ArgumentParser(description='Script to run data collect python script')
     parser.add_argument('-f', dest='folder', default='./',
                         help='output folder [default: ./]', metavar = '<folder>')
     parser.add_argument('-n', dest='ncapture', type=int, default=1,
@@ -80,8 +87,8 @@ if __name__ == '__main__':
                         metavar='<load-configuration-file>')  
     args = parser.parse_args()
 
-    print ("SDK version: ", tof.getApiVersion(),"| branch: ", tof.getBranchVersion(), 
-           "| commit: ", tof.getCommitVersion() )
+
+    print("SDK version: ", tof.getApiVersion(), " | branch: ", tof.getBranchVersion(), " | commit: ", tof.getCommitVersion())
 
     #check if directory output folder exist, if not, create one
     if (args.folder):
@@ -132,23 +139,32 @@ if __name__ == '__main__':
         print("Failed to create system")
 
     cameras = []
-    
+
+
     if args.ip:
         ip = "ip:" + args.ip
         if args.netlinktest:
             ip += ":netlinktest"
-        status = system.getCameraList(cameras, ip)
+        status = system.getCameraList(cameras, args.ip)
     else:
         status = system.getCameraList(cameras)
-    
+
     print("system.getCameraList(): ", status)
     if status != tof.Status.Ok:
         sys.exit("No cameras found")
-    
+
+
     camera1 = cameras[0]
+    mode = args.mode
+
+    #create callback and register it to the interrupt routine
+    def callbackFunction(callbackStatus):
+        print("Running the python callback for which the status of ADSD3500 has been forwarded. ADSD3500 status = ", callbackStatus)
+
+    sensor = camera1.getSensor()
+    status = sensor.adsd3500_register_interrupt_callback(callbackFunction)
 
     status = camera1.initialize()
-    print('camera1.initialize()', status)
     if status != tof.Status.Ok:
         sys.exit("Could not initialize camera!")
 
@@ -189,12 +205,12 @@ if __name__ == '__main__':
         else:
             print('Please reboot the board')
 
-    #Get frame types
+    # Get frame type
     modes = []
     status = camera1.getAvailableModes(modes)
     if status != tof.Status.Ok or len(modes) == 0:
         sys.exit('Could not acquire available modes')
-   
+
     #check mode, accepts both string and index
     if (args.mode):
         if int(args.mode) not in modes:
@@ -202,8 +218,9 @@ if __name__ == '__main__':
         else:
             mode = int(args.mode)
             print(f'Mode: {mode}')
-    
-    status = camera1.setMode(mode)
+
+
+    status = camera1.setMode(int(mode))
     if status != tof.Status.Ok:
         sys.exit("Could not set camera mode!")
 
