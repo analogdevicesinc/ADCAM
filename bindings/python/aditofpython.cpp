@@ -35,6 +35,7 @@
 #include "pybind11/stl.h"
 
 #include <aditof/aditof.h>
+#include <aditof/version-kit.h>
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
@@ -861,6 +862,7 @@ PYBIND11_MODULE(aditofpython, m) {
              py::arg("frameContent"));
 
     //SDK version
+    m.def("getKitVersion", &aditof::getKitVersion);
     m.def("getApiVersion", &aditof::getApiVersion);
     m.def("getBranchVersion", &aditof::getBranchVersion);
     m.def("getCommitVersion", &aditof::getCommitVersion);

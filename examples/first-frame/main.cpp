@@ -34,6 +34,7 @@
 #include <aditof/frame.h>
 #include <aditof/system.h>
 #include <aditof/version.h>
+#include <aditof/version-kit.h>
 #include <command_parser.h>
 #include <fstream>
 #ifdef USE_GLOG
@@ -145,7 +146,8 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    LOG(INFO) << "SDK version: " << aditof::getApiVersion()
+    LOG(INFO) << "ADCAM version: " << aditof::getKitVersion()
+	      << " | SDK version: " << aditof::getApiVersion()
               << " | branch: " << aditof::getBranchVersion()
               << " | commit: " << aditof::getCommitVersion();
 

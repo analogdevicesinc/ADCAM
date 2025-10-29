@@ -10,11 +10,11 @@ if( ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR} )
 endif()
 
 ############################### Version #######################################
-set(ADITOF_VERSION_MAJOR 0)
-set(ADITOF_VERSION_MINOR 1)
-set(ADITOF_VERSION_PATCH 0)
+set(ADCAM_VERSION_MAJOR 0)
+set(ADCAM_VERSION_MINOR 1)
+set(ADCAM_VERSION_PATCH 0)
 
-set(VERSION "${ADITOF_VERSION_MAJOR}.${ADITOF_VERSION_MINOR}.${ADITOF_VERSION_PATCH}")
+set(VERSION "${ADCAM_VERSION_MAJOR}.${ADCAM_VERSION_MINOR}.${ADCAM_VERSION_PATCH}")
 
 ############################### Options #######################################
 option(WITH_EXAMPLES "Build examples?" ON)
@@ -206,3 +206,6 @@ endif()
 
 ############################### Installer #######################################
 configure_file(cmake/aditof-setup.iss.cmakein ${CMAKE_CURRENT_BINARY_DIR}/aditof-setup.iss @ONLY)
+
+############################### Version #######################################
+configure_file(cmake/version.h.cmakein ${CMAKE_SOURCE_DIR}/libaditof/sdk/include/aditof/version-kit.h @ONLY)

@@ -11,6 +11,7 @@
 #include <aditof/frame_handler.h>
 #include <aditof/system.h>
 #include <aditof/version.h>
+#include <aditof/version-kit.h>
 #include <chrono>
 #include <command_parser.h>
 #include <ctime>
@@ -166,7 +167,9 @@ int main(int argc, char *argv[]) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_alsologtostderr = 1;
 
-    LOG(INFO) << "SDK version: " << aditof::getApiVersion()
+
+    LOG(INFO) << "ADCAM version: " << aditof::getKitVersion()
+	      << " | SDK version: " << aditof::getApiVersion()
               << " | branch: " << aditof::getBranchVersion()
               << " | commit: " << aditof::getCommitVersion();
 
