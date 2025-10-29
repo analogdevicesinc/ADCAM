@@ -10,6 +10,7 @@
 #include "ADIImGUIExtensions.h"
 #include "ADIOpenFile.h"
 #include "aditof/version.h"
+#include "aditof/version-kit.h"
 #include <aditof/status_definitions.h>
 #include <cmath>
 #include <fcntl.h>
@@ -290,7 +291,7 @@ bool ADIMainWindow::startImGUI(const ADIViewerArgs &args) {
     // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
 #endif
 
-    std::string version = aditof::getApiVersion();
+    std::string version = aditof::getKitVersion();
     std::string _title = "Analog Devices, Inc. Time of Flight Main Window v" +
                          version; //Default name
 
@@ -1378,7 +1379,7 @@ void ADIMainWindow::InitCamera() {
         LOG(INFO) << "Reset successful.";
     }
 
-    std::string version = aditof::getApiVersion();
+    std::string version = aditof::getKitVersion();
     LOG(INFO) << "Preparing camera. Please wait...\n";
     view = std::make_shared<adiviewer::ADIView>(
         std::make_shared<adicontroller::ADIController>(m_camerasList),
