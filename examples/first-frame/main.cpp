@@ -33,8 +33,8 @@
 #include <aditof/depth_sensor_interface.h>
 #include <aditof/frame.h>
 #include <aditof/system.h>
-#include <aditof/version.h>
 #include <aditof/version-kit.h>
+#include <aditof/version.h>
 #include <command_parser.h>
 #include <fstream>
 #ifdef USE_GLOG
@@ -73,7 +73,8 @@ static const char Help_Menu[] =
         6: short-range mixed
 )";
 
-Status save_frame(aditof::Frame &frame, std::string frameType) {
+Status save_frame(aditof::Frame &frame, std::string frameType,
+                  const int &mode_num) {
 
     uint16_t *data1;
     FrameDataDetails fDetails;
@@ -90,7 +91,8 @@ Status save_frame(aditof::Frame &frame, std::string frameType) {
         return status;
     }
 
-    std::ofstream g("out_" + frameType + "_" + fDetails.type + ".bin",
+    std::ofstream g("out_" + frameType + "_" + fDetails.type + "mode_" +
+                        std::to_string(mode_num) + ".bin",
                     std::ios::binary);
     frame.getDataDetails(frameType, fDetails);
     g.write((char *)data1, fDetails.width * fDetails.height * sizeof(uint16_t));
@@ -147,7 +149,7 @@ int main(int argc, char *argv[]) {
     }
 
     LOG(INFO) << "ADCAM version: " << aditof::getKitVersion()
-	      << " | SDK version: " << aditof::getApiVersion()
+              << " | SDK version: " << aditof::getApiVersion()
               << " | branch: " << aditof::getBranchVersion()
               << " | commit: " << aditof::getCommitVersion();
 
@@ -246,8 +248,8 @@ int main(int argc, char *argv[]) {
         LOG(INFO) << "succesfully requested frame!";
     }
 
-    save_frame(frame, "ab");
-    save_frame(frame, "depth");
+    save_frame(frame, "ab", mode);
+    save_frame(frame, "depth", mode);
 
     status = camera->stop();
     if (status != Status::OK) {
