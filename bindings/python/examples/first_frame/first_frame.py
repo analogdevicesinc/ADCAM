@@ -38,14 +38,14 @@ import struct
 
 def help():
     print(f"{sys.argv[0]} usage:")
-    print(f"Target: {sys.argv[0]} <mode number>")
-    print(f"Network connection: {sys.argv[0]} <mode number> <ip>")
+    print(f"Target: {sys.argv[0]} <mode number> <show frames(0/1)>")
+    print(f"Network connection: {sys.argv[0]} <mode number> <ip> <show frames (0/1)>")
     print()
     print("For example:")
-    print(f"python {sys.argv[0]} 0 192.168.56.1")
+    print(f"python {sys.argv[0]} 0 192.168.56.1 0")
     exit(1)
 
-if len(sys.argv) < 2 or len(sys.argv) > 3 or sys.argv[1] == "--help" or sys.argv[1] == "-h" :
+if len(sys.argv) < 3 or len(sys.argv) > 4 or sys.argv[1] == "--help" or sys.argv[1] == "-h" :
     help()
     exit(-1)
 
@@ -55,14 +55,17 @@ print("SDK version: ", tof.getApiVersion(), " | branch: ", tof.getBranchVersion(
 
 mode = 0
 cameras = []
+isdisplay = 1
 ip = ""
-if len(sys.argv) == 3:
+if len(sys.argv) == 4:
     mode = sys.argv[1]
     ip = sys.argv[2]
     print (f"Looking for camera on network @ {ip}.")
     ip = "ip:" + ip
-elif len(sys.argv) == 2:
+    isdisplay = sys.argv[3]
+elif len(sys.argv) == 3:
     mode = sys.argv[1]
+    isdisplay = sys.argv[2]
     print (f"Looking for camera on Target.")
 else :
     print("Too many arguments provided!")
@@ -169,40 +172,41 @@ print("Laser temperature from metadata: ", laser_temp)
 print("Frame number from metadata: ", frame_num)
 print("Mode from metadata: ", imager_mode)
 
-# Create a figure with 4 subplots (3 images + 1 metadata text)
-fig, axs = plt.subplots(1, 4, figsize=(18, 5))  # 1 row, 4 columns
+if int(isdisplay)==1:
+    # Create a figure with 4 subplots (3 images + 1 metadata text)
+    fig, axs = plt.subplots(1, 4, figsize=(18, 5))  # 1 row, 4 columns
 
-# Plot the depth image
-axs[0].imshow(image_depth, cmap='jet')
-axs[0].set_title("Depth Image")
-axs[0].axis("off")
+    # Plot the depth image
+    axs[0].imshow(image_depth, cmap='jet')
+    axs[0].set_title("Depth Image")
+    axs[0].axis("off")
 
-# Plot the AB image
-axs[1].imshow(image_ab, cmap='gray')
-axs[1].set_title("AB Image")
-axs[1].axis("off")
+    # Plot the AB image
+    axs[1].imshow(image_ab, cmap='gray')
+    axs[1].set_title("AB Image")
+    axs[1].axis("off")
 
-# Plot the Confidence image
-axs[2].imshow(image_conf, cmap='gray')
-axs[2].set_title("Confidence Image")
-axs[2].axis("off")
+    # Plot the Confidence image
+    axs[2].imshow(image_conf, cmap='gray')
+    axs[2].set_title("Confidence Image")
+    axs[2].axis("off")
 
-# Add colorbars
-fig.colorbar(axs[0].imshow(image_depth, cmap='jet'), ax=axs[0])
-fig.colorbar(axs[1].imshow(image_ab, cmap='gray'), ax=axs[1])
-fig.colorbar(axs[2].imshow(image_conf, cmap='gray'), ax=axs[2])
+    # Add colorbars
+    fig.colorbar(axs[0].imshow(image_depth, cmap='jet'), ax=axs[0])
+    fig.colorbar(axs[1].imshow(image_ab, cmap='gray'), ax=axs[1])
+    fig.colorbar(axs[2].imshow(image_conf, cmap='gray'), ax=axs[2])
 
-# Metadata as text in the fourth subplot
-axs[3].axis("off")  # Hide axes
-metadata_text = (
-    f"Sensor Temp: {sensor_temp}°C\n"
-    f"Laser Temp: {laser_temp}°C\n"
-    f"Frame #: {frame_num}\n"
-    f"Mode: {imager_mode}"
-)
-axs[3].text(0.1, 0.5, metadata_text, fontsize=12, verticalalignment='center')
+    # Metadata as text in the fourth subplot
+    axs[3].axis("off")  # Hide axes
+    metadata_text = (
+        f"Sensor Temp: {sensor_temp}°C\n"
+        f"Laser Temp: {laser_temp}°C\n"
+        f"Frame #: {frame_num}\n"
+        f"Mode: {imager_mode}"
+    )
+    axs[3].text(0.1, 0.5, metadata_text, fontsize=12, verticalalignment='center')
 
-plt.tight_layout()
-plt.show()
+    plt.tight_layout()
+    plt.show()
 
 
