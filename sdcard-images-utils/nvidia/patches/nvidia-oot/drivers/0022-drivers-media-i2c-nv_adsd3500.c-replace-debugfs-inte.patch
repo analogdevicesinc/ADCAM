@@ -1,0 +1,242 @@
+From 2af70d0cf2bd9db32a5706a87fcb7f1ce4118e9d Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan-Padmanaban_adi <sivasubramaniyan.padmanaban@analog.com>
+Date: Fri, 31 Oct 2025 12:22:04 +0530
+Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: replace debugfs interface
+ with procfs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The debug interface for adsd3500 previously used debugfs entries under
+/sys/kernel/debug/adsd3500 for user-space access. Since debugfs requires
+root privileges and is intended only for debugging, the interface has been
+migrated to procfs to allow non-root user access.
+
+Using procfs makes the driver’s control and status access available without
+sudo while keeping kernel interaction simple and safe.
+
+Signed-off-by: Sivasubramaniyan-Padmanaban_adi <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/nv_adsd3500.c | 99 ++++++++++++++++++++-------------
+ 1 file changed, 61 insertions(+), 38 deletions(-)
+
+diff --git a/drivers/media/i2c/nv_adsd3500.c b/drivers/media/i2c/nv_adsd3500.c
+index e90f7f6a..68d4c4ab 100644
+--- a/drivers/media/i2c/nv_adsd3500.c
++++ b/drivers/media/i2c/nv_adsd3500.c
+@@ -19,7 +19,7 @@
+ #include <linux/of_device.h>
+ #include <linux/of_gpio.h>
+ #include <linux/regmap.h>
+-#include <linux/debugfs.h>
++#include <linux/proc_fs.h>
+ #include <media/v4l2-ctrls.h>
+ #include <media/v4l2-subdev.h>
+ 
+@@ -83,7 +83,8 @@ struct adsd3500 {
+ 
+ 	struct v4l2_ctrl 		*ctrls[15];
+ 	struct pwm_device 		*pwm_fsync;
+-	struct dentry 			*debugfs;
++	struct proc_dir_entry 		*proc_dir;
++	struct proc_dir_entry 		*proc_file;
+ 	struct task_struct 		*task;
+ };
+ 
+@@ -97,8 +98,8 @@ struct adsd3500 {
+ #define V4L2_CID_ADSD3500_FSYNC_TRIGGER 	(V4L2_CID_USER_ADITOF_BASE + 7)
+ #define V4L2_CID_ADSD3500_LOAD_FIRMWARE 	(V4L2_CID_USER_ADITOF_BASE + 8)
+ 
+-ssize_t debug_read(struct file *file, char __user *buff, size_t count, loff_t *offset);
+-ssize_t debug_write(struct file *file, const char __user *buff, size_t count, loff_t *offset);
++ssize_t adsd3500_proc_read(struct file *file, char __user *buff, size_t count, loff_t *offset);
++ssize_t adsd3500_proc_write(struct file *file, const char __user *buff, size_t count, loff_t *offset);
+ static int adsd3500_set_fsync_trigger(struct adsd3500 *adsd3500, s32 val);
+ static int adsd3500_load_firmware(struct v4l2_subdev *sd);
+ 
+@@ -116,31 +117,33 @@ static const s64 link_freq_tbl[] = {
+ 	1250000000,
+ };
+ 
+-static int debug_open(struct inode *inode, struct file *file)
++static int adsd3500_proc_open(struct inode *inode, struct file *file)
+ {
+ 	struct adsd3500 *adsd3500;
+ 
+-	if (inode->i_private)
+-		file->private_data = inode->i_private;
++	adsd3500 = PDE_DATA(inode);
++	if (!adsd3500)
++		return -ENODEV;
+ 
+-	adsd3500 = (struct adsd3500 *) file->private_data;
++	file->private_data = adsd3500;
+ 
+-	dev_dbg(adsd3500->dev, "Entered debugfs file open\n");
++	dev_dbg(adsd3500->dev, "Entered procfs file open\n");
+ 
+ 	return 0;
+ }
+ 
+-static int debug_release(struct inode *inode, struct file *file)
++static int adsd3500_proc_release(struct inode *inode, struct file *file)
+ {
+ 	struct adsd3500 *adsd3500;
+ 	struct task_struct *release_task = get_current();
+ 
+-	if (inode->i_private)
+-		file->private_data = inode->i_private;
++	adsd3500 = PDE_DATA(inode);
++	if (!adsd3500)
++		return -ENODEV;
+ 
+-	adsd3500 = (struct adsd3500 *) file->private_data;
++	file->private_data = adsd3500;
+ 
+-	dev_dbg(adsd3500->dev, "Entered debugfs file close\n");
++	dev_dbg(adsd3500->dev, "Entered procfs file close\n");
+ 	if(release_task == adsd3500->task) {
+ 		adsd3500->task = NULL;
+ 	}
+@@ -148,18 +151,27 @@ static int debug_release(struct inode *inode, struct file *file)
+ 	return 0;
+ }
+ 
+-ssize_t debug_read(struct file *file, char __user *buff, size_t count, loff_t *offset){
++ssize_t adsd3500_proc_read(struct file *file, char __user *buff, size_t count, loff_t *offset){
+ 
+-	struct adsd3500 *adsd3500 = file->private_data;
++	struct adsd3500 *adsd3500;
+ 	unsigned int read_val;
+ 	unsigned int len;
+ 	int ret;
+ 	char data[16];
+ 
+-	dev_dbg(adsd3500->dev, "Entered debugfs file read\n");
++	adsd3500 = PDE_DATA(file_inode(file));
++	if (!adsd3500)
++		return -ENODEV;
++
++	if (!adsd3500->regmap) {
++		dev_err(adsd3500->dev, "regmap not initialized\n");
++		return -EFAULT;
++	}
++
++	dev_dbg(adsd3500->dev, "Entered procfs file read\n");
+ 	ret = regmap_read(adsd3500->regmap, GET_IMAGER_STATUS_CMD, &read_val);
+ 	if (ret < 0) {
+-		dev_err(adsd3500->dev, "Read of get status cmd failed.\n");
++		dev_err(adsd3500->dev, "Read of get status cmd failed %d.\n", ret);
+ 		len = snprintf(data, sizeof(data), "Read failed\n");
+ 	}
+ 	else{
+@@ -170,22 +182,28 @@ ssize_t debug_read(struct file *file, char __user *buff, size_t count, loff_t *o
+ 
+ }
+ 
+-ssize_t debug_write(struct file *file, const char __user *buff, size_t count, loff_t *offset){
++ssize_t adsd3500_proc_write(struct file *file, const char __user *buff, size_t count, loff_t *offset){
++
++	struct adsd3500 *adsd3500;
+ 
+-	struct adsd3500 *adsd3500 = file->private_data;
++	adsd3500 = PDE_DATA(file_inode(file));
++	if (!adsd3500)
++		return -ENODEV;
+ 
+-	dev_dbg(adsd3500->dev, "Entered debugfs file write\n");
++	dev_dbg(adsd3500->dev, "Entered procfs file write\n");
+ 
+ 	return count;
+ }
+ 
+-static long debug_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
++static long adsd3500_proc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ {
+ 	struct adsd3500 *adsd3500;
+ 
+-	adsd3500 = (struct adsd3500 *) file->private_data;
++	adsd3500 = PDE_DATA(file_inode(file));
++	if (!adsd3500)
++		return -ENODEV;
+ 
+-	dev_dbg(adsd3500->dev, "Entered debugfs ioctl\n");
++	dev_dbg(adsd3500->dev, "Entered procfs ioctl\n");
+ 	if (cmd == USER_TASK) {
+ 		dev_dbg(adsd3500->dev, "Registered user task\n");
+ 		adsd3500->task = get_current();
+@@ -195,13 +213,12 @@ static long debug_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 	return 0;
+ }
+ 
+-static const struct file_operations adsd3500_debug_fops = {
+-	.owner 	= THIS_MODULE,
+-	.open   = debug_open,
+-	.read 	= debug_read,
+-	.write  = debug_write,
+-	.unlocked_ioctl = debug_ioctl,
+-	.release= debug_release,
++static const struct proc_ops adsd3500_proc_ops = {
++	.proc_open   	= adsd3500_proc_open,
++	.proc_read 	= adsd3500_proc_read,
++	.proc_write  	= adsd3500_proc_write,
++	.proc_ioctl 	= adsd3500_proc_ioctl,
++	.proc_release	= adsd3500_proc_release,
+ };
+ 
+ static irqreturn_t adsd3500_irq_handler(int irq,void *priv)
+@@ -745,6 +762,7 @@ static bool adsd3500_regmap_accessible_reg(struct device *dev, unsigned int reg)
+ 		case GET_IMAGER_JBLF_STATE:
+ 		case GET_IMAGER_JBLF_FILT_SIZE:
+ 		case GET_FRAMERATE_CMD:
++		case GET_IMAGER_STATUS_CMD:
+ 			return 1;
+ 		default:
+ 			return 0;
+@@ -1435,13 +1453,17 @@ const static struct of_device_id adsd3500_of_match[] = {
+ 	{ /* sentinel */ }
+ };
+ 
+-static int adsd3500_debugfs_init(struct adsd3500 *priv){
++static int adsd3500_procfs_init(struct adsd3500 *priv){
+ 
+-	priv->debugfs = debugfs_create_dir("adsd3500", NULL);
+-	if(!priv->debugfs)
++	priv->proc_dir = proc_mkdir("adsd3500", NULL);
++	if (!priv->proc_dir)
+ 		return -ENOMEM;
+ 
+-	debugfs_create_file("value", 0660, priv->debugfs, priv, &adsd3500_debug_fops);
++	priv->proc_file = proc_create_data("value", 0666, priv->proc_dir, &adsd3500_proc_ops, priv);
++	if (!priv->proc_file) {
++		proc_remove(priv->proc_dir);
++		return -ENOMEM;
++	}
+ 
+ 	return 0;
+ }
+@@ -1804,9 +1826,9 @@ static int adsd3500_probe(struct i2c_client *client,
+ 	v4l2_i2c_subdev_init(priv->sd, client, &adsd3500_subdev_ops);
+ 	//v4l2_set_subdevdata(priv->sd, priv);
+ 
+-	ret= adsd3500_debugfs_init(priv);
++	ret= adsd3500_procfs_init(priv);
+ 	if(ret < 0){
+-		dev_err(&client->dev, "Failed to initialize debugfs.\n");
++		dev_err(&client->dev, "Failed to initialize procfs.\n");
+ 		return ret;
+ 	}
+ 
+@@ -1875,7 +1897,8 @@ static int adsd3500_remove(struct i2c_client *client)
+ 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
+ 	camera_common_cleanup(priv->s_data);
+ 	mutex_destroy(&priv->lock);
+-	debugfs_remove(priv->debugfs);
++	proc_remove(priv->proc_file);
++	proc_remove(priv->proc_dir);
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+ 	return 0;
+-- 
+2.25.1
+
