@@ -32,10 +32,12 @@
 
 #ifdef NVIDIA
 #define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG 	(0x009819d1)
+const char *debugfs_name = "/proc/adsd3500/value";
 #endif
 
 #ifdef NXP
 #define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (	0x009819e1)
+const char *debugfs_name = "/sys/kernel/debug/adsd3500/value";
 #endif
 
 /* Seed value for CRC computation */
@@ -58,7 +60,6 @@ typedef union
 	};
 } cmd_header_t;
 
-const char *debugfs_name = "/sys/kernel/debug/adsd3500/value";
 int debug_fd = -1;
 static int handler_done = 0;
 int signal_value = 0;
@@ -122,33 +123,60 @@ int Adsd3500::xioctl(int fd, int request, void* arg)
 	return r;
 }
 
+bool Adsd3500::findDevicePathsAtVideo(const std::string &video, std::string &subdev_path, std::string &device_name) {
+
+	char *buf;
+	int size = 0;
+	size_t pos;
+
+	/* Run media-ctl to get the video processing pipes */
+	char cmd[64];
+	sprintf(cmd, "media-ctl -d %s --print-dot", video.c_str());
+	FILE *fp = popen(cmd, "r");
+	if (!fp) {
+		std::cout << "Error running media-ctl";
+		return false;
+	}
+
+	/* Read the media-ctl output stream */
+	buf = (char *)malloc(128 * 1024);
+	while (!feof(fp)) {
+		fread(&buf[size], 1, 1, fp);
+		size++;
+	}
+	pclose(fp);
+	buf[size] = '\0';
+
+	/* Search command media-ctl for device/subdevice name */
+	string str(buf);
+	free(buf);
+
+
+	if (str.find("adsd3500") != string::npos) {
+		device_name = "adsd3500";
+		pos = str.find("adsd3500");
+		subdev_path = str.substr(pos + strlen("adsd3500") + 9,
+				strlen("/dev/v4l-subdevX"));
+	} else {
+		return false;
+	}
+	return true;
+}
+
 void Adsd3500::open_device() {
 	struct stat st;
 	struct sigaction act;
 	int32_t number;
+	bool status = true;
 
-	if (-1 == stat(dev_name, &st))
-	{
-		fprintf(stderr, "Cannot identify '%s': %d, %s\n", dev_name, errno, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	if (!S_ISCHR(st.st_mode))
-	{
-		fprintf(stderr, "%s is no device\n", dev_name);
-		exit(EXIT_FAILURE);
-	}
-
-	fd = open(dev_name, O_RDWR /* required */ | O_NONBLOCK, 0);
-
-	if (-1 == fd)
-	{
-		fprintf(stderr, "Cannot open '%s': %d, %s\n", dev_name, errno, strerror(errno));
-		exit(EXIT_FAILURE);
+	status = findDevicePathsAtVideo(video, subdevPath, deviceName);
+	if (!status) {
+		std::cout << "failed to find device paths at video: " << video;
+		return;
 	}
 
 	/* Open V4L2 subdevice */
-	if (stat("/dev/v4l-subdev1", &st) == -1) {
+	if (stat(subdevPath.c_str(), &st) == -1) {
 		fprintf(stderr, "1\n");
 		return;
 	}
@@ -158,7 +186,7 @@ void Adsd3500::open_device() {
 		return;
 	}
 
-	sfd = ::open("/dev/v4l-subdev1", O_RDWR | O_NONBLOCK, 0);
+	sfd = open(subdevPath.c_str(), O_RDWR | O_NONBLOCK, 0);
 	if (sfd == -1) {
 		fprintf(stderr, "1\n");
 		return;
@@ -179,7 +207,7 @@ void Adsd3500::open_device() {
 	std::cout << "Installed signal handler for SIGETX = "<< SIGETX << std::endl;
 
 	/* Open ADSD3500 debugfs */
-	debug_fd = open("/sys/kernel/debug/adsd3500/value", O_RDWR);
+	debug_fd = open(debugfs_name, O_RDWR);
 	if(debug_fd < 0) {
 		std::cout << "Failed to open the debug sysfs " << std::endl;
 		exit(EXIT_FAILURE);
@@ -190,7 +218,6 @@ void Adsd3500::open_device() {
 		std::cout << "Failed to send the IOCTL call" << std::endl;
 		close(debug_fd);
 		close(sfd);
-		close(fd);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -322,7 +349,6 @@ bool Adsd3500::updateAdsd3500MasterFirmware(const std::string& filePath)
 
 			std::cout<<"Firmware update failed"<<std::endl;
 			close(debug_fd);
-			close(fd);
 			exit(EXIT_FAILURE);
 		}
 		Wait_Time++;
@@ -389,7 +415,6 @@ bool Adsd3500::updateAdsd3500MasterFirmware(const std::string& filePath)
 
 	close(debug_fd);
 	close(sfd);
-	close(fd);
 
 	return true;
 }
@@ -523,7 +548,6 @@ bool Adsd3500::updateAdsd3500SlaveFirmware(const std::string& filePath)
 
 			std::cout<<"Firmware update failed"<<std::endl;
 			close(debug_fd);
-			close(fd);
 			exit(EXIT_FAILURE);
 		}
 		Wait_Time++;
@@ -588,7 +612,6 @@ bool Adsd3500::updateAdsd3500SlaveFirmware(const std::string& filePath)
 
 	close(debug_fd);
 	close(sfd);
-	close(fd);
 
 	return true;
 
