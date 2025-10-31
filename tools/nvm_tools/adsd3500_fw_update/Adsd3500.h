@@ -35,6 +35,8 @@
 #include <string>
 #include <iostream>
 
+using namespace std;
+
 bool validate_ext(std::string FileName, std::string Target);
 
 class Adsd3500 {
@@ -43,6 +45,8 @@ class Adsd3500 {
 
 	private:
 		int xioctl(int fd, int request, void* arg);
+
+		bool findDevicePathsAtVideo(const std::string &video, std::string &subdev_path, std::string &device_name);
 
 		void open_device();
 
@@ -70,9 +74,9 @@ class Adsd3500 {
 
 		bool read_burst_cmd(uint8_t *payload, uint16_t payload_len, uint8_t *data);
 
-		const char *dev_name = "/dev/video0";
-		const char *subdev_name = "/dev/v4l-subdev1";
-		int fd = -1;
+		std::string video = "/dev/media0";
+		std::string deviceName = "adsd3500";
+		std::string subdevPath;
 		int sfd = -1;
 };
 

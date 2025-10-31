@@ -10,6 +10,7 @@
 
 int main(int argc, char *argv[]) {
 
+#ifdef NXP
 	int user;
 	user = getuid();
 	if (user != 0)
@@ -17,6 +18,7 @@ int main(int argc, char *argv[]) {
 		std::cout << "Please run the application with sudo" << std::endl;
 		return 1;
 	}
+#endif
 
 	if (argc != 3) {
 		fprintf(stderr, "Usage: %s <file> <master|slave>\n", argv[0]);
