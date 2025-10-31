@@ -1,0 +1,4 @@
+ACTION=="add", KERNEL=="PAC.00",  SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/PAC.00/value"
+ACTION=="add", KERNEL=="gpio305", SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/gpio305/value"
+ACTION=="add", KERNEL=="gpio308", SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/gpio308/value"
+ACTION=="add", KERNEL=="gpio311", SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/gpio311/value"
