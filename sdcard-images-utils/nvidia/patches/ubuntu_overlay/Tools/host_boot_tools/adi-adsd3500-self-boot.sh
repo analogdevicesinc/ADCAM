@@ -5,44 +5,44 @@ MODULE=$(strings /proc/device-tree/tegra-camera-platform/modules/module0/badge)
 adsd3500_power_sequence(){
 
 	#Pull ADSD3500 reset low
-        sudo echo 0 > /sys/class/gpio/PH.06/value
+        echo 0 > /sys/class/gpio/PAC.00/value
 
         #Disable the the supply voltage
         #EN_1P8
-        sudo gpioset 2 0=0
+        gpioset 2 0=0
 
         #EN_0P8
-        sudo gpioset 2 1=0
+        gpioset 2 1=0
 
         sleep 0.2
 
         #I2CM_SET
-        sudo gpioset 2 3=0
+        gpioset 2 3=0
 
         #ISP_BS0 
-        sudo gpioset 2 6=0
+        gpioset 2 6=0
 
         #ISP_BS1
-        sudo gpioset 2 7=0
+        gpioset 2 7=0
 
         #ISP_BS4
-        sudo gpioset 2 9=0
+        gpioset 2 9=0
 
         #ISP_BS5
-        sudo gpioset 2 10=0
+        gpioset 2 10=0
 
         #EN_1P8
-        sudo gpioset 2 0=1
+        gpioset 2 0=1
 
         sleep 0.2
 
         #EN_0P8
-        sudo gpioset 2 1=1
+        gpioset 2 1=1
 
         sleep 0.2
 
         #Pull ADSD3500 reset high
-        sudo echo 1 > /sys/class/gpio/PH.06/value
+        echo 1 > /sys/class/gpio/PAC.00/value
 
 }
 
@@ -66,11 +66,5 @@ main(){
 
 	enable_self_boot
 }
-
-if [[ $EUID > 0 ]]; then
-                echo "This script must be run as root user"
-		echo "Usage: sudo ./adi-adsd3500-self-boot.sh"
-		exit
-fi
 
 main

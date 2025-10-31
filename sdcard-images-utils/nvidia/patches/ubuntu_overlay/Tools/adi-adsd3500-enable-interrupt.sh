@@ -1,11 +1,5 @@
 #!/bin/bash
 
-if [[ $EUID > 0 ]]; then
-	echo "This script must be run as root user"
-	echo "Usage: sudo ./adi-adsd3500-enable-interrupt.sh"
-	exit
-fi
-
 # export NET HOST_IO_SEL Pin
 if [ ! -d /sys/class/gpio/gpio305 ]
 then
