@@ -22,6 +22,11 @@ function apply_ubuntu_overlay()
 	echo "Copy all the shell scripts"
 	sudo cp $ROOTDIR/ubuntu_overlay/usr/share/systemd/*.sh		/usr/share/systemd/
 
+	echo "Copy the udev gpio rules"
+	sudo cp $ROOTDIR/ubuntu_overlay/etc/udev/rules.d/99-gpio.rules /etc/udev/rules.d/
+	sudo udevadm control --reload-rules
+	sudo udevadm trigger
+
 }
 
 function update_kernel()
