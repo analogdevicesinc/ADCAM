@@ -25,6 +25,9 @@
 #include <sys/stat.h>
 #include <linux/videodev2.h>
 #include "include/compute_crc.h"
+
+using namespace std;
+
 #define IOCTL_TRIES 1
 #define USER_TASK _IOW('A',1,int32_t*)
 #define SIGETX 		44
@@ -36,17 +39,19 @@
 #define ADI_STATUS_NVM_FLASH_UPDATE	0x000F
 #define FULL_UPDATE_CMD 0x12
 #define VER_MAJ 1
-#define VER_MIN 4
+#define VER_MIN 5
 #define VER_PATCH 0
 #define MAX_BIN_SIZE	1048576
 #define MIN_BIN_SIZE    741376
 
 #ifdef NVIDIA
 #define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (0x009819d1)
+const char *debugfs_name = "/proc/adsd3500/value";
 #endif
 
 #ifdef NXP
 #define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (0x009819e1)
+const char *debugfs_name = "/sys/kernel/debug/adsd3500/value";
 #endif
 
 /* Seed value for CRC computation */
@@ -70,6 +75,48 @@ bool validate_ext(const char *filename){
 		return true;
 	}
 	
+}
+
+bool findDevicePathsAtVideo(const std::string &video,
+		std::string &subdev_path,
+		std::string &device_name) {
+
+	char *buf;
+	int size = 0;
+	size_t pos;
+
+	/* Run media-ctl to get the video processing pipes */
+	char cmd[64];
+	sprintf(cmd, "media-ctl -d %s --print-dot", video.c_str());
+	FILE *fp = popen(cmd, "r");
+	if (!fp) {
+		std::cout << "Error running media-ctl";
+		return false;
+	}
+
+	/* Read the media-ctl output stream */
+	buf = (char *)malloc(128 * 1024);
+	while (!feof(fp)) {
+		fread(&buf[size], 1, 1, fp);
+		size++;
+	}
+	pclose(fp);
+	buf[size] = '\0';
+
+	/* Search command media-ctl for device/subdevice name */
+	string str(buf);
+	free(buf);
+
+
+	if (str.find("adsd3500") != string::npos) {
+		device_name = "adsd3500";
+		pos = str.find("adsd3500");
+		subdev_path = str.substr(pos + strlen("adsd3500") + 9,
+				strlen("/dev/v4l-subdevX"));
+	} else {
+		return false;
+	}
+	return true;
 }
 
 static int xioctl(int fd, int request, void *arg)
@@ -155,6 +202,11 @@ int main(int argc, char **argv)
 	bool retval;
 	bool validate;
 	uint8_t Status_Command;
+	bool status = true;
+
+	std::string video = "/dev/media0";
+	std::string deviceName = "adsd3500";
+	std::string subdevPath;
 
 	if(argc < 2){
                 std::cout<<"Please pass valid file.\nEg: Flash.nvm"<<std::endl;
@@ -169,8 +221,13 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	status = findDevicePathsAtVideo(video, subdevPath, deviceName);
+	if (!status) {
+		std::cout << "failed to find device paths at video: " << video;
+		return status;
+	}
 
-	fd = open("/dev/v4l-subdev1", O_RDWR | O_NONBLOCK);
+	fd = open(subdevPath.c_str(), O_RDWR | O_NONBLOCK);
 	if (fd == -1)
 	{
 		std::cout << "Failed to open the camera" << std::endl;
@@ -201,7 +258,7 @@ int main(int argc, char **argv)
 	std::cout << "Installed signal handler for SIGETX = "<< SIGETX << std::endl;
 
 	/* Open ADSD3500 debugfs */
-	debug_fd = open("/sys/kernel/debug/adsd3500/value", O_RDWR);
+	debug_fd = open(debugfs_name, O_RDWR);
 	if(debug_fd < 0) {
 		std::cout << "Failed to open the debug sysfs " << std::endl;
 		return -1;
