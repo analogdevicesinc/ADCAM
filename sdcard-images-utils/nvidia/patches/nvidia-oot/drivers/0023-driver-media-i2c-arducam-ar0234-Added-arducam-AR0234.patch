@@ -1,0 +1,1121 @@
+From 55cb3ec842d9071a8fe1b3749325476c11430339 Mon Sep 17 00:00:00 2001
+From: Kishan kava <kishan.kava@analog.com>
+Date: Fri, 31 Oct 2025 17:30:07 +0530
+Subject: [PATCH] driver: media: i2c: arducam ar0234: Added arducam AR0234 RGB
+ camera v4l2 driver.
+
+Signed-off-by: Kishan Kava <kishan.kava@analog.com>
+---
+ drivers/media/i2c/Makefile             |   1 +
+ drivers/media/i2c/arducam_jetvariety.c | 909 +++++++++++++++++++++++++
+ drivers/media/i2c/arducam_jetvariety.h | 169 +++++
+ 3 files changed, 1079 insertions(+)
+ create mode 100644 drivers/media/i2c/arducam_jetvariety.c
+ create mode 100644 drivers/media/i2c/arducam_jetvariety.h
+
+diff --git a/drivers/media/i2c/Makefile b/drivers/media/i2c/Makefile
+index 7960eab7..ae7e9896 100644
+--- a/drivers/media/i2c/Makefile
++++ b/drivers/media/i2c/Makefile
+@@ -22,6 +22,7 @@ obj-m += nv_ov5693.o
+ obj-m += nv_ar0234.o
+ obj-m += nv_hawk_owl.o
+ obj-m += max929x.o
++obj-m += arducam_jetvariety.o
+ endif
+ 
+ obj-m += pca9570.o
+diff --git a/drivers/media/i2c/arducam_jetvariety.c b/drivers/media/i2c/arducam_jetvariety.c
+new file mode 100644
+index 00000000..c8fc40ca
+--- /dev/null
++++ b/drivers/media/i2c/arducam_jetvariety.c
+@@ -0,0 +1,909 @@
++/*
++ * arducam.c - arducam sensor driver
++ *
++ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms and conditions of the GNU General Public License,
++ * version 2, as published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++ * more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++#include <linux/slab.h>
++#include <linux/uaccess.h>
++#include <linux/gpio.h>
++#include <linux/module.h>
++#include <linux/seq_file.h>
++#include <linux/of.h>
++#include <linux/of_device.h>
++#include <linux/of_gpio.h>
++#include <linux/crc32.h>
++#include <media/tegra_v4l2_camera.h>
++#include <media/tegracam_core.h>
++#include <media/v4l2-device.h>
++#include <media/v4l2-event.h>
++#include <media/v4l2-fwnode.h>
++#include <media/v4l2-subdev.h>
++#include <media/tegra-v4l2-camera.h>
++
++#include "../platform/tegra/camera/camera_gpio.h"
++#include "arducam_jetvariety.h"
++
++#define RD_MCU_INFO  1
++
++#define arducam_reg struct reg_8
++
++// /* arducam - sensor parameter limits */
++// #define ARDUCAM_MIN_GAIN						0x0000
++// #define ARDUCAM_MAX_GAIN						0x00FF
++// #define ARDUCAM_MIN_COARSE_EXPOSURE				0x0001
++// #define ARDUCAM_MAX_COARSE_DIFF					0x0004
++
++// /* arducam sensor register address */
++// #define ARDUCAM_MODEL_ID_ADDR_MSB			0x0016
++// #define ARDUCAM_MODEL_ID_ADDR_LSB			0x0017
++// #define ARDUCAM_GAIN_ADDR					0x0205
++// #define ARDUCAM_FRAME_LENGTH_ADDR_MSB		0x0340
++// #define ARDUCAM_FRAME_LENGTH_ADDR_LSB		0x0341
++// #define ARDUCAM_COARSE_INTEG_TIME_ADDR_MSB	0x0202
++// #define ARDUCAM_COARSE_INTEG_TIME_ADDR_LSB	0x0203
++// #define ARDUCAM_FINE_INTEG_TIME_ADDR_MSB		0x0200
++// #define ARDUCAM_FINE_INTEG_TIME_ADDR_LSB		0x0201
++
++
++static int debug = 4;
++MODULE_PARM_DESC(debug, "debug");
++module_param(debug, int, 0600); /* S_IRUGO */
++
++static const struct of_device_id arducam_of_match[] = {
++	{ .compatible = "arducam,arducam-jvar", },
++	{ },/*  */
++};
++MODULE_DEVICE_TABLE(of, arducam_of_match);
++
++static const u32 ctrl_cid_list[] = {
++	TEGRA_CAMERA_CID_GAIN,
++	TEGRA_CAMERA_CID_EXPOSURE,
++	TEGRA_CAMERA_CID_FRAME_RATE,
++	TEGRA_CAMERA_CID_SENSOR_MODE_ID,
++};
++
++
++
++static const struct regmap_config sensor_regmap_config = {
++	.reg_bits = 16,
++	.val_bits = 8,
++	.cache_type = REGCACHE_RBTREE,
++	// .use_single_read = true,
++};
++
++
++//static int wait_for_free(struct i2c_client *client, int interval) {
++//	u32 value;
++//	u32 count = 0;
++//	while(count++ < (1000 / interval)) {
++//		int ret = arducam_read(client, SYSTEM_IDLE_REG, &value);
++//		if (!ret && !value) break;
++//		msleep(interval);
++//	}
++//	v4l2_err(client, "%s: End wait, Count: %d.\n", __func__, count);
++//
++//	return 0;
++//}
++
++static int arducam_readl_reg(struct i2c_client *client,
++								   u16 addr, u32 *val)
++{
++    u16 buf = htons(addr);
++    u32 data;
++    struct i2c_msg msgs[2] = {
++		{
++			.addr = client->addr,
++			.flags= 0,
++			.len = 2,
++			.buf = (u8 *)&buf,
++		},
++		{
++			.addr = client->addr,
++			.flags= I2C_M_RD,
++			.len = 4,
++			.buf = (u8 *)&data,
++		},
++	};
++
++	if(i2c_transfer(client->adapter, msgs, 2) != 2){
++		return -1;
++	}
++
++	*val = ntohl(data);
++
++	return 0;
++}
++
++static int arducam_writel_reg(struct i2c_client *client,
++									u16 addr, u32 val)
++{
++	u8 data[6];
++	struct i2c_msg msgs[2] = {
++		{
++			.addr = client->addr,
++			.flags= 0,
++			.len = 6,
++			.buf = data,
++		},
++	};
++	addr = htons(addr);
++	val = htonl(val);
++	memcpy(data, &addr, 2);
++	memcpy(data + 2, &val, 4);
++
++	if(i2c_transfer(client->adapter, msgs, 1) != 1)
++		return -1;
++	//usleep_range(500, 500);
++	return 0;
++}
++
++int arducam_read(struct i2c_client *client, u16 addr, u32 *value)
++{
++	int ret;
++	int count = 0;
++	//wait_for_free
++	static int flag  = 0;
++	if(flag == 1){
++		while(flag){msleep(1);};
++	}else{
++		flag = 1;
++	}
++	while (count++ < I2C_READ_RETRY_COUNT) {
++		ret = arducam_readl_reg(client, addr, value);
++		if(!ret) {
++			v4l2_dbg(1, debug, client, "%s: 0x%02x 0x%04x\n",
++				__func__, addr, *value);
++			flag = 0;
++			return ret;
++		}
++	}
++	flag = 0;
++	
++	v4l2_err(client, "%s: Reading register 0x%02x failed\n",
++			 __func__, addr);
++	//mutex_unlock(&priv->mutex);
++	return ret;
++}
++
++int arducam_write(struct i2c_client *client, u16 addr, u32 value)
++{
++	int ret;
++	int count = 0;
++	static int flag = 0;
++	if(flag == 1){
++		while(flag){msleep(1);};
++	}else{
++		flag = 1;
++	}
++	while (count++ < I2C_WRITE_RETRY_COUNT) {
++		ret = arducam_writel_reg(client, addr, value);
++		if(!ret){
++			flag = 0;
++			return ret;
++		}
++			
++	}
++	v4l2_err(client, "%s: Write 0x%04x to register 0x%02x failed\n",
++			 __func__, value, addr);
++	//mutex_unlock(&priv->mutex);
++	flag = 0;
++	return ret;
++}
++#if defined RD_MCU_INFO
++static int arducam_get_length_of_set(struct i2c_client *client,
++									u16 idx_reg, u16 val_reg)
++{
++	int ret;
++	int index = 0;
++	u32 val;
++	while (1) {
++		ret = arducam_write(client, idx_reg, index);
++		ret += arducam_read(client, val_reg, &val);
++
++		if (ret < 0)
++			return -1;
++
++		if (val == NO_DATA_AVAILABLE)
++			break;
++		index++;
++	}
++	arducam_write(client, idx_reg, 0);
++	return index;
++}
++#endif
++
++
++static inline int arducam_read_reg(struct camera_common_data *s_data,
++	u16 addr, u8 *val)
++{
++	int err = 0;
++	u32 reg_val = 0;
++
++	err = regmap_read(s_data->regmap, addr, &reg_val);
++	*val = reg_val & 0xff;
++
++	return err;
++}
++
++static inline int arducam_write_reg(struct camera_common_data *s_data,
++	u16 addr, u8 val)
++{
++	int err = 0;
++
++	err = regmap_write(s_data->regmap, addr, val);
++	if (err)
++		dev_err(s_data->dev, "%s: i2c write failed, 0x%x = %x",
++			__func__, addr, val);
++
++	return err;
++}
++static int arducam_set_group_hold(struct tegracam_device *tc_dev, bool val)
++{
++	/* arducam does not support group hold */
++	return 0;
++}
++
++static int arducam_set_gain(struct tegracam_device *tc_dev, s64 val)
++{
++	struct camera_common_data *s_data = tc_dev->s_data;
++	struct device *dev = s_data->dev;
++	struct arducam *priv = (struct arducam *)tc_dev->priv;
++	const struct sensor_mode_properties *mode =
++		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
++	int err = 0;
++	s16 gain;
++	if (val < mode->control_properties.min_gain_val)
++		val = mode->control_properties.min_gain_val;
++	else if (val > mode->control_properties.max_gain_val)
++		val = mode->control_properties.max_gain_val;
++	/* translate value (from normalized analog gain) */
++	//gain = (s16)((256 * mode->control_properties.gain_factor) / val);
++	//gain = (s16)(val/(mode->control_properties.gain_factor));
++	gain = (s16)val;
++	dev_dbg(dev, "%s: val: %lld (/%d) [times], gain: %u\n",
++		__func__, val, mode->control_properties.gain_factor, gain);
++	err = arducam_write(priv->i2c_client,CTRL_ID_REG, V4L2_CID_ANALOGUE_GAIN);
++	err += arducam_write(priv->i2c_client,CTRL_VALUE_REG, gain & 0xFFFFFFFF);
++	return 0;
++}
++
++static int arducam_set_frame_rate(struct tegracam_device *tc_dev, s64 val)
++{
++	struct camera_common_data *s_data = tc_dev->s_data;
++	struct arducam *priv = (struct arducam *)tc_dev->priv;
++	struct device *dev = tc_dev->dev;
++	const struct sensor_mode_properties *mode =
++		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
++	int err = 0;
++	u32 ARDUCAM_MIN_FRAME_LENGTH = 0;
++	u32 ARDUCAM_MAX_FRAME_LENGTH = 0;
++	u32 frame_length, vblack;
++    err += arducam_write(priv->i2c_client, CTRL_ID_REG, V4L2_CID_VBLANK);
++	err += arducam_write(priv->i2c_client, CTRL_VALUE_REG, 0); //dummy write to wait device prepare data 
++	msleep(10);
++	err += arducam_read(priv->i2c_client, CTRL_MIN_REG, &ARDUCAM_MIN_FRAME_LENGTH);
++	err += arducam_read(priv->i2c_client, CTRL_MAX_REG, &ARDUCAM_MAX_FRAME_LENGTH);
++	ARDUCAM_MAX_FRAME_LENGTH +=mode->image_properties.height; 
++    ARDUCAM_MIN_FRAME_LENGTH +=mode->image_properties.height; 
++	frame_length = (u32)(mode->signal_properties.pixel_clock.val *
++		(u64)mode->control_properties.framerate_factor /
++		mode->image_properties.line_length / val);
++
++	if (frame_length < ARDUCAM_MIN_FRAME_LENGTH)
++		frame_length = ARDUCAM_MIN_FRAME_LENGTH;
++	else if (frame_length > ARDUCAM_MAX_FRAME_LENGTH)
++		frame_length = ARDUCAM_MAX_FRAME_LENGTH;
++
++	dev_dbg(dev,
++		"%s: val: %llde-6 [fps], frame_length: %u [lines]\n",
++		__func__, val, frame_length);
++	priv->frame_length = frame_length;
++	vblack = frame_length-mode->image_properties.height;
++	err = arducam_write(priv->i2c_client,CTRL_ID_REG, V4L2_CID_VBLANK);
++ 	err += arducam_write(priv->i2c_client,CTRL_VALUE_REG,vblack&0xFFFFFFFF);
++	if(err)
++		return -1;
++	return 0;
++}
++
++static int arducam_set_exposure(struct tegracam_device *tc_dev, s64 val)
++{
++
++	struct camera_common_data *s_data = tc_dev->s_data;
++	struct arducam *priv = (struct arducam *)tc_dev->priv;
++	const struct sensor_mode_properties *mode =
++		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
++	int err = 0;
++	u32 coarse_time= val*mode->signal_properties.pixel_clock.val
++		/ mode->control_properties.exposure_factor
++		/ mode->image_properties.line_length;
++	if(coarse_time>=priv->frame_length)
++		coarse_time = priv->frame_length;
++	err  = arducam_write(priv->i2c_client,CTRL_ID_REG,V4L2_CID_EXPOSURE);
++	err  += arducam_write(priv->i2c_client,CTRL_VALUE_REG,coarse_time&0xFFFFFFFF);
++	if(err)
++		return -1;
++	return 0;
++}
++
++static struct tegracam_ctrl_ops arducam_ctrl_ops = {
++	.numctrls = ARRAY_SIZE(ctrl_cid_list),
++	.ctrl_cid_list = ctrl_cid_list,
++	.set_gain = arducam_set_gain,
++	.set_exposure = arducam_set_exposure,
++	.set_frame_rate = arducam_set_frame_rate,
++	.set_group_hold = arducam_set_group_hold,
++};
++
++static int arducam_power_on(struct camera_common_data *s_data)
++{
++	int err = 0;
++	struct camera_common_power_rail *pw = s_data->power;
++	struct camera_common_pdata *pdata = s_data->pdata;
++	struct device *dev = s_data->dev;
++
++	dev_dbg(dev, "%s: power on\n", __func__);
++	if (pdata && pdata->power_on) {
++		err = pdata->power_on(pw);
++		if (err)
++			dev_err(dev, "%s failed.\n", __func__);
++		else
++			pw->state = SWITCH_ON;
++		return err;
++	}
++
++	if (pw->reset_gpio) {
++		if (gpio_cansleep(pw->reset_gpio))
++			gpio_set_value_cansleep(pw->reset_gpio, 0);
++		else
++			gpio_set_value(pw->reset_gpio, 0);
++	}
++
++	if (unlikely(!(pw->avdd || pw->iovdd || pw->dvdd)))
++		goto skip_power_seqn;
++
++	usleep_range(10, 20);
++
++	if (pw->avdd) {
++		err = regulator_enable(pw->avdd);
++		if (err)
++			goto arducam_avdd_fail;
++	}
++
++	if (pw->iovdd) {
++		err = regulator_enable(pw->iovdd);
++		if (err)
++			goto arducam_iovdd_fail;
++	}
++
++	if (pw->dvdd) {
++		err = regulator_enable(pw->dvdd);
++		if (err)
++			goto arducam_dvdd_fail;
++	}
++
++	usleep_range(10, 20);
++
++skip_power_seqn:
++	if (pw->reset_gpio) {
++		if (gpio_cansleep(pw->reset_gpio))
++			gpio_set_value_cansleep(pw->reset_gpio, 1);
++		else
++			gpio_set_value(pw->reset_gpio, 1);
++	}
++
++	/* Need to wait for t4 + t5 + t9 time as per the data sheet */
++	/* t4 - 200us, t5 - 21.2ms, t9 - 1.2ms */
++	usleep_range(23000, 23100);
++
++	pw->state = SWITCH_ON;
++
++	return 0;
++
++arducam_dvdd_fail:
++	regulator_disable(pw->iovdd);
++
++arducam_iovdd_fail:
++	regulator_disable(pw->avdd);
++
++arducam_avdd_fail:
++	dev_err(dev, "%s failed.\n", __func__);
++
++	return -ENODEV;
++}
++
++static int arducam_power_off(struct camera_common_data *s_data)
++{
++	int err = 0;
++	struct camera_common_power_rail *pw = s_data->power;
++	struct camera_common_pdata *pdata = s_data->pdata;
++	struct device *dev = s_data->dev;
++
++	dev_dbg(dev, "%s: power off\n", __func__);
++
++	if (pdata && pdata->power_off) {
++		err = pdata->power_off(pw);
++		if (err) {
++			dev_err(dev, "%s failed.\n", __func__);
++			return err;
++		}
++	} else {
++		if (pw->reset_gpio) {
++			if (gpio_cansleep(pw->reset_gpio))
++				gpio_set_value_cansleep(pw->reset_gpio, 0);
++			else
++				gpio_set_value(pw->reset_gpio, 0);
++		}
++
++		usleep_range(10, 10);
++
++		if (pw->dvdd)
++			regulator_disable(pw->dvdd);
++		if (pw->iovdd)
++			regulator_disable(pw->iovdd);
++		if (pw->avdd)
++			regulator_disable(pw->avdd);
++	}
++
++	pw->state = SWITCH_OFF;
++
++	return 0;
++}
++
++static int arducam_power_put(struct tegracam_device *tc_dev)
++{
++	struct camera_common_data *s_data = tc_dev->s_data;
++	struct camera_common_power_rail *pw = s_data->power;
++
++	if (unlikely(!pw))
++		return -EFAULT;
++
++	if (likely(pw->dvdd))
++		devm_regulator_put(pw->dvdd);
++
++	if (likely(pw->avdd))
++		devm_regulator_put(pw->avdd);
++
++	if (likely(pw->iovdd))
++		devm_regulator_put(pw->iovdd);
++
++	pw->dvdd = NULL;
++	pw->avdd = NULL;
++	pw->iovdd = NULL;
++
++	if (likely(pw->reset_gpio))
++		gpio_free(pw->reset_gpio);
++
++	return 0;
++}
++static int arducam_power_get(struct tegracam_device *tc_dev)
++{
++	struct device *dev = tc_dev->dev;
++	struct camera_common_data *s_data = tc_dev->s_data;
++	struct camera_common_power_rail *pw = s_data->power;
++	struct camera_common_pdata *pdata = s_data->pdata;
++	struct clk *parent;
++	int err = 0;
++
++	if (!pdata) {
++		dev_err(dev, "pdata missing\n");
++		return -EFAULT;
++	}
++	/* Sensor MCLK (aka. INCK) */
++	if (pdata->mclk_name) {
++		pw->mclk = devm_clk_get(dev, pdata->mclk_name);
++		if (IS_ERR(pw->mclk)) {
++			dev_err(dev, "unable to get clock %s\n",
++				pdata->mclk_name);
++			return PTR_ERR(pw->mclk);
++		}
++
++		if (pdata->parentclk_name) {
++			parent = devm_clk_get(dev, pdata->parentclk_name);
++			if (IS_ERR(parent)) {
++				dev_err(dev, "unable to get parent clock %s",
++					pdata->parentclk_name);
++			} else
++				clk_set_parent(pw->mclk, parent);
++		}
++	}
++	/* analog 2.8v */
++	if (pdata->regulators.avdd)
++		err |= camera_common_regulator_get(dev,
++				&pw->avdd, pdata->regulators.avdd);
++	/* IO 1.8v */
++	if (pdata->regulators.iovdd)
++		err |= camera_common_regulator_get(dev,
++				&pw->iovdd, pdata->regulators.iovdd);
++	/* dig 1.2v */
++	if (pdata->regulators.dvdd)
++		err |= camera_common_regulator_get(dev,
++				&pw->dvdd, pdata->regulators.dvdd);
++	if (err) {
++		dev_err(dev, "%s: unable to get regulator(s)\n", __func__);
++		goto done;
++	}
++	/* Reset or ENABLE GPIO */
++	pw->reset_gpio = pdata->reset_gpio;
++	err = gpio_request(pw->reset_gpio, "cam_reset_gpio");
++	if (err < 0) {
++		dev_err(dev, "%s: unable to request reset_gpio (%d)\n",
++			__func__, err);
++		goto done;
++	}
++
++done:
++	pw->state = SWITCH_OFF;
++/*  */
++	return err;
++}
++
++static struct camera_common_pdata *arducam_parse_dt(
++	struct tegracam_device *tc_dev)
++{
++	struct device *dev = tc_dev->dev;
++	struct device_node *np = dev->of_node;
++	struct camera_common_pdata *board_priv_pdata;
++	const struct of_device_id *match;
++	struct camera_common_pdata *ret = NULL;
++	int err = 0;
++	int gpio;
++
++	if (!np)
++		return NULL;
++
++	match = of_match_device(arducam_of_match, dev);
++	if (!match) {
++		dev_err(dev, "Failed to find matching dt id\n");
++		return NULL;
++	}
++
++	board_priv_pdata = devm_kzalloc(dev,
++		sizeof(*board_priv_pdata), GFP_KERNEL);
++	if (!board_priv_pdata)
++		return NULL;
++
++	gpio = of_get_named_gpio(np, "reset-gpios", 0);
++	if (gpio < 0) {
++		if (gpio == -EPROBE_DEFER)
++			ret = ERR_PTR(-EPROBE_DEFER);
++		dev_err(dev, "reset-gpios not found\n");
++		goto error;
++	}
++	board_priv_pdata->reset_gpio = (unsigned int)gpio;
++
++	err = of_property_read_string(np, "mclk", &board_priv_pdata->mclk_name);
++	if (err)
++		dev_dbg(dev, "mclk name not present, "
++			"assume sensor driven externally\n");
++
++	err = of_property_read_string(np, "avdd-reg",
++		&board_priv_pdata->regulators.avdd);
++	err |= of_property_read_string(np, "iovdd-reg",
++		&board_priv_pdata->regulators.iovdd);
++	err |= of_property_read_string(np, "dvdd-reg",
++		&board_priv_pdata->regulators.dvdd);
++	if (err)
++		dev_dbg(dev, "avdd, iovdd and/or dvdd reglrs. not present, "
++			"assume sensor powered independently\n");
++
++	board_priv_pdata->has_eeprom =
++		of_property_read_bool(np, "has-eeprom");
++
++	return board_priv_pdata;
++
++error:
++	devm_kfree(dev, board_priv_pdata);
++
++	return ret;
++}
++
++static int arducam_set_mode(struct tegracam_device *tc_dev)
++{
++	struct arducam *priv = (struct arducam *)tegracam_get_privdata(tc_dev);
++	struct camera_common_data *s_data = tc_dev->s_data;
++	int err = 0;
++	err = arducam_write(priv->i2c_client, RESOLUTION_INDEX_REG,
++		s_data->mode);
++	if (err)
++		return err;
++
++	return 0;
++}
++
++static int arducam_start_streaming(struct tegracam_device *tc_dev)
++{
++	struct arducam *priv = (struct arducam *)tegracam_get_privdata(tc_dev);
++
++	return arducam_write(priv->i2c_client, STREAM_ON, 1);
++}
++
++static int arducam_stop_streaming(struct tegracam_device *tc_dev)
++{
++	int err;
++	struct arducam *priv = (struct arducam *)tegracam_get_privdata(tc_dev);
++	err = arducam_write(priv->i2c_client, STREAM_ON, 0);
++	usleep_range(50000, 51000);
++
++	return err;
++}
++
++static struct camera_common_sensor_ops arducam_common_ops = {
++	.power_on = arducam_power_on,
++	.power_off = arducam_power_off,
++	.write_reg = arducam_write_reg,
++	.read_reg = arducam_read_reg,
++	.parse_dt = arducam_parse_dt,
++	.power_get = arducam_power_get,
++	.power_put = arducam_power_put,
++	.set_mode = arducam_set_mode,
++	.start_streaming = arducam_start_streaming,
++	.stop_streaming = arducam_stop_streaming,
++};
++
++static int arducam_board_setup(struct arducam *priv)
++{
++	struct camera_common_data *s_data = priv->s_data;
++	struct camera_common_pdata *pdata = s_data->pdata;
++	struct device *dev = s_data->dev;
++	u32 device_id;
++	u32 sensor_id;
++	u32 firmware_version;
++	u32 retry = 0;
++	int err = 0;
++	if (pdata->mclk_name) {
++		err = camera_common_mclk_enable(s_data);
++		if (err) {
++			dev_err(dev, "error turning on mclk (%d)\n", err);
++			goto done;
++		}
++	}
++	err = arducam_power_on(s_data);
++	if (err) {
++		dev_err(dev, "error during power on sensor (%d)\n", err);
++		goto err_power_on;
++	}
++	err = arducam_read(priv->i2c_client, DEVICE_ID_REG, &device_id);
++	if (err || device_id != DEVICE_ID) {
++		dev_err(dev, "probe failed\n");
++		goto err_reg_probe;
++	}
++
++	err = arducam_read(priv->i2c_client, FIRMWARE_VERSION_REG, &firmware_version);
++	if (err)
++		dev_err(dev, "failed to read version number.\n");
++	else
++		dev_info(dev, "firmware version: %d\n", firmware_version);
++	
++	do {
++		err = arducam_read(priv->i2c_client, SENSOR_ID_REG, &sensor_id);
++		if (!err && sensor_id != NO_DATA_AVAILABLE)
++			break;
++		usleep_range(3000, 3000);
++	} while (retry++ < 3);
++
++	if (err || sensor_id == NO_DATA_AVAILABLE) {
++		dev_err(dev, "read sensor id failed\n");
++
++		err = arducam_read(priv->i2c_client, FIRMWARE_SENSOR_ID_REG, &sensor_id);
++		dev_err(dev, "Expected Sensor ID: 0x%04X\n", sensor_id);
++
++		goto err_reg_probe;
++	}
++	
++	dev_info(dev, "Sensor ID: 0x%04X\n", sensor_id);
++
++err_reg_probe:
++	arducam_power_off(s_data);
++
++err_power_on:
++	if (pdata->mclk_name)
++		camera_common_mclk_disable(s_data);
++
++done:
++	return err;
++}
++
++static int arducam_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
++{
++	struct i2c_client *client = v4l2_get_subdevdata(sd);
++
++	dev_dbg(&client->dev, "%s:\n", __func__);
++
++	return 0;
++}
++
++static const struct v4l2_subdev_internal_ops arducam_subdev_internal_ops = {
++	.open = arducam_open,
++};
++
++#if defined RD_MCU_INFO
++	struct camera_common_frmfmt* arducam_frmfmt= NULL;
++	int** arducam_frame_rates = NULL;
++#else
++	static const int arducam_35fps[] = {
++		35,
++	};
++	static const struct camera_common_frmfmt arducam_frmfmt[] = {
++	{
++		{4656,3496},	arducam_35fps, 1, 0, 0},
++	};
++#endif
++
++static int arducam_probe(struct i2c_client *client,
++	const struct i2c_device_id *id)
++{
++	struct device *dev = &client->dev;
++	struct tegracam_device *tc_dev;
++	struct arducam *priv;
++	int num_resolution =0;
++	int num_pixformat = 0;
++	u32 width, height, frame_rate;
++	int pixformat_type;
++	int pixformat_index = 0;
++	int index = 0;
++	int ret;
++	int err;
++
++	dev_dbg(dev, "probing v4l2 sensor at addr 0x%0x\n", client->addr);
++
++	if (!IS_ENABLED(CONFIG_OF) || !client->dev.of_node)
++		return -EINVAL;
++
++	priv = devm_kzalloc(dev,
++			sizeof(struct arducam), GFP_KERNEL);
++	if (!priv)
++		return -ENOMEM;
++	mutex_init(&priv->mutex);
++	tc_dev = devm_kzalloc(dev,
++			sizeof(struct tegracam_device), GFP_KERNEL);
++	if (!tc_dev)
++		return -ENOMEM;
++
++//Add read info from MCU
++#if defined RD_MCU_INFO
++		num_pixformat = arducam_get_length_of_set(client,
++							PIXFORMAT_INDEX_REG, PIXFORMAT_TYPE_REG);
++		if (num_pixformat < 0)
++			return -ENODEV;
++		while(1){
++			ret = arducam_write(client, PIXFORMAT_INDEX_REG, pixformat_index);
++			ret += arducam_read(client, PIXFORMAT_TYPE_REG, &pixformat_type);	
++			if (pixformat_type == NO_DATA_AVAILABLE)
++				break;
++			num_resolution += arducam_get_length_of_set(client,
++						RESOLUTION_INDEX_REG, FORMAT_WIDTH_REG);
++			v4l2_dbg(1, debug, client, "%s: num_resolution = %d\n",
++				__func__, num_resolution);
++			if(num_resolution < 0)
++				return -ENODEV;
++			pixformat_index ++;	
++		}
++		arducam_frame_rates = devm_kzalloc(dev,
++					sizeof(int)*num_resolution,GFP_KERNEL);
++		if(!arducam_frame_rates)
++			return -ENOMEM;
++		arducam_frmfmt = devm_kzalloc(dev,
++						sizeof(struct camera_common_frmfmt)*num_resolution,GFP_KERNEL);
++		if(!arducam_frmfmt)
++			return -ENOMEM;
++		
++		pixformat_index = 0;
++		while(1){
++			ret = arducam_write(client, PIXFORMAT_INDEX_REG, pixformat_index);
++			ret += arducam_read(client, PIXFORMAT_TYPE_REG, &pixformat_type);	
++			if (pixformat_type == NO_DATA_AVAILABLE)
++				break;
++			while(1){
++				ret = arducam_write(client, RESOLUTION_INDEX_REG, index);
++				ret += arducam_read(client, FORMAT_WIDTH_REG, &width);
++				ret += arducam_read(client, FORMAT_HEIGHT_REG, &height); 
++				ret += arducam_write(client, CTRL_ID_REG, V4L2_CID_ARDUCAM_FRAME_RATE);
++				ret += arducam_write(client, CTRL_VALUE_REG, 0);
++				msleep(10);
++				ret += arducam_read(client, CTRL_DEF_REG, &frame_rate);
++				if(ret < 0)
++					return -ENODEV;
++				if (width == NO_DATA_AVAILABLE || height == NO_DATA_AVAILABLE)
++					break;
++				dev_info(dev, "%s: width = %d height = %d frame_rate = %d\n", __func__, width, height,frame_rate);
++				v4l2_dbg(1, debug, client, "%s: width = %d height = %d frame_rate = %d\n",
++				__func__, width, height,frame_rate);
++				arducam_frame_rates[index] = devm_kzalloc(dev,sizeof(int),GFP_KERNEL);
++				arducam_frame_rates[index][0] = frame_rate;
++				arducam_frmfmt[index].framerates = arducam_frame_rates[index];
++				arducam_frmfmt[index].size.width  = width;
++				arducam_frmfmt[index].size.height = height;
++				arducam_frmfmt[index].mode = index;
++				arducam_frmfmt[index].num_framerates = 1;
++				index++;
++			}
++			pixformat_index ++;
++		}
++
++		arducam_common_ops.numfrmfmts = index;
++		arducam_common_ops.frmfmt_table = arducam_frmfmt;
++	#else
++		arducam_common_ops.numfrmfmts = ARRAY_SIZE(arducam_frmfmt);
++		arducam_common_ops.frmfmt_table = arducam_frmfmt;
++	#endif
++	priv->i2c_client = tc_dev->client = client;
++	tc_dev->dev = dev;
++	strncpy(tc_dev->name, "arducam", sizeof(tc_dev->name));
++	tc_dev->dev_regmap_config = &sensor_regmap_config;
++	tc_dev->sensor_ops = &arducam_common_ops;
++	tc_dev->v4l2sd_internal_ops = &arducam_subdev_internal_ops;
++	tc_dev->tcctrl_ops = &arducam_ctrl_ops;
++
++	err = tegracam_device_register(tc_dev);
++	if (err) {
++		dev_err(dev, "tegra camera driver registration failed\n");
++		return err;
++	}
++	priv->tc_dev = tc_dev;
++	priv->s_data = tc_dev->s_data;
++	priv->subdev = &tc_dev->s_data->subdev;
++	tegracam_set_privdata(tc_dev, (void *)priv);
++
++	err = arducam_board_setup(priv);
++	if (err) {
++		dev_err(dev, "board setup failed\n");
++		return err;
++	}
++
++	err = tegracam_v4l2subdev_register(tc_dev, true);
++	if (err) {
++		dev_err(dev, "tegra camera subdev registration failed\n");
++		return err;
++	}
++
++	dev_dbg(dev, "detected arducam-jvar sensor\n");
++
++	return 0;
++}
++
++static int arducam_remove(struct i2c_client *client)
++{
++	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
++	struct arducam *priv = (struct arducam *)s_data->priv;
++
++	tegracam_v4l2subdev_unregister(priv->tc_dev);
++	tegracam_device_unregister(priv->tc_dev);
++
++	return 0;
++}
++
++static const struct i2c_device_id arducam_id[] = {
++	{ "arducam-jvar", 0 },
++	{ }
++};
++MODULE_DEVICE_TABLE(i2c, arducam_id);
++
++static struct i2c_driver arducam_i2c_driver = {
++	.driver = {
++		.name = "arducam-jvar",
++		.owner = THIS_MODULE,
++		.of_match_table = of_match_ptr(arducam_of_match),
++	},
++	.probe = arducam_probe,
++	.remove = arducam_remove,
++	.id_table = arducam_id,
++};
++module_i2c_driver(arducam_i2c_driver);
++
++MODULE_DESCRIPTION("Media Controller driver for Arducam Jetvariety");
++MODULE_AUTHOR("NVIDIA Corporation");
++MODULE_LICENSE("GPL v2");
+diff --git a/drivers/media/i2c/arducam_jetvariety.h b/drivers/media/i2c/arducam_jetvariety.h
+new file mode 100644
+index 00000000..48870327
+--- /dev/null
++++ b/drivers/media/i2c/arducam_jetvariety.h
+@@ -0,0 +1,169 @@
++#ifndef _ARDUCAM_CSI_2_H_
++#define _ARDUCAM_CSI_2_H_
++
++#include <linux/v4l2-controls.h>
++
++#define DEVICE_REG_BASE 0x0100
++#define PIXFORMAT_REG_BASE 0x0200
++#define FORMAT_REG_BASE 0x0300
++#define CTRL_REG_BASE 0x0400
++#define SENSOR_REG_BASE 0x500
++
++#define STREAM_ON				(DEVICE_REG_BASE | 0x0000)
++#define FIRMWARE_VERSION_REG	(DEVICE_REG_BASE | 0x0001)
++#define SENSOR_ID_REG			(DEVICE_REG_BASE | 0x0002)
++#define DEVICE_ID_REG			(DEVICE_REG_BASE | 0x0003)
++#define FIRMWARE_SENSOR_ID_REG	(DEVICE_REG_BASE | 0x0005)
++
++#define SYSTEM_IDLE_REG		(DEVICE_REG_BASE | 0x0007)
++
++#define PIXFORMAT_INDEX_REG (PIXFORMAT_REG_BASE | 0x0000)
++#define PIXFORMAT_TYPE_REG  (PIXFORMAT_REG_BASE | 0x0001)
++#define PIXFORMAT_ORDER_REG (PIXFORMAT_REG_BASE | 0x0002)
++#define MIPI_LANES_REG      (PIXFORMAT_REG_BASE | 0x0003)
++
++#define RESOLUTION_INDEX_REG (FORMAT_REG_BASE | 0x0000)
++#define FORMAT_WIDTH_REG    (FORMAT_REG_BASE | 0x0001)
++#define FORMAT_HEIGHT_REG   (FORMAT_REG_BASE | 0x0002)
++#define FORMAT_FRMRATE_REG   (FORMAT_REG_BASE | 0x0003)
++
++#define CTRL_INDEX_REG  (CTRL_REG_BASE | 0x0000)
++#define CTRL_ID_REG     (CTRL_REG_BASE | 0x0001)
++#define CTRL_MIN_REG    (CTRL_REG_BASE | 0x0002)
++#define CTRL_MAX_REG    (CTRL_REG_BASE | 0x0003)
++#define CTRL_STEP_REG   (CTRL_REG_BASE | 0x0004)
++#define CTRL_DEF_REG    (CTRL_REG_BASE | 0x0005)
++#define CTRL_VALUE_REG  (CTRL_REG_BASE | 0x0006)
++
++#define SENSOR_RD_REG	(SENSOR_REG_BASE |0x0001)
++#define SENSOR_WR_REG	(SENSOR_REG_BASE |0x0002)
++
++#define NO_DATA_AVAILABLE   0xFFFFFFFE
++
++#define DEVICE_ID 0x0030
++
++#define I2C_READ_RETRY_COUNT 3
++#define I2C_WRITE_RETRY_COUNT 2
++
++/* opencv does not support Y10 or Y12, but supports Y16 */
++/* so pretend we are Y16 */
++#define MEDIA_BUS_FMT_ARDUCAM_Y102Y16_1x16	0x5002
++#define MEDIA_BUS_FMT_ARDUCAM_Y122Y16_1x16	0x5003
++
++#define V4L2_CID_ARDUCAM_BASE					(V4L2_CID_USER_BASE + 0x1000)
++#define V4L2_CID_ARDUCAM_EXT_TRI				(V4L2_CID_ARDUCAM_BASE + 1)
++#define V4L2_CID_ARDUCAM_TEGRA_DISABLE_TIMEOUT	(V4L2_CID_ARDUCAM_BASE + 2)
++#define V4L2_CID_ARDUCAM_TEGRA_TIMEOUT			(V4L2_CID_ARDUCAM_BASE + 3)
++#define V4L2_CID_ARDUCAM_TEGRA_DISABLE_ALIGN	(V4L2_CID_ARDUCAM_BASE + 4)
++#define V4L2_CID_ARDUCAM_FACE_DETECTION				(V4L2_CID_ARDUCAM_BASE + 5)
++#define V4L2_CID_ARDUCAM_FRAME_RATE				(V4L2_CID_ARDUCAM_BASE + 6)
++#define V4L2_CID_ARDUCAM_EFFECTS				(V4L2_CID_ARDUCAM_BASE + 7)
++#define V4L2_CID_ARDUCAM_IRCUT					(V4L2_CID_ARDUCAM_BASE + 8)
++#define V4L2_CID_ARDUCAM_HDR					(V4L2_CID_ARDUCAM_BASE + 9)
++#define V4L2_CID_ARDUCAM_PAN_X_ABSOLUTE				(V4L2_CID_ARDUCAM_BASE + 10)
++#define V4L2_CID_ARDUCAM_PAN_Y_ABSOLUTE				(V4L2_CID_ARDUCAM_BASE + 11)
++#define V4L2_CID_ARDUCAM_ZOOM_PAN_SPEED				(V4L2_CID_ARDUCAM_BASE + 12)
++#define V4L2_CID_ARDUCAM_DENOISE				(V4L2_CID_ARDUCAM_BASE + 13)
++
++#define V4L2_CTRL_CLASS_IMAGE_SOURCE	0x009e0000	/* Image source controls */
++#define V4L2_CTRL_CLASS_IMAGE_PROC		0x009f0000	/* Image processing controls */
++/* Image source controls */
++// #define V4L2_CID_IMAGE_SOURCE_CLASS_BASE	(V4L2_CTRL_CLASS_IMAGE_SOURCE | 0x900)
++// #define V4L2_CID_IMAGE_SOURCE_CLASS			(V4L2_CTRL_CLASS_IMAGE_SOURCE | 1)
++
++// #define V4L2_CID_VBLANK					(V4L2_CID_IMAGE_SOURCE_CLASS_BASE + 1)
++// #define V4L2_CID_HBLANK					(V4L2_CID_IMAGE_SOURCE_CLASS_BASE + 2)
++// #define V4L2_CID_ANALOGUE_GAIN			(V4L2_CID_IMAGE_SOURCE_CLASS_BASE + 3)
++// #define V4L2_CID_DIGITAL_GAIN			(V4L2_CID_IMAGE_SOURCE_CLASS_BASE + 5)
++
++#define READ_SENSOR_I2C_MASK 0x8000
++struct arducam_i2c {
++	__u16 reg;
++	__u16 val;
++};
++
++struct arducam_dev {
++	__u16 reg;
++	__u32 val;
++};
++
++#define VIDIOC_R_I2C	_IOWR('V', BASE_VIDIOC_PRIVATE + 0,  struct arducam_i2c)
++#define VIDIOC_W_I2C	_IOWR('V', BASE_VIDIOC_PRIVATE + 1,  struct arducam_i2c)
++#define VIDIOC_R_DEV	_IOWR('V', BASE_VIDIOC_PRIVATE + 2,  struct arducam_dev)
++#define VIDIOC_W_DEV	_IOWR('V', BASE_VIDIOC_PRIVATE + 3,  struct arducam_dev)
++#define VIDIOC_W_VCM	_IOWR('V', BASE_VIDIOC_PRIVATE + 4,  struct arducam_dev)
++#define VIDIOC_R_VCM	_IOWR('V', BASE_VIDIOC_PRIVATE + 5,  struct arducam_dev)
++
++enum image_dt {
++    IMAGE_DT_YUV420_8 = 0x18,
++	IMAGE_DT_YUV420_10,
++
++	IMAGE_DT_YUV420CSPS_8 = 0x1C,
++	IMAGE_DT_YUV420CSPS_10,
++	IMAGE_DT_YUV422_8,
++	IMAGE_DT_YUV422_10,
++	IMAGE_DT_RGB444,
++	IMAGE_DT_RGB555,
++	IMAGE_DT_RGB565,
++	IMAGE_DT_RGB666,
++	IMAGE_DT_RGB888,
++
++	IMAGE_DT_RAW6 = 0x28,
++	IMAGE_DT_RAW7,
++	IMAGE_DT_RAW8,
++	IMAGE_DT_RAW10,
++	IMAGE_DT_RAW12,
++	IMAGE_DT_RAW14,
++};
++
++enum bayer_order {
++    //Carefully ordered so that an hflip is ^1,
++    //and a vflip is ^2.
++    BAYER_ORDER_BGGR = 0,
++    BAYER_ORDER_GBRG = 1,
++    BAYER_ORDER_GRBG = 2,
++    BAYER_ORDER_RGGB = 3,
++    BAYER_ORDER_GRAY = 4,
++};
++
++enum yuv_order {
++	YUV_ORDER_YUYV = 0,
++	YUV_ORDER_YVYU = 1,
++	YUV_ORDER_UYVY = 2,
++	YUV_ORDER_VYUY = 3,
++};
++// V4L2_PIX_FMT_YUYV;
++// V4L2_PIX_FMT_YVYU;
++// V4L2_PIX_FMT_UYVY;
++// V4L2_PIX_FMT_VYUY;
++
++struct arducam_resolution {
++	u32 width;
++	u32 height;
++	const struct reg_8 *regs;
++	int num_regs;
++};
++
++struct arducam_format {
++	u32 index;
++	u32 mbus_code;
++	u32 data_type;
++	u32 num_resolution_set;
++	struct arducam_resolution *resolution_set;
++};
++
++struct arducam {
++	struct i2c_client		*i2c_client;
++	struct v4l2_subdev		*subdev;
++	u16				fine_integ_time;
++	u32				frame_length;
++	struct camera_common_data	*s_data;
++	struct tegracam_device		*tc_dev;
++	struct arducam_format *supported_formats;
++	struct mutex mutex;
++};
++
++int arducam_read(struct i2c_client *client, u16 addr, u32 *value);
++int arducam_write(struct i2c_client *client, u16 addr, u32 value);
++
++#endif
+\ No newline at end of file
+-- 
+2.25.1
+
