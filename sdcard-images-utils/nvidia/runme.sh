@@ -151,6 +151,7 @@ function build_kernel_Image()
 	echo "Copy DTB Overlay"
 	cp -r $ROOTDIR/build/Linux_for_Tegra/source/modules/dtb/tegra234-p3767-camera-p3768-adsd3500.dtbo   			$PATCH_DIR
 	cp -r $ROOTDIR/build/Linux_for_Tegra/source/modules/dtb/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo   	$PATCH_DIR
+	cp -r $ROOTDIR/build/Linux_for_Tegra/source/modules/dtb/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dtbo   	$PATCH_DIR
 
 	echo "Copy kernel modules"
 	cd $ROOTDIR/build/Linux_for_Tegra/source/modules
