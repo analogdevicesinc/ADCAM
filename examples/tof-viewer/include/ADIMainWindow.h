@@ -595,7 +595,7 @@ class ADIMainWindow {
     bool cameraOptionsTreeEnabled = true;
     bool pointCloudEnable = true;
 
-    const uint32_t MAX_FRAME_RATE = 25;
+    const uint32_t MAX_FRAME_RATE = 60;
     uint32_t m_max_frame_rate = MAX_FRAME_RATE;
 
     /**
