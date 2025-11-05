@@ -208,5 +208,10 @@ if int(isdisplay)==1:
 
     plt.tight_layout()
     plt.show()
+else:
+    # dump the files
+    image_depth.tofile("depth_mode_" + str(mode) + ".bin")
+    image_ab.tofile("ab_mode_" + str(mode) + ".bin")
+    image_conf.tofile("conf_mode_" + str(mode) + ".bin")
 
 
