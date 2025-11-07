@@ -4,6 +4,7 @@ project(examples)
 add_subdirectory(first-frame)
 add_subdirectory(data_collect)
 if (NOT NXP)
+    #add_subdirectory(tof-viewer2)
     add_subdirectory(tof-viewer)
 endif()
 
