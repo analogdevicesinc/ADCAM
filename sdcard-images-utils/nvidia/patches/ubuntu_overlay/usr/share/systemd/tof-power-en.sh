@@ -1,6 +1,7 @@
 #!/bin/bash
 
 MODULE=$(strings /proc/device-tree/tegra-camera-platform/modules/module0/badge)
+MODULE1=$(strings /proc/device-tree/tegra-camera-platform/modules/module1/badge)
 
 if [[ $MODULE == "adi_adsd3500_adsd3100" ]]; then
 	echo "Module name: $MODULE"
@@ -71,7 +72,7 @@ if [[ $MODULE == "adi_adsd3500_adsd3100" ]]; then
 	echo "ToF power sequence completed"
 fi
 
-if [[ $MODULE == "adi_dual_adsd3500_adsd3100" ]]; then
+if [[ $MODULE == "adi_dual_adsd3500_adsd3100" || $MODULE1 == "adi_dual_adsd3500_adsd3100" ]]; then
 	echo "Module name: $MODULE"
 	echo "export CAM1_PWDN and set direction as output"
 
