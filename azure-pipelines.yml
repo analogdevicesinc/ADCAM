@@ -26,35 +26,17 @@ jobs:
   timeoutInMinutes: 200
   strategy:
     matrix:
-      
-      #PC
-      ubuntu_22_04_x86_64:
-        imageName: 'ubuntu-22.04'
-
-      ubuntu_24_04_x86_64:
-        imageName: 'ubuntu-24.04'
-
-      ubuntu_22_04_x86_64_offline:
-        imageName: 'ubuntu-22.04'
-        EXTRA_CMAKE_FLAGS: "-DWITH_OFFLINE=on"
-
-      #IMX
+      # ARM / Jetson builds
       ubuntu_22_04_imx:
         imageName: 'ubuntu-22.04'
         DOCKER: "septimiuvana/arm64-ubuntu"
-        EXTRA_CMAKE_FLAGS: "-DNXP=1"
 
-      #NVIDIA
       ubuntu_22_04_nvidia:
         imageName: 'ubuntu-22.04'
         DOCKER: "septimiuvana/arm64-ubuntu"
         EXTRA_CMAKE_FLAGS: "-DNVIDIA=1"
-      
-      #code quality, TO DO: once entire code is formatted enable clang-format
-      clang_format:
-        imageName: 'ubuntu-22.04'
-        BUILD_TYPE: "clang_format"
 
+      # Code-quality
       cppcheck:
         imageName: 'ubuntu-22.04'
         BUILD_TYPE: "cppcheck"
@@ -101,32 +83,32 @@ jobs:
       ./ci/azure/run_build.sh
     displayName: "Build"
 
-- job: WindowsBuild
-  strategy:
-    matrix:
+      #- job: WindowsBuild
+      #strategy:
+      #matrix:
 
-      VS2019_Win64:
-        imageName: 'windows-2019'
-        COMPILER: 'Visual Studio 16 2019'
-        ARCH: 'x64'
-        artifactName: 'Windows-VS-16-2019-x64'
+      #VS2019_Win64:
+      # imageName: 'windows-2019'
+      # COMPILER: 'Visual Studio 16 2019'
+      # ARCH: 'x64'
+      # artifactName: 'Windows-VS-16-2019-x64'
 
-      VS2022_Win64:
-        imageName: 'windows-2022'
-        COMPILER: 'Visual Studio 17 2022'
-        ARCH: 'x64'
-        artifactName: 'Windows-VS-17-2022-x64'
+      #VS2022_Win64:
+      # imageName: 'windows-2022'
+      # COMPILER: 'Visual Studio 17 2022'
+      # ARCH: 'x64'
+      # artifactName: 'Windows-VS-17-2022-x64'
 
-  pool:
-      vmImage: $[ variables['imageName'] ]
-  steps:
-  - checkout: self
-    fetchDepth: 1
-    submodules: true
-    clean: true
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '3.9'
+      #pool:
+      #vmImage: $[ variables['imageName'] ]
+      #steps:
+      #- checkout: self
+      #fetchDepth: 1
+      #submodules: true
+      #clean: true
+      #- task: UsePythonVersion@0
+      #inputs:
+      #versionSpec: '3.9'
   # - task: Cache@2
   #   inputs:
   #     key: deps_windows | "$(imageName)" 
@@ -139,8 +121,8 @@ jobs:
   #     filePath: ./ci/azure/windows-build/install_deps.ps1
   #   condition: eq(variables.CACHE_RESTORED, 'false')
   #   displayName: "Install Dependencies"
-  - task: PowerShell@2
-    inputs:
-      targetType: 'filePath'
-      filePath: ./ci/azure/windows-build/build_sdk.ps1
-    displayName: "Build"
+  #- task: PowerShell@2
+  #  inputs:
+  #   targetType: 'filePath'
+  #   filePath: ./ci/azure/windows-build/build_sdk.ps1
+  # displayName: "Build"
