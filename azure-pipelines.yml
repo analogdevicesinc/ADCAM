@@ -30,6 +30,7 @@ jobs:
       ubuntu_22_04_imx:
         imageName: 'ubuntu-22.04'
         DOCKER: "septimiuvana/arm64-ubuntu"
+        EXTRA_CMAKE_FLAGS: "-DNXP=1"
 
       ubuntu_22_04_nvidia:
         imageName: 'ubuntu-22.04'
