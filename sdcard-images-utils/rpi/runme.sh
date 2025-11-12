@@ -111,7 +111,9 @@ function sw_version_info()
 function create_package()
 {
 
+	
 	cd $ROOTDIR
+	cp $ROOTDIR/scripts/system_upgrade/apply_patch.sh $PATCH_DIR
 	ARCHIVE_FILENAME="RPI_ToF_ADSD3500_REL_PATCH_$(date +"%d%b%y").zip"
 	zip -r "RPI_ToF_ADSD3500_REL_PATCH_$(date +"%d%b%y").zip" RPI_ToF_ADSD3500_REL_PATCH_*
 	rm -rf $PATCH_DIR
