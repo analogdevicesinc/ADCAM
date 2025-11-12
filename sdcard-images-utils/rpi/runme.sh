@@ -30,15 +30,14 @@ BR_COMMIT=`git log -1 --pretty=format:%h`
 PATCH_DIR=$ROOTDIR/RPI_ToF_ADSD3500_REL_PATCH_$(date +"%d%b%y")
 mkdir -p $PATCH_DIR
 
+REPO_URL="https://github.com/raspberrypi/linux.git"
+REPO_DIR="linux"
+STABLE_TAG="stable_20250916"
+
 function download_linux_kernel()
 {
 	mkdir -p build
-	cd $ROOTDIR/build
-
-	REPO_URL="https://github.com/raspberrypi/linux.git"
-	REPO_DIR="linux"
-	BRANCH="rpi-6.12.y"
-	STABLE_TAG="stable_20250916"
+	cd "$ROOTDIR/build" || { echo "Failed to enter build directory"; exit 1; }
 
 	echo "=== Cloning Raspberry Pi Linux repository ==="
 	if [ -d "$REPO_DIR" ]; then
@@ -49,14 +48,22 @@ function download_linux_kernel()
 
 	cd "$REPO_DIR" || { echo "Failed to enter directory '$REPO_DIR'"; exit 1; }
 
-	echo "=== Checking out branch: $BRANCH ==="
+	echo "=== Fetching all tags ==="
 	git fetch --all --tags
-	git checkout "$BRANCH" || { echo "Failed to checkout branch $BRANCH"; exit 1; }
 
-	echo "=== Resetting to stable version: $STABLE_TAG ==="
-	git reset --hard "$STABLE_TAG" || { echo "Failed to reset to tag $STABLE_TAG"; exit 1; }
+	echo "=== Checking out stable tag: $STABLE_TAG ==="
+	git checkout "tags/$STABLE_TAG" -b "$STABLE_TAG" || { echo "Failed to checkout tag $STABLE_TAG"; exit 1; }
 
-	echo "=== Repository is now at $STABLE_TAG on branch $BRANCH ==="
+	echo "=== Repository is now at tag $STABLE_TAG ==="
+
+}
+
+function apply_git_format_patches()
+{
+
+	cd "$ROOTDIR/build/$REPO_DIR"
+	git reset --hard "tags/$STABLE_TAG"
+	git am $ROOTDIR/patches/linux/*.patch
 
 }
 
@@ -124,6 +131,8 @@ function main()
 {
 	
 	download_linux_kernel
+
+	apply_git_format_patches
 
 	build_kernel
 
