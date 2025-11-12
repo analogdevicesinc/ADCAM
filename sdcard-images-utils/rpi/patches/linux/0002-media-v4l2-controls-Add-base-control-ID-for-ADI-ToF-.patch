@@ -1,0 +1,36 @@
+From 60eb7009e10195464c4da8abbd9a53546a34d34e Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Wed, 12 Nov 2025 13:47:26 +0530
+Subject: [PATCH 2/3] media: v4l2-controls: Add base control ID for ADI ToF
+ ADSD3500 driver
+
+Define V4L2_CID_USER_ADITOF_BASE to reserve a control ID range for the
+Analog Devices ToF ADSD3500 camera driver. This adds a dedicated block
+of 16 user controls under the V4L2 user control space, allowing driver-
+specific control definitions without conflicting with other drivers.
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ include/uapi/linux/v4l2-controls.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/include/uapi/linux/v4l2-controls.h b/include/uapi/linux/v4l2-controls.h
+index f7ac33a1d57b..f7265b1c8392 100644
+--- a/include/uapi/linux/v4l2-controls.h
++++ b/include/uapi/linux/v4l2-controls.h
+@@ -169,6 +169,12 @@ enum v4l2_colorfx {
+  */
+ #define V4L2_CID_USER_ATMEL_ISC_BASE		(V4L2_CID_USER_BASE + 0x10c0)
+ 
++/*
++ * The base for the addicmos driver controls.
++ * We reserve 16 controls for this driver.
++ */
++#define V4L2_CID_USER_ADITOF_BASE         (V4L2_CID_USER_BASE + 0x10d0)
++
+ /*
+  * The base for the CODA driver controls.
+  * We reserve 16 controls for this driver.
+-- 
+2.25.1
+
