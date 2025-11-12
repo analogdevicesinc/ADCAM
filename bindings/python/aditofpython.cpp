@@ -168,7 +168,6 @@ PYBIND11_MODULE(aditofpython, m) {
     // Camera declarations
 
     py::enum_<aditof::ConnectionType>(m, "ConnectionType")
-        .value("Usb", aditof::ConnectionType::USB)
         .value("Network", aditof::ConnectionType::NETWORK)
         .value("OnTarget", aditof::ConnectionType::ON_TARGET)
         .value("Offline", aditof::ConnectionType::OFFLINE);
