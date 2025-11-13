@@ -700,7 +700,8 @@ PYBIND11_MODULE(aditofpython, m) {
                 py::buffer_info buffInfo = buffer.request(true);
                 uint16_t *ptr = static_cast<uint16_t *>(buffInfo.ptr);
 
-                return device.getFrame(ptr);
+                // TODO : give a paramete here.
+                return device.getFrame(ptr, 0);
             },
             py::arg("buffer"))
         .def(
