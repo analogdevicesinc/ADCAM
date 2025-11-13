@@ -20,19 +20,27 @@ set(VERSION "${ADCAM_VERSION_MAJOR}.${ADCAM_VERSION_MINOR}.${ADCAM_VERSION_PATCH
 option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
+option(WITH_NETWORK "Build network interface?" OFF)
 
 ################################# FIXED #######################################
+
+### Note: Turn the following off when building on the host
 option(NVIDIA "Set to ON when building on NVIDIA" ON)
+
+if (WITH_NETWORK)
+        option(WITH_SUBMODULES "Use submodules to build the library" ON)
+        option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" ON)
+        option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" ON)
+else()
+        option(WITH_SUBMODULES "Use submodules to build the library" OFF)
+        option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" OFF)
+        option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" OFF)
+endif()
 option(WITH_OFFLINE "Build offline interface?" OFF)
-option(WITH_SUBMODULES "Use submodules to build the library" OFF)
-option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" OFF)
-option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" OFF)
-option(WITH_NETWORK "Build network interface?" OFF)
 option(WITH_COMMAND_LINE_TOOLS "Build with command line tools?" ON)
 option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" OFF)
 option(CI_BUILD "Build for CI" OFF)
 set(SOM_TYPE "Dual" CACHE STRING "Which SoM SDK is building for?")
-
 ################################## Git ########################################
 include(FindGit OPTIONAL)
 if (GIT_FOUND)

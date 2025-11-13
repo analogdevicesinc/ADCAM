@@ -6,7 +6,7 @@ add_executable(${PROJECT_NAME} server.cpp ${PROTO_HDRS} ${PROTO_SRCS})
 target_include_directories(${PROJECT_NAME} PRIVATE ${GENERATED_PROTO_FILES_DIR})
 
 # Glog
-if(NOT WITH_SUBMODULES AND NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../glog/.git")
+if(NOT WITH_SUBMODULES AND NOT EXISTS "${LIBADITOF_SUBMODULE_PATH}/glog/.git")
     find_package(glog 0.3.5 REQUIRED)
 else()
     target_link_libraries(${PROJECT_NAME} PUBLIC glog)
@@ -16,7 +16,7 @@ endif()
 if(NOT WITH_SUBMODULES AND NOT EXISTS "${LIBADITOF_SUBMODULE_PATH}/protobuf/.git")
     find_package(Protobuf 3.9.0 REQUIRED)
 else()
-target_link_libraries(${PROJECT_NAME} PUBLIC libprotobuf)
+    target_link_libraries(${PROJECT_NAME} PUBLIC libprotobuf)
 endif()
 
 # Generating protobuf files
