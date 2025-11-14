@@ -69,12 +69,6 @@ void ADIMainWindow::InitCamera(std::string filePath) {
 
         aditof::CameraDetails cameraDetails;
         camera->getDetails(cameraDetails);
-
-        LOG(INFO) << "SD card image version: "
-                  << cameraDetails.sdCardImageVersion;
-        LOG(INFO) << "Kernel version: " << cameraDetails.kernelVersion;
-        LOG(INFO) << "U-Boot version: " << cameraDetails.uBootVersion;
-
         camera->getAvailableModes(_cameraModes);
         sort(_cameraModes.begin(), _cameraModes.end());
 
