@@ -955,7 +955,8 @@ void ADIMainWindow::ShowStartWizard() {
                         }
 
                         auto camera = GetActiveCamera();
-                        if (camera) {
+                        if (camera && false) { // TODO: Why is this casusing an exception from the Dual ADSD3500
+                            LOG(INFO) << "*** adsd3500setEnableDynamicModeSwitching disabled ***";
                             camera->adsd3500setEnableDynamicModeSwitching(false);
                         }
 
