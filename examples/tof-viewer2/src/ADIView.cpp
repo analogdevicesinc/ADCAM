@@ -514,10 +514,13 @@ void ADIView::_displayAbImage() {
                 continue;
             }
 
-        lock.unlock(); // Lock is no longer needed
+            lock.unlock(); // Lock is no longer needed
+        }
 
         auto camera = m_ctrl->m_cameras[static_cast<unsigned int>(
             m_ctrl->getCameraInUse())];
+
+        uint16_t* _ab_video_data = nullptr;
 
         m_capturedFrame->getData("ab", &ab_video_data);
 
