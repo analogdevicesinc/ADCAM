@@ -382,7 +382,7 @@ void ADIMainWindow::RefreshDevices() {
 
     aditof::Status status;
     if (m_off_line) {
-        status = m_system.getCameraList(m_cameras_list);
+        status = m_system.getCameraList(m_cameras_list, "offline:");
         for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
             m_connected_devices.emplace_back(ix, "ToF Camera " +
                                                      std::to_string(ix));
@@ -428,6 +428,7 @@ void ADIMainWindow::HandleInterruptCallback() {
         LOG(WARNING) << "status: " << status;
         ImGui::Begin("Interrupt");
         ImGui::Text("%i", status);
+        ImGui::End();
     };
     aditof::Status ret_status = aditof::Status::OK;
     auto camera = GetActiveCamera();
