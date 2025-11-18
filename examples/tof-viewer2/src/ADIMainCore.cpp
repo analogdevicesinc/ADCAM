@@ -155,6 +155,13 @@ ADIMainWindow::~ADIMainWindow() {
     if (m_is_playing) {
         CameraStop();
     }
+    
+    // Clean up persistent OpenGL buffers for Jetson optimization
+    if (m_buffers_initialized) {
+        glDeleteVertexArrays(1, &m_persistent_vao);
+        glDeleteBuffers(1, &m_persistent_vbo);
+        m_buffers_initialized = false;
+    }
 
     // imGUI disposing
     //ImGui::GetIO().IniFilename = NULL;

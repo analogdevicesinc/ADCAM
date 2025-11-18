@@ -527,31 +527,28 @@ void ADIMainWindow::DisplayDepthWindow(ImGuiWindowFlags overlayFlags) {
 void ADIMainWindow::InitOpenGLPointCloudTexture() {
     glEnable(GL_PROGRAM_POINT_SIZE);
 
+    // Optimized shader for Jetson Orin Nano - reduced branching and operations
     constexpr char const pointCloudVertexShader[] =
         R"(
 				#version 330 core
 				layout (location = 0) in vec3 aPos;
-				layout (location = 1) in vec3 hsvColor;//Contains R, G, B, values based on HSV standard
+				layout (location = 1) in vec3 hsvColor;
 
-				uniform mat4 model;
-				uniform mat4 view;
-				uniform mat4 projection;
+				uniform mat4 mvp; // Combined model-view-projection
                 uniform float uPointSize;
 
-				out vec4 color_based_on_position;
+				out vec4 vColor;
 
 				void main()
 				{
-                    vec3 flippedPos = aPos;
-                    flippedPos.x = -flippedPos.x; // Flip horizontally
-                    if (length(flippedPos) < 0.0001) {
-                        gl_PointSize = 10.0;
-                        color_based_on_position = vec4(1.0, 1.0, 1.0, 1.0);
-                    } else {
-                        gl_PointSize = uPointSize;
-                        color_based_on_position = vec4(hsvColor, 1.0);
-                    }
-					gl_Position = projection * view * model * vec4(flippedPos, 1.0);
+                    // Flip horizontally and compute position in one step
+                    vec3 pos = vec3(-aPos.x, aPos.y, aPos.z);
+                    gl_Position = mvp * vec4(pos, 1.0);
+                    
+                    // Avoid branching - use smooth step for point size
+                    float isOrigin = step(length(pos), 0.0001);
+                    gl_PointSize = mix(uPointSize, 10.0, isOrigin);
+                    vColor = mix(vec4(hsvColor, 1.0), vec4(1.0, 1.0, 1.0, 1.0), isOrigin);
 				}
 				)";
 
@@ -559,10 +556,10 @@ void ADIMainWindow::InitOpenGLPointCloudTexture() {
         R"(
 				#version 330 core
 				out vec4 FragColor;
-				in vec4 color_based_on_position;
+				in vec4 vColor;
 				void main()
 				{
-					FragColor = color_based_on_position;
+					FragColor = vColor;
 				}
 				)";
 
@@ -577,26 +574,30 @@ void ADIMainWindow::InitOpenGLPointCloudTexture() {
     m_view_instance->pcShader.AttachShader(std::move(fragmentShader));
     m_view_instance->pcShader.Link();
 
-    //Get the model, view, and projection index
-    m_view_instance->modelIndex = glGetUniformLocation(m_view_instance->pcShader.Id(), "model");
-    m_view_instance->viewIndex = glGetUniformLocation(m_view_instance->pcShader.Id(), "view");
-    m_view_instance->projectionIndex = glGetUniformLocation(m_view_instance->pcShader.Id(), "projection");
+    //Get uniform locations - use combined MVP for better performance
+    m_view_instance->modelIndex = glGetUniformLocation(m_view_instance->pcShader.Id(), "mvp");
     m_view_instance->m_pointSizeIndex = glGetUniformLocation(m_view_instance->pcShader.Id(), "uPointSize");
+    
+    // Keep legacy indices for compatibility
+    m_view_instance->viewIndex = -1;
+    m_view_instance->projectionIndex = -1;
 
     //Initialize Model, View, and Projection Matrices to Identity
     mat4x4_identity(m_view_mat);
     mat4x4_identity(m_projection_mat);
     mat4x4_identity(m_model_mat);
 
-    //Create Frame Buffers to be able to display on the Point Cloud Window.
+    //Create Frame Buffers optimized for Jetson Orin Nano
     glGenFramebuffers(1, &m_gl_pc_colourTex);
     glBindFramebuffer(GL_FRAMEBUFFER, m_gl_pc_colourTex);
-    // create a color attachment texture
+    
+    // Create color attachment texture with optimal format for Jetson
     glGenTextures(1, &m_gl_pointcloud_video_texture);
     glBindTexture(GL_TEXTURE_2D, m_gl_pointcloud_video_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_main_window_width, m_main_window_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // Use RGB8 for better performance on ARM Mali/Tegra GPUs
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, m_main_window_width, m_main_window_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // Nearest for point cloud
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_gl_pointcloud_video_texture, 0);
@@ -641,28 +642,39 @@ void ADIMainWindow::DisplayPointCloudWindow(ImGuiWindowFlags overlayFlags) {
         if (PreparePointCloudVertices(m_view_instance->vertexBufferObject,
             m_view_instance->vertexArrayObject) >= 0) {
 
+            // Bind framebuffer and set up rendering state
             glBindFramebuffer(GL_FRAMEBUFFER, m_gl_pc_colourTex);
-            
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear whole main window
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
-
-            // draw our Image
+            
+            // Use shader program
             glUseProgram(m_view_instance->pcShader.Id());
 
+            // Set point size uniform
             glUniform1f(m_view_instance->m_pointSizeIndex, m_point_size);
-            mat4x4_perspective(m_projection_mat, Radians(m_field_of_view), (float)m_view_instance->frameWidth / (float)m_view_instance->frameHeight, 0.1f, 100.0f);
-            glUniformMatrix4fv(m_view_instance->projectionIndex, 1, GL_FALSE, &m_projection_mat[0][0]);
-
-            //Look-At function[ x, y, z] = (m_camera_position_vec, m_camera_position_vec + m_camera_front_vec, m_camera_up_vec);
+            
+            // Compute combined MVP matrix (optimized for Jetson)
+            mat4x4 mvp_mat;
+            mat4x4_perspective(m_projection_mat, Radians(m_field_of_view), 
+                             (float)m_view_instance->frameWidth / (float)m_view_instance->frameHeight, 
+                             0.1f, 100.0f);
+            
             vec3_add(m_camera_position_front_vec, m_camera_position_vec, m_camera_front_vec);
             mat4x4_look_at(m_view_mat, m_camera_position_vec, m_camera_position_front_vec, m_camera_up_vec);
-            glUniformMatrix4fv(m_view_instance->viewIndex, 1, GL_FALSE, &m_view_mat[0][0]);
-            glUniformMatrix4fv(m_view_instance->modelIndex, 1, GL_FALSE, &m_model_mat[0][0]);
+            
+            // Combine matrices: MVP = P * V * M
+            mat4x4 temp_mat;
+            mat4x4_mul(temp_mat, m_projection_mat, m_view_mat);
+            mat4x4_mul(mvp_mat, temp_mat, m_model_mat);
+            
+            // Upload single combined matrix (saves 2 matrix multiplications in shader per vertex)
+            glUniformMatrix4fv(m_view_instance->modelIndex, 1, GL_FALSE, &mvp_mat[0][0]);
 
-            glBindVertexArray(m_view_instance->vertexArrayObject); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-            glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(m_view_instance->vertexArraySize));
-            glBindVertexArray(0);
-
+            // VAO already bound by PreparePointCloudVertices
+            size_t point_count = m_view_instance->vertexArraySize / (6 * sizeof(float));
+            glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(point_count));
+            
+            // Minimal state cleanup
             glUseProgram(0);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -678,8 +690,7 @@ void ADIMainWindow::DisplayPointCloudWindow(ImGuiWindowFlags overlayFlags) {
                 ImVec2(_displayPointCloudDimensions.x,
                     _displayPointCloudDimensions.y),
                 rotationangleradians);
-            glDeleteVertexArrays(1, &m_view_instance->vertexArrayObject);
-            glDeleteBuffers(1, &m_view_instance->vertexBufferObject);
+            // Persistent buffers are reused - no need to delete every frame
 
             float modelMatrix[16];
             float projMatrix[16];
@@ -707,37 +718,49 @@ int32_t ADIMainWindow::PreparePointCloudVertices(GLuint &vbo, GLuint&vao) {
         return -2;
     }
     
-    glGenVertexArrays(1, &vao); // Here is where m_view_instance->vertexArraySize goes to 0;
-    //Initialize Point Cloud Image
-    glGenBuffers(1, &vbo);
-    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-    glBindVertexArray(vao);
-    //Bind Point Cloud Image
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    //Pass on Image buffer here:
-    glBufferData(GL_ARRAY_BUFFER, 
-                 m_view_instance->vertexArraySize,
-                 m_view_instance->normalized_vertices,
-                 GL_STREAM_DRAW);
-
-    assert(m_view_instance->vertexArraySize != 0);
-
-    //Image
-    glVertexAttribPointer(
-        0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
-        (void *)0); //Our image buffer got bigger: [X, Y, Z, R, G, B]
-    glEnableVertexAttribArray(0); //Enable [X, Y, Z]
-
-    //Point Cloud Color
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
-                          (void *)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1); //Enable [R, G, B]
-
-    // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    glBindVertexArray(0);
+    // Optimized persistent buffer approach for Jetson Orin Nano
+    // Reuse buffers instead of creating new ones every frame
+    if (!m_buffers_initialized || m_last_vertex_size != m_view_instance->vertexArraySize) {
+        // Clean up old buffers if size changed
+        if (m_buffers_initialized) {
+            glDeleteVertexArrays(1, &m_persistent_vao);
+            glDeleteBuffers(1, &m_persistent_vbo);
+        }
+        
+        // Create persistent buffers
+        glGenVertexArrays(1, &m_persistent_vao);
+        glGenBuffers(1, &m_persistent_vbo);
+        
+        glBindVertexArray(m_persistent_vao);
+        glBindBuffer(GL_ARRAY_BUFFER, m_persistent_vbo);
+        
+        // Allocate buffer with GL_DYNAMIC_DRAW for frequent updates
+        glBufferData(GL_ARRAY_BUFFER, 
+                     m_view_instance->vertexArraySize,
+                     nullptr,  // Allocate but don't fill yet
+                     GL_DYNAMIC_DRAW);
+        
+        // Set up vertex attributes (only once)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+        
+        m_last_vertex_size = m_view_instance->vertexArraySize;
+        m_buffers_initialized = true;
+    }
+    
+    // Update buffer data efficiently using glBufferSubData
+    glBindBuffer(GL_ARRAY_BUFFER, m_persistent_vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, m_view_instance->vertexArraySize,
+                    m_view_instance->normalized_vertices);
+    
+    // Return persistent buffer handles
+    vbo = m_persistent_vbo;
+    vao = m_persistent_vao;
+    
+    // Keep buffer bound for rendering
+    glBindVertexArray(m_persistent_vao);
 
     return 0;
 }

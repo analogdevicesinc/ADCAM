@@ -556,6 +556,12 @@ class ADIMainWindow {
     int32_t m_point_size = 1;
     GLuint m_gl_pc_colourTex;
     GLuint m_gl_pc_depthTex;
+    
+    // Optimizations for Jetson Orin Nano
+    GLuint m_persistent_vbo = 0;
+    GLuint m_persistent_vao = 0;
+    size_t m_last_vertex_size = 0;
+    bool m_buffers_initialized = false;
     bool m_mouse_down = false;
     bool m_saveBinaryFormatTmp = false;
     float m_tof_image_pos_y;
