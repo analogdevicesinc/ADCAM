@@ -15,6 +15,18 @@
 #include <chrono>
 #include <omp.h>
 
+#if defined(__aarch64__) || defined(__ARM_NEON)
+#include <arm_neon.h>
+#define USE_NEON 1
+#elif defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+#include <immintrin.h>
+#define USE_AVX2 1
+#endif
+
+#ifdef USE_CUDA
+#include "ADIViewCuda.cuh"
+#endif
+
 #ifdef USE_GLOG
 #include <glog/logging.h>
 #else
@@ -55,23 +67,35 @@ ADIView::ADIView(std::shared_ptr<ADIController> ctrl, const std::string &name)
     depth_video_data_8bit = nullptr;
     normalized_vertices = nullptr;
 
-#ifdef DEPTH_SIMD
+#if defined(USE_CUDA) && defined(DEPTH_SIMD)
+    m_depthImageWorker = std::thread(std::bind(&ADIView::_displayDepthImage_CUDA, this));
+#elif defined(USE_NEON) && defined(DEPTH_SIMD)
+    m_depthImageWorker = std::thread(std::bind(&ADIView::_displayDepthImage_NEON, this));
+#elif defined(DEPTH_SIMD)
     m_depthImageWorker = std::thread(std::bind(&ADIView::_displayDepthImage_SIMD, this));
-#else //DEPTH_SIMD
+#else
 	m_depthImageWorker = std::thread(std::bind(&ADIView::_displayDepthImage, this));
-#endif //DEPTH_SIMD
+#endif
 
-#ifdef AB_SIMD
+#if defined(USE_CUDA) && defined(AB_SIMD)
+    m_abImageWorker = std::thread(std::bind(&ADIView::_displayAbImage_CUDA, this));
+#elif defined(USE_NEON) && defined(AB_SIMD)
+    m_abImageWorker = std::thread(std::bind(&ADIView::_displayAbImage_NEON, this));
+#elif defined(AB_SIMD)
     m_abImageWorker = std::thread(std::bind(&ADIView::_displayAbImage_SIMD, this));
-#else //AB_SIMD
+#else
     m_abImageWorker = std::thread(std::bind(&ADIView::_displayAbImage, this));
-#endif //AB_SIMD
+#endif
 
-#ifdef PC_SIMD
+#if defined(USE_CUDA) && defined(PC_SIMD)
+    m_pointCloudImageWorker = std::thread(std::bind(&ADIView::_displayPointCloudImage_CUDA, this));
+#elif defined(USE_NEON) && defined(PC_SIMD)
+    m_pointCloudImageWorker = std::thread(std::bind(&ADIView::_displayPointCloudImage_NEON, this));
+#elif defined(PC_SIMD)
     m_pointCloudImageWorker = std::thread(std::bind(&ADIView::_displayPointCloudImage_SIMD, this));
-#else //PC_SIMD
+#else
     m_pointCloudImageWorker = std::thread(std::bind(&ADIView::_displayPointCloudImage, this));
-#endif //PC_SIMD
+#endif
 }
 
 ADIView::~ADIView() {
@@ -130,7 +154,7 @@ void ADIView::setABMaxRange(std::string value) {
     m_maxABPixelValue = (1 << base) - 1;
 }
 
-#ifdef AB_SIMD
+#if defined(USE_AVX2) && defined(AB_SIMD)
 void ADIView::normalizeABBuffer_SIMD(
     uint16_t* abBuffer, uint16_t abWidth,
     uint16_t abHeight, bool advanceScaling,
@@ -408,7 +432,12 @@ void ADIView::_displayAbImage_SIMD() {
         }
     }
 }
-#else //AB_SIMD
+#endif // USE_AVX2 && AB_SIMD
+
+#if !defined(USE_AVX2) && defined(AB_SIMD)
+// Non-AVX2 SIMD path (will use NEON on ARM64)
+#elif !defined(AB_SIMD)
+// Scalar AB implementation
 void ADIView::normalizeABBuffer(uint16_t* abBuffer, uint16_t abWidth,
     uint16_t abHeight, bool advanceScaling,
     bool useLogScaling) {
@@ -597,7 +626,7 @@ void ADIView::_displayAbImage() {
 }
 #endif //AB_SIMD
 
-#ifdef DEPTH_SIMD
+#if defined(USE_AVX2) && defined(DEPTH_SIMD)
 void ADIView::_displayDepthImage_SIMD() {
 
 #ifdef DEPTH_TIME
@@ -731,8 +760,12 @@ void ADIView::_displayDepthImage_SIMD() {
         }
     }
 }
+#endif // USE_AVX2 && DEPTH_SIMD
 
-#else //DEPTH_SIMD
+#if !defined(USE_AVX2) && defined(DEPTH_SIMD)
+// Non-AVX2 SIMD depth (will use NEON on ARM64)
+#elif !defined(DEPTH_SIMD)
+// Scalar depth implementation
 
 void ADIView::_displayDepthImage() {
 
@@ -839,6 +872,7 @@ void ADIView::_displayDepthImage() {
 
 
 #else //PC_SIMD
+
 void ADIView::_displayPointCloudImage() {
 
 #ifdef PC_TIME
@@ -1064,3 +1098,6 @@ void ADIView::startCamera() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
+
+// ARM NEON implementations are in ADIView_neon.cpp (compiled separately)
+// CUDA implementations are in ADIView_cuda_wrapper.cpp and ADIView_cuda.cu (compiled separately)
