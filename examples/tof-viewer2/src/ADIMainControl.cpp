@@ -249,6 +249,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
                 filePath = "";
                 // QUERY: Is it necessary to stop a recording if one is on going?
                 CameraStop();
+                ImGui::End();
                 return;
             }
 
@@ -454,6 +455,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
                 m_is_playing = false;
                 m_fps_frame_received = 0;
                 CameraStop();
+                ImGui::End();
                 return;
             }
 

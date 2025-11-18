@@ -11,6 +11,7 @@
 #include "ADIImGUIExtensions.h"
 #include "ADIOpenFile.h"
 #include "aditof/version.h"
+#include "aditof/version-kit.h"
 #include "aditof/status_definitions.h"
 #include <cmath>
 #include <fcntl.h>
@@ -198,9 +199,9 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs& args) {
     // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
-    std::string version = aditof::getApiVersion();
+    std::string version = aditof::getKitVersion();
     std::string _title = "Analog Devices, Inc. Time of Flight Main Window v" +
-        version; //Default name
+                         version; //Default name
 
     // Create window with graphics context
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
@@ -733,6 +734,7 @@ void ADIMainWindow::ShowStartWizard() {
                 }
                 else {
                     LOG(ERROR) << "Camera not initialized!";
+                    ImGui::End();
                     return;
                 }
             }
@@ -909,7 +911,7 @@ void ADIMainWindow::ShowStartWizard() {
 						wizard_height -= 20;
 
                     if (ImGuiExtensions::ADIComboBox(
-                        "", "Select Mode", ImGuiSelectableFlags_None,
+                        "select_mode", "Select Mode", ImGuiSelectableFlags_None,
                         m_cameraModesDropDown, &m_mode_selection, true)) {
 						m_ini_params.clear();
                     }
