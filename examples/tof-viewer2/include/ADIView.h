@@ -26,7 +26,9 @@
 
 #ifdef __ARM_NEON or __ARM_NEON__
 
-// TODO ARM NEON
+#define AB_SIMD /* ARM NEON optimized */
+#define DEPTH_SIMD /* ARM NEON optimized */
+#define PC_SIMD /* ARM NEON optimized */
 
 #else
 
@@ -159,35 +161,53 @@ class ADIView {
     /**
 		* @brief Creates Depth buffer data
 		*/
+    void _displayDepthImage();
 #ifdef DEPTH_SIMD
     void _displayDepthImage_SIMD();
-#else //DEPTH_SIMD
-    void _displayDepthImage();
-#endif //DEPTH_SIMD
+#endif
+#if defined(__aarch64__) || defined(__ARM_NEON)
+    void _displayDepthImage_NEON();
+#endif
+#ifdef USE_CUDA
+    void _displayDepthImage_CUDA();
+#endif
 
     /**
 		* @brief Creates AB buffer data
 		*/
+    void _displayAbImage();
+    void normalizeABBuffer(uint16_t* abBuffer, uint16_t abWidth,
+        uint16_t abHeight, bool advanceScaling,
+        bool useLogScaling);
 #ifdef AB_SIMD
     void _displayAbImage_SIMD();
     void normalizeABBuffer_SIMD(uint16_t* abBuffer, uint16_t abWidth,
         uint16_t abHeight, bool advanceScaling,
         bool useLogScaling);
-#else //AB_SIMD
-    void _displayAbImage();
-    void normalizeABBuffer(uint16_t* abBuffer, uint16_t abWidth,
+#endif
+#if defined(__aarch64__) || defined(__ARM_NEON)
+    void _displayAbImage_NEON();
+    void normalizeABBuffer_NEON(uint16_t* abBuffer, uint16_t abWidth,
         uint16_t abHeight, bool advanceScaling,
         bool useLogScaling);
-#endif //AB_SIMD
+#endif
+#ifdef USE_CUDA
+    void _displayAbImage_CUDA();
+#endif
 
     /**
 		* @brief Creates a Point Cloud buffer data
 		*/
+    void _displayPointCloudImage();
 #ifdef PC_SIMD
     void _displayPointCloudImage_SIMD();
-#else //PC_SIMD
-    void _displayPointCloudImage();
-#endif //PC_SIMD
+#endif
+#if defined(__aarch64__) || defined(__ARM_NEON)
+    void _displayPointCloudImage_NEON();
+#endif
+#ifdef USE_CUDA
+    void _displayPointCloudImage_CUDA();
+#endif
 
     /**
 		* @brief Returns RGB components in

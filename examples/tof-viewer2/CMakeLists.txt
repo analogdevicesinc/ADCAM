@@ -4,10 +4,34 @@
 cmake_minimum_required(VERSION 3.10)
 
 # set the project name
-project(ADIToFGUI)
+project(ADIToFGUI LANGUAGES CXX)
+
+# Check for CUDA support on ARM64
+if(ENABLE_CUDA_ACCELERATION AND (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64"))
+    # Try to enable CUDA on ARM64 platforms (Jetson)
+    include(CheckLanguage)
+    check_language(CUDA)
+    if(CMAKE_CUDA_COMPILER)
+        enable_language(CUDA)
+        set(USE_CUDA ON)
+        set(CMAKE_CUDA_STANDARD 14)
+        set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+        message(STATUS "CUDA support enabled for ARM64")
+    else()
+        set(USE_CUDA OFF)
+        message(STATUS "CUDA not found, using NEON optimizations only")
+    endif()
+else()
+    set(USE_CUDA OFF)
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        message(STATUS "CUDA acceleration disabled (ENABLE_CUDA_ACCELERATION=OFF), using NEON only")
+    endif()
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+option(ENABLE_CUDA_ACCELERATION "Enable CUDA GPU acceleration if available" ON)
 
 option(ENBABLE_PASSIVE_IR "Allow passive IR (PCM) mode" OFF)
 
@@ -39,10 +63,47 @@ set(M4DC_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/m4dc)
 
 file(GLOB ADIToF_SOURCES CONFIGURE_DEPENDS "${ADIToF_SOURCE_DIR}/*.cpp")
 
-add_executable(ADIToFGUI
-    ${ADIToF_SOURCES}
-    ${OS_SPECIFIC_SOURCES}
-)
+# Add ARM NEON optimized source files for ARM64 platforms
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+    list(APPEND ADIToF_SOURCES "${ADIToF_SOURCE_DIR}/ADIView_neon.cpp")
+    message(STATUS "Adding ARM NEON optimized sources")
+    
+    # Enable NEON compilation flags
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        add_compile_options(-march=armv8-a+simd)
+    endif()
+endif()
+
+# Add CUDA source files if CUDA is available
+if(USE_CUDA)
+    list(APPEND ADIToF_SOURCES "${ADIToF_SOURCE_DIR}/ADIView_cuda_wrapper.cpp")
+    set(CUDA_SOURCES "${ADIToF_SOURCE_DIR}/ADIView_cuda.cu")
+    message(STATUS "Adding CUDA accelerated sources")
+endif()
+
+if(USE_CUDA)
+    add_executable(ADIToFGUI
+        ${ADIToF_SOURCES}
+        ${CUDA_SOURCES}
+        ${OS_SPECIFIC_SOURCES}
+    )
+    
+    # Set CUDA properties
+    set_target_properties(ADIToFGUI PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+        CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    )
+    
+    # Add CUDA architectures for Jetson Orin
+    set_property(TARGET ADIToFGUI PROPERTY CUDA_ARCHITECTURES 87)
+    
+    target_compile_definitions(ADIToFGUI PRIVATE USE_CUDA)
+else()
+    add_executable(ADIToFGUI
+        ${ADIToF_SOURCES}
+        ${OS_SPECIFIC_SOURCES}
+    )
+endif()
 
 # Link Libraries
 if(UNIX)
@@ -65,6 +126,12 @@ target_link_libraries(ADIToFGUI PRIVATE
 					  ${CMAKE_DL_LIBS}
 					  cjson
 					 )
+
+# Link CUDA runtime if CUDA is enabled
+if(USE_CUDA)
+    target_link_libraries(ADIToFGUI PRIVATE ${CUDA_LIBRARIES})
+    message(STATUS "Linking CUDA libraries")
+endif()
 
 if( WIN32 )					 
 	set_target_properties(ADIToFGUI PROPERTIES
