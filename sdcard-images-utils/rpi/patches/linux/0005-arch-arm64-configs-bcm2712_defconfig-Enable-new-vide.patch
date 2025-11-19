@@ -1,0 +1,35 @@
+From 9a46e70a04855cd2872fa8b4e58d0901874305b9 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Wed, 19 Nov 2025 18:00:55 +0530
+Subject: [PATCH 2/2] arch: arm64: configs: bcm2712_defconfig: Enable new video
+ drivers and features
+
+This patch updates the bcm2712_defconfig to enable support for additional video drivers:
+- VIDEO_V4L2: Enable Video For Linux 2 support.
+- VIDEO_ADSD3500: Enable the ADSD3500 video driver
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ arch/arm64/configs/bcm2712_defconfig | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm64/configs/bcm2712_defconfig b/arch/arm64/configs/bcm2712_defconfig
+index 7b5f2d8fdf91..af57cdac508b 100644
+--- a/arch/arm64/configs/bcm2712_defconfig
++++ b/arch/arm64/configs/bcm2712_defconfig
+@@ -1030,10 +1030,12 @@ CONFIG_VIDEO_RPI_HEVC_DEC=m
+ CONFIG_VIDEO_RASPBERRYPI_PISP_BE=m
+ CONFIG_VIDEO_RP1_CFE=m
+ CONFIG_V4L_TEST_DRIVERS=y
++CONFIG_VIDEO_V4L2=y
+ CONFIG_VIDEO_VIM2M=m
+ CONFIG_VIDEO_VICODEC=m
+ CONFIG_VIDEO_VIMC=m
+ CONFIG_VIDEO_VIVID=m
++CONFIG_VIDEO_ADSD3500=m
+ CONFIG_VIDEO_ARDUCAM_64MP=m
+ CONFIG_VIDEO_ARDUCAM_PIVARIETY=m
+ CONFIG_VIDEO_IMX219=m
+-- 
+2.25.1
+
