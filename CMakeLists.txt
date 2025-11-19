@@ -137,34 +137,6 @@ make_directory(${RESOURCES_DIR})
 
 if (WITH_OFFLINE)
         add_definitions(-DHAS_OFFLINE)
-
-        set(RESOURCES_OFFLINE_DIR "${RESOURCES_DIR}/offline")
-        make_directory(${RESOURCES_OFFLINE_DIR})
-        
-        set(MODE_FILE "lr-native.bin" "sr-native.bin" "lr-qnative.bin" "sr-qnative.bin" "lr-mixed.bin" "sr-mixed.bin")
-        message("Downloading raw frames into ${RESOURCES_OFFLINE_DIR}")
-        foreach(MODE IN LISTS MODE_FILE)
-                set(MODE_URL "swdownloads.analog.com/cse/aditof/resources/itof/frames/${MODE}")
-                set(MODE_PATH "${RESOURCES_OFFLINE_DIR}/${MODE}")
-
-                if (NOT EXISTS ${MODE_PATH})
-                        file(DOWNLOAD "${MODE_URL}" "${MODE_PATH}")
-                endif()
-        endforeach()
-
-        if (ON_TARGET)
-                make_directory("${RESOURCES_OFFLINE_DIR}/adsd3500_raw")
-
-                message("Downloading raw frames into ${RESOURCES_OFFLINE_DIR}/adsd3500_raw")
-                foreach(MODE IN LISTS MODE_FILE)
-                set(MODE_URL "swdownloads.analog.com/cse/aditof/resources/itof/offline/adsd3500_raw/${MODE}")
-                set(MODE_PATH "${RESOURCES_OFFLINE_DIR}/adsd3500_raw/${MODE}")
-
-                if (NOT EXISTS ${MODE_PATH})
-                        file(DOWNLOAD "${MODE_URL}" "${MODE_PATH}")
-                endif()
-        endforeach()
-        endif()
 endif()
 
 if(WITH_GLOG_DEPENDENCY)
