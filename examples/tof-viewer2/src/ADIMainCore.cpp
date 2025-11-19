@@ -6,13 +6,17 @@
 /*																				*/
 /********************************************************************************/
 
+// clang-format off
+// IMPORTANT: glad/gl.h must be included first to avoid conflicts with ImGui OpenGL loader
+#include "glad/gl.h"
+// clang-format on
+
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
 #include "ADIOpenFile.h"
 #include "aditof/status_definitions.h"
 #include "aditof/version-kit.h"
 #include "aditof/version.h"
-#include "glad/gl.h"
 #include <cmath>
 #include <fcntl.h>
 #include <fstream>

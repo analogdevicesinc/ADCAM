@@ -1,3 +1,8 @@
+// clang-format off
+// IMPORTANT: glad/gl.h must be included first to avoid conflicts with ImGui OpenGL loader
+#include <glad/gl.h>
+// clang-format on
+
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
 #include "imoguizmo.hpp"
@@ -6,7 +11,6 @@
 #include <aditof/frame_handler.h>
 #include <cmath>
 #include <fstream>
-#include <glad/gl.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
