@@ -11,7 +11,7 @@ endif()
 
 ############################### Version #######################################
 set(ADCAM_VERSION_MAJOR 0)
-set(ADCAM_VERSION_MINOR 1)
+set(ADCAM_VERSION_MINOR 2)
 set(ADCAM_VERSION_PATCH 0)
 
 set(VERSION "${ADCAM_VERSION_MAJOR}.${ADCAM_VERSION_MINOR}.${ADCAM_VERSION_PATCH}")
