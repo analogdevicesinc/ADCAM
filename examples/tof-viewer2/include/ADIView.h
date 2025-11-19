@@ -24,7 +24,7 @@
 #include <ADIShader.h>
 #include <aditof/frame.h>
 
-#ifdef __ARM_NEON or __ARM_NEON__
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
 
 #define AB_SIMD    /* ARM NEON optimized */
 #define DEPTH_SIMD /* ARM NEON optimized */
@@ -36,7 +36,7 @@
 #define DEPTH_SIMD /* Much faster, so leave this active */
 //#define PC_SIMD
 
-#endif //__ARM_NEON or __ARM_NEON__
+#endif // ARM NEON
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 //#define AB_TIME
