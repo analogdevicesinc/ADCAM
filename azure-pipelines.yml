@@ -48,6 +48,12 @@ jobs:
     clean: true
     persistCredentials: true
 
+  - script: |
+      cd libaditof
+      git fetch origin main
+      git checkout main
+    displayName: "Update submodule to main branch"
+
   - task: Cache@2
     condition: and(
       eq(variables['DOCKER'], ''),
