@@ -9,8 +9,8 @@
 // ADIToFTest.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 #include <aditof/system.h>
-#include <aditof/version.h>
 #include <aditof/version-kit.h>
+#include <aditof/version.h>
 #include <algorithm>
 #include <cctype>
 #ifdef USE_GLOG
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 #endif
 
     LOG(INFO) << "ADCAM version: " << aditof::getKitVersion()
-	      << " | SDK version: " << aditof::getApiVersion()
+              << " | SDK version: " << aditof::getApiVersion()
               << " | branch: " << aditof::getBranchVersion()
               << " | commit: " << aditof::getCommitVersion();
 

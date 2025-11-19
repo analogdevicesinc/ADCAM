@@ -50,8 +50,9 @@ void ADIView::_displayAbImage_CUDA() {
 
         std::lock_guard<std::mutex> lock(ab_data_ready_mtx);
 
-        uint16_t* _ab_video_data = nullptr;
-        auto camera = m_ctrl->m_cameras[static_cast<unsigned int>(m_ctrl->getCameraInUse())];
+        uint16_t *_ab_video_data = nullptr;
+        auto camera = m_ctrl->m_cameras[static_cast<unsigned int>(
+            m_ctrl->getCameraInUse())];
 
         m_capturedFrame->getData("ab", &ab_video_data);
 
@@ -74,10 +75,11 @@ void ADIView::_displayAbImage_CUDA() {
             LOG(ERROR) << __func__ << ": Cannot allocate _ab_video_data.";
             return;
         }
-        memcpy(_ab_video_data, ab_video_data, frameHeight * frameWidth * sizeof(uint16_t));
+        memcpy(_ab_video_data, ab_video_data,
+               frameHeight * frameWidth * sizeof(uint16_t));
 
         // Use CUDA for normalization
-        normalizeABBuffer_CUDA(nullptr, _ab_video_data, frameWidth, frameHeight, 
+        normalizeABBuffer_CUDA(nullptr, _ab_video_data, frameWidth, frameHeight,
                                getAutoScale(), getLogImage());
 
         if (ab_video_data_8bit == nullptr) {
@@ -85,7 +87,8 @@ void ADIView::_displayAbImage_CUDA() {
         }
 
         // Use CUDA for BGR conversion
-        convertABtoBGR_CUDA(_ab_video_data, nullptr, ab_video_data_8bit, frameWidth, frameHeight);
+        convertABtoBGR_CUDA(_ab_video_data, nullptr, ab_video_data_8bit,
+                            frameWidth, frameHeight);
 
         ab_data_ready = true;
         ab_data_ready_cv.notify_one();
@@ -97,7 +100,8 @@ void ADIView::_displayAbImage_CUDA() {
 #ifdef AB_TIME
         {
             std::ostringstream oss;
-            oss << "AB (CUDA): " << endTimerAndUpdate(timerStart, &timeABQ) << " ms" << std::endl;
+            oss << "AB (CUDA): " << endTimerAndUpdate(timerStart, &timeABQ)
+                << " ms" << std::endl;
             OutputDebugStringA(oss.str().c_str());
         }
 #endif
@@ -140,7 +144,7 @@ void ADIView::_displayDepthImage_CUDA() {
         auto timerStart = startTimer();
 #endif
 
-        uint16_t* data;
+        uint16_t *data;
         m_capturedFrame->getData("depth", &depth_video_data);
 
         if (depth_video_data == nullptr) {
@@ -158,13 +162,16 @@ void ADIView::_displayDepthImage_CUDA() {
         }
 
         // Use CUDA for depth processing
-        processDepthImage_CUDA(nullptr, depth_video_data, nullptr, depth_video_data_8bit,
-                              frameWidth, frameHeight, minRange, maxRange);
+        processDepthImage_CUDA(nullptr, depth_video_data, nullptr,
+                               depth_video_data_8bit, frameWidth, frameHeight,
+                               minRange, maxRange);
 
 #ifdef DEPTH_TIME
         {
             std::ostringstream oss;
-            oss << "Depth (CUDA): " << endTimerAndUpdate(timerStart, &timeDepthQ) << " ms" << std::endl;
+            oss << "Depth (CUDA): "
+                << endTimerAndUpdate(timerStart, &timeDepthQ) << " ms"
+                << std::endl;
             OutputDebugStringA(oss.str().c_str());
         }
 #endif
@@ -207,7 +214,7 @@ void ADIView::_displayPointCloudImage_CUDA() {
         auto timerStart = startTimer();
 #endif
 
-        m_capturedFrame->getData("xyz", (uint16_t**)&pointCloud_video_data);
+        m_capturedFrame->getData("xyz", (uint16_t **)&pointCloud_video_data);
 
         if (pointCloud_video_data == nullptr) {
             return;
@@ -221,7 +228,8 @@ void ADIView::_displayPointCloudImage_CUDA() {
         frameWidth = static_cast<int>(frameXyzDetails.width);
 
         size_t frameSize = frameHeight * frameWidth * 3;
-        if (normalized_vertices == nullptr || pointcloudTableSize != frameSize) {
+        if (normalized_vertices == nullptr ||
+            pointcloudTableSize != frameSize) {
             if (normalized_vertices) {
                 delete[] normalized_vertices;
             }
@@ -237,17 +245,18 @@ void ADIView::_displayPointCloudImage_CUDA() {
         }
 
         // Use CUDA for point cloud processing
-        processPointCloud_CUDA(nullptr, pointCloud_video_data, nullptr, normalized_vertices,
-                              haveAb ? ab_video_data_8bit : nullptr,
-                              frameWidth, frameHeight, Max_X, Max_Y, Max_Z,
-                              minRange, maxRange, m_pccolour, haveAb);
+        processPointCloud_CUDA(
+            nullptr, pointCloud_video_data, nullptr, normalized_vertices,
+            haveAb ? ab_video_data_8bit : nullptr, frameWidth, frameHeight,
+            Max_X, Max_Y, Max_Z, minRange, maxRange, m_pccolour, haveAb);
 
         vertexArraySize = (pointcloudTableSize + 1) * sizeof(float) * 3;
 
 #ifdef PC_TIME
         {
             std::ostringstream oss;
-            oss << "PC (CUDA): " << endTimerAndUpdate(timerStart, &timePCQ) << " ms" << std::endl;
+            oss << "PC (CUDA): " << endTimerAndUpdate(timerStart, &timePCQ)
+                << " ms" << std::endl;
             OutputDebugStringA(oss.str().c_str());
         }
 #endif

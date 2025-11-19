@@ -6,13 +6,13 @@
 /*																				*/
 /********************************************************************************/
 
-#include "glad/gl.h"
-#include "ADIMainWindow.h"
 #include "ADIImGUIExtensions.h"
+#include "ADIMainWindow.h"
 #include "ADIOpenFile.h"
-#include "aditof/version.h"
-#include "aditof/version-kit.h"
 #include "aditof/status_definitions.h"
+#include "aditof/version-kit.h"
+#include "aditof/version.h"
+#include "glad/gl.h"
 #include <cmath>
 #include <fcntl.h>
 #include <fstream>
@@ -33,8 +33,8 @@
 #include "roboto-semicondensed-bold.h"
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-#include <direct.h>
 #include "psapi.h"
+#include <direct.h>
 #include <io.h>
 #include <windows.h>
 /* TODO : Remove <experimental/filesystem> when updating to C++17 or newer */
@@ -66,15 +66,16 @@ namespace fs = ghc::filesystem;
 
 using namespace adiMainWindow;
 
-extern ImFont* g_font_regular;
-extern ImFont* g_font_bold;
-extern ImFont* g_font_bold_large;
+extern ImFont *g_font_regular;
+extern ImFont *g_font_bold;
+extern ImFont *g_font_bold_large;
 
 ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
     /********************/
     struct stat info;
     std::string folderName = "log";
-    if (stat(folderName.c_str(), &info) != 0) { // If no folder named log is found
+    if (stat(folderName.c_str(), &info) !=
+        0) { // If no folder named log is found
 #ifdef _WIN32
         if (_mkdir("log")) { // Create local folder where all logs will be filed
 #elif __linux__
@@ -98,13 +99,14 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
 #ifdef _WIN32
     wholeLogPath += "\\"; // Ensure the path ends with a slash
 #elif __linux__
-    wholeLogPath += "/"; // Ensure the path ends with a slash
+    wholeLogPath += "/";   // Ensure the path ends with a slash
 #endif
     wholeLogPath += "log_" + std::string(timebuff) + ".txt";
 
     /********************/
-    m_file_stream = freopen(wholeLogPath.c_str(), "w", stderr); // Added missing pointer
-    setvbuf(m_file_stream, 0, _IONBF, 0);               // No Buffering
+    m_file_stream =
+        freopen(wholeLogPath.c_str(), "w", stderr); // Added missing pointer
+    setvbuf(m_file_stream, 0, _IONBF, 0);           // No Buffering
     m_file_input = fopen(wholeLogPath.c_str(), "r");
 
     //Parse config file for this application
@@ -155,7 +157,7 @@ ADIMainWindow::~ADIMainWindow() {
     if (m_is_playing) {
         CameraStop();
     }
-    
+
     // Clean up persistent OpenGL buffers for Jetson optimization
     if (m_buffers_initialized) {
         glDeleteVertexArrays(1, &m_persistent_vao);
@@ -190,7 +192,7 @@ static void glfw_error_callback(int error, const char *description) {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-bool ADIMainWindow::StartImGUI(const ADIViewerArgs& args) {
+bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
     // Setup window
     glfwSetErrorCallback(glfw_error_callback); //Error Management
     if (!glfwInit()) {
@@ -199,7 +201,7 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs& args) {
 
     // Decide GL+GLSL versions
     // GL 3.0 + GLSL 130
-    const char* glsl_version = "#version 130";
+    const char *glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 3.2+
@@ -216,7 +218,9 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs& args) {
     m_dict_win_position["main"].width = 1580.0f;
     m_dict_win_position["main"].height = 1080.0f;
 
-    window = glfwCreateWindow(m_dict_win_position["main"].width, m_dict_win_position["main"].height, _title.c_str(), NULL, NULL);
+    window = glfwCreateWindow(m_dict_win_position["main"].width,
+                              m_dict_win_position["main"].height,
+                              _title.c_str(), NULL, NULL);
 
     if (window == NULL) {
         return false;
@@ -291,7 +295,8 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs& args) {
     m_dict_win_position["fr-sub2"].height = 256.0f;
 
     m_dict_win_position["plotA"].x = m_dict_win_position["fr-main"].x;
-    m_dict_win_position["plotA"].y = WindowCalcY(m_dict_win_position["fr-main"], 10.0f);
+    m_dict_win_position["plotA"].y =
+        WindowCalcY(m_dict_win_position["fr-main"], 10.0f);
     m_dict_win_position["plotA"].width = m_dict_win_position["fr-main"].width;
     m_dict_win_position["plotA"].height = 315.0f;
 
@@ -320,7 +325,7 @@ void ADIMainWindow::OpenGLCleanUp() {
     glDeleteTextures(1, &m_gl_ab_video_texture);
     glDeleteTextures(1, &m_gl_depth_video_texture);
     glDeleteTextures(1, &m_gl_pointcloud_video_texture);
-	//glDeleteTextures(1, &m_gl_pc_colourTex); // TODO: Find out why deleting this causes issues.
+    //glDeleteTextures(1, &m_gl_pc_colourTex); // TODO: Find out why deleting this causes issues.
     //glDeleteTextures(1, &m_gl_pc_depthTex);  // TODO: Find out why deleting this causes issues.
     glDeleteVertexArrays(1, &m_view_instance->vertexArrayObject);
     glDeleteBuffers(1, &m_view_instance->vertexBufferObject);
@@ -328,16 +333,18 @@ void ADIMainWindow::OpenGLCleanUp() {
     m_view_instance->pcShader.RemoveShaders();
 }
 
-ImFont * ADIMainWindow::LoadFont(const unsigned char *ext_font, const unsigned int ext_font_len, const float size) {
+ImFont *ADIMainWindow::LoadFont(const unsigned char *ext_font,
+                                const unsigned int ext_font_len,
+                                const float size) {
     ImFont *font;
     bool isFontLoaded = false;
-    unsigned char* buffer = new(std::nothrow) unsigned char[ext_font_len];
+    unsigned char *buffer = new (std::nothrow) unsigned char[ext_font_len];
     if (buffer == nullptr) {
         LOG(ERROR) << "Failed to allocate memory for Roboto Regular font!";
-    }
-    else {
+    } else {
         std::memcpy(buffer, ext_font, ext_font_len);
-        font = ImGui::GetIO().Fonts->AddFontFromMemoryTTF(buffer, ext_font_len, size * m_dpi_scale_factor);
+        font = ImGui::GetIO().Fonts->AddFontFromMemoryTTF(
+            buffer, ext_font_len, size * m_dpi_scale_factor);
         if (!font) {
             LOG(ERROR) << "Failed to load font!";
             delete[] buffer; // Clean up memory if font loading fails
@@ -361,13 +368,16 @@ void ADIMainWindow::SetDpi() {
     fontConfig.SizePixels = defaultFontSize * m_dpi_scale_factor;
     ImGui::GetIO().Fonts->AddFontDefault(&fontConfig);
 
-    g_font_regular = LoadFont(Roboto_Regular_ttf, Roboto_Regular_ttf_len, 12.0f);
+    g_font_regular =
+        LoadFont(Roboto_Regular_ttf, Roboto_Regular_ttf_len, 12.0f);
     g_font_bold = LoadFont(Roboto_Bold_ttf, Roboto_Bold_ttf_len, 12.0f);
     g_font_bold_large = LoadFont(Roboto_Bold_ttf, Roboto_Bold_ttf_len, 18.0f);
 
     glfwGetWindowSize(window, &m_main_window_width, &m_main_window_height);
-    m_main_window_width = static_cast<int>(m_main_window_width * m_dpi_scale_factor);
-    m_main_window_height = static_cast<int>(m_main_window_height * m_dpi_scale_factor);
+    m_main_window_width =
+        static_cast<int>(m_main_window_width * m_dpi_scale_factor);
+    m_main_window_height =
+        static_cast<int>(m_main_window_height * m_dpi_scale_factor);
     glfwSetWindowSize(window, m_main_window_width, m_main_window_height);
 }
 
@@ -386,7 +396,8 @@ void ADIMainWindow::SetWindowSize(float width, float height) {
 }
 
 std::shared_ptr<aditof::Camera> ADIMainWindow::GetActiveCamera() {
-    if (!m_view_instance || !m_view_instance->m_ctrl || m_view_instance->m_ctrl->m_cameras.empty() ||
+    if (!m_view_instance || !m_view_instance->m_ctrl ||
+        m_view_instance->m_ctrl->m_cameras.empty() ||
         m_selected_device_index < 0 ||
         m_selected_device_index >= m_view_instance->m_ctrl->m_cameras.size()) {
         return nullptr;
@@ -433,25 +444,26 @@ void ADIMainWindow::Render() {
                         GetActiveCamera(); //already initialized on constructor
 
                     int chipStatus, imagerStatus;
-                    status = camera->adsd3500GetStatus(chipStatus, imagerStatus);
+                    status =
+                        camera->adsd3500GetStatus(chipStatus, imagerStatus);
                     if (status != aditof::Status::OK) {
                         LOG(ERROR) << "Failed to read chip status!";
                     } else {
-                        LOG(WARNING) << "Chip status error code: " << chipStatus;
+                        LOG(WARNING)
+                            << "Chip status error code: " << chipStatus;
                         LOG(WARNING)
                             << "Imager status error code: " << imagerStatus;
                     }
                 }
             }
 
-        }
-        else {
+        } else {
             // Show Start Wizard
             ShowStartWizard();
         }
 
         if (getIsWorking()) {
-			Spinner("Working...", 10.0f, 2.0f, IM_COL32(255, 255, 255, 255));
+            Spinner("Working...", 10.0f, 2.0f, IM_COL32(255, 255, 255, 255));
         }
 
         /***************************************************/
@@ -464,7 +476,7 @@ void ADIMainWindow::Render() {
         if (m_flash_main_window) {
             flashWindow = true;
             flashTimer = flashDuration;
-			m_flash_main_window = false;
+            m_flash_main_window = false;
         }
 
         float deltaTime = ImGui::GetIO().DeltaTime;
@@ -477,8 +489,7 @@ void ADIMainWindow::Render() {
 
         if (flashWindow) {
             clear_color = ImVec4(1.0f, 1.0f, 1.0f, 1.00f);
-        }
-        else {
+        } else {
             clear_color = ImVec4(0.0f, 0.0f, 0.00f, 1.00f);
         }
 
@@ -486,7 +497,8 @@ void ADIMainWindow::Render() {
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
-        glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+        glClearColor(clear_color.x, clear_color.y, clear_color.z,
+                     clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
@@ -542,8 +554,9 @@ void ADIMainWindow::ShowLoadAdsdParamsMenu() {
         loadconfigurationFile = true;
     }
     if (loadconfigurationFile && m_view_instance) {
-        auto camera = m_view_instance->m_ctrl->m_cameras[static_cast<unsigned int>(
-            m_view_instance->m_ctrl->getCameraInUse())];
+        auto camera =
+            m_view_instance->m_ctrl->m_cameras[static_cast<unsigned int>(
+                m_view_instance->m_ctrl->getCameraInUse())];
 
         aditof::Status status =
             camera->loadDepthParamsFromJsonFile(loadconfigurationFileValue);
@@ -563,8 +576,8 @@ void ADIMainWindow::ShowLoadAdsdParamsMenu() {
 
 void ADIMainWindow::ShowSaveAdsdParamsMenu() {
 
-    ImGuiExtensions::ButtonColorChanger colorChangerStartRec(m_custom_color_play,
-                                                             m_is_playing);
+    ImGuiExtensions::ButtonColorChanger colorChangerStartRec(
+        m_custom_color_play, m_is_playing);
 
     char filename[MAX_PATH] = "";
     int FilterIndex;
@@ -583,8 +596,9 @@ void ADIMainWindow::ShowSaveAdsdParamsMenu() {
         saveconfigurationFile = true;
     }
     if (saveconfigurationFile && m_view_instance) {
-        auto camera = m_view_instance->m_ctrl->m_cameras[static_cast<unsigned int>(
-            m_view_instance->m_ctrl->getCameraInUse())];
+        auto camera =
+            m_view_instance->m_ctrl->m_cameras[static_cast<unsigned int>(
+                m_view_instance->m_ctrl->getCameraInUse())];
 
         aditof::Status status =
             camera->saveDepthParamsToJsonFile(saveconfigurationFileValue);
@@ -596,7 +610,6 @@ void ADIMainWindow::ShowSaveAdsdParamsMenu() {
         } else {
             LOG(INFO) << "Current configuration info saved to file "
                       << saveconfigurationFileValue << std::endl;
-
         }
     }
 }
@@ -656,15 +669,19 @@ void ADIMainWindow::DrawBarLabel(const char *fmt, ...) {
     ImGui::PopStyleColor(); // Reset bar color
 }
 
-void ADIMainWindow::NewLine(float spacing) { ImGui::Dummy(ImVec2(0.0f, spacing)); }
+void ADIMainWindow::NewLine(float spacing) {
+    ImGui::Dummy(ImVec2(0.0f, spacing));
+}
 
 void ADIMainWindow::ShowStartWizard() {
 
     static float wizard_height = 360.0f;
-    
-    centreWindow(450.0f * m_dpi_scale_factor, wizard_height * m_dpi_scale_factor);
 
-    ImGui::Begin("Camera Selection Wizard", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
+    centreWindow(450.0f * m_dpi_scale_factor,
+                 wizard_height * m_dpi_scale_factor);
+
+    ImGui::Begin("Camera Selection Wizard", nullptr,
+                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
 
     static uint32_t selected = 1;
     uint32_t state_change_check = selected;
@@ -699,7 +716,7 @@ void ADIMainWindow::ShowStartWizard() {
             ImGuiExtensions::ButtonColorChanger colorChanger(
                 ImGuiExtensions::ButtonColor::Green, openAvailable);
             if (ImGuiExtensions::ADIButton("Open")) {
-                
+
                 int FilterIndex = 0;
                 std::string fs = openADIFileName(
                     "ADI ToF Config Files\0*.adcam\0", nullptr, FilterIndex);
@@ -720,14 +737,16 @@ void ADIMainWindow::ShowStartWizard() {
                 }
             }
             ImGui::SameLine();
-            if (ImGuiExtensions::ADIButton("Start Streaming", m_is_open_device)) {
+            if (ImGuiExtensions::ADIButton("Start Streaming",
+                                           m_is_open_device)) {
 
-                // Deallocate frame memory such that it can be reallocated for the 
+                // Deallocate frame memory such that it can be reallocated for the
                 //  correct frame size in case there was a change in mode.
                 m_view_instance->cleanUp();
 
-                // PRB25 
-                auto camera = GetActiveCamera(); //already initialized on constructor
+                // PRB25
+                auto camera =
+                    GetActiveCamera(); //already initialized on constructor
                 if (camera != nullptr) {
 
                     m_offline_change_frame = true;
@@ -738,8 +757,7 @@ void ADIMainWindow::ShowStartWizard() {
                     m_view_selection_changed = m_view_selection;
                     m_is_playing = true;
                     m_ini_params.clear();
-                }
-                else {
+                } else {
                     LOG(ERROR) << "Camera not initialized!";
                     ImGui::End();
                     return;
@@ -748,15 +766,15 @@ void ADIMainWindow::ShowStartWizard() {
             if (m_is_open_device) {
                 NewLine(5.0f);
                 ImGui::Text("File selected");
-                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 400); // Wrap at 400px
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x +
+                                       400); // Wrap at 400px
                 ImGui::TextWrapped("  %s", fileName.c_str());
                 ImGui::PopTextWrapPos();
                 NewLine(5.0f);
             }
         }
 #pragma endregion // WizardOffline
-    }
-    else {
+    } else {
 #pragma region WizardOnline
         m_off_line = false;
         ImGuiExtensions::ADIComboBox(
@@ -810,12 +828,11 @@ void ADIMainWindow::ShowStartWizard() {
         NewLine(5.0f);
 
         if (ImGuiExtensions::ADICheckbox("Max FPS Network Test (Debug)",
-            &m_network_link_test,
-            m_is_open_device)) {
+                                         &m_network_link_test,
+                                         m_is_open_device)) {
             if (m_network_link_test) {
                 m_ip_suffix = ":netlinktest";
-            }
-            else {
+            } else {
                 m_ip_suffix.clear();
             }
             RefreshDevices();
@@ -834,8 +851,10 @@ void ADIMainWindow::ShowStartWizard() {
 
                 static bool show_dynamic_mode_switch = false;
 #ifdef ENABLE_DYNAMIC_MODE_SWITCHING
-                ImGui::Toggle(!show_dynamic_mode_switch ? "Switch to Dynamic Mode" : "Switch to Standard Mode",
-                    &show_dynamic_mode_switch);
+                ImGui::Toggle(!show_dynamic_mode_switch
+                                  ? "Switch to Dynamic Mode"
+                                  : "Switch to Standard Mode",
+                              &show_dynamic_mode_switch);
 #endif //ENABLE_DYNAMIC_MODE_SWITCHING
 
                 if (show_dynamic_mode_switch) {
@@ -848,27 +867,32 @@ void ADIMainWindow::ShowStartWizard() {
 
                     // TODO: Add non-Crosby repeat count
 
-                    static int32_t mode_selections[] = { 1, 1, 1, 1, 1, 1, 1, 1 };
-                    static int32_t mode_repeat[] = { 1, 1, 1, 1, 1, 1, 1, 1 };
+                    static int32_t mode_selections[] = {1, 1, 1, 1, 1, 1, 1, 1};
+                    static int32_t mode_repeat[] = {1, 1, 1, 1, 1, 1, 1, 1};
 
                     for (int32_t idx = 0; idx < 8; idx++) {
                         ImGui::SetNextItemWidth(180 * m_dpi_scale_factor);
 
-                        std::string slot = "Slot " + std::to_string(idx + 1) + " mode";
+                        std::string slot =
+                            "Slot " + std::to_string(idx + 1) + " mode";
 
                         ImGuiExtensions::ADIComboBox(
-                            slot.c_str(), "Select Mode", ImGuiSelectableFlags_None,
-                            m_cameraModesDropDown, &mode_selections[idx], true);
+                            slot.c_str(), "Select Mode",
+                            ImGuiSelectableFlags_None, m_cameraModesDropDown,
+                            &mode_selections[idx], true);
 
                         ImGui::SameLine();
 
-
-                        std::string repeat = "Repeat " + std::to_string(idx + 1);
+                        std::string repeat =
+                            "Repeat " + std::to_string(idx + 1);
                         ImGui::SetNextItemWidth(60 * m_dpi_scale_factor);
-                        if (ImGui::BeginCombo(repeat.c_str(), std::to_string(mode_repeat[idx]).c_str())) {
+                        if (ImGui::BeginCombo(
+                                repeat.c_str(),
+                                std::to_string(mode_repeat[idx]).c_str())) {
                             for (int i = 0; i <= 15; ++i) {
                                 bool isSelected = (mode_repeat[idx] == i);
-                                if (ImGui::Selectable(std::to_string(i).c_str(), isSelected))
+                                if (ImGui::Selectable(std::to_string(i).c_str(),
+                                                      isSelected))
                                     mode_repeat[idx] = i;
 
                                 if (isSelected)
@@ -882,26 +906,36 @@ void ADIMainWindow::ShowStartWizard() {
                         m_custom_color_play, !m_is_playing);
 
                     NewLine(5.0f);
-                    if (ImGuiExtensions::ADIButton("Start Streaming", !m_is_playing)) {
+                    if (ImGuiExtensions::ADIButton("Start Streaming",
+                                                   !m_is_playing)) {
 
                         std::vector<std::pair<uint8_t, uint8_t>> seqence;
 
-                        seqence.push_back(std::make_pair(mode_selections[0], mode_repeat[0]));
-                        seqence.push_back(std::make_pair(mode_selections[1], mode_repeat[1]));
-                        seqence.push_back(std::make_pair(mode_selections[2], mode_repeat[2]));
-                        seqence.push_back(std::make_pair(mode_selections[3], mode_repeat[3]));
-                        seqence.push_back(std::make_pair(mode_selections[4], mode_repeat[4]));
-                        seqence.push_back(std::make_pair(mode_selections[5], mode_repeat[5]));
-                        seqence.push_back(std::make_pair(mode_selections[6], mode_repeat[6]));
-                        seqence.push_back(std::make_pair(mode_selections[7], mode_repeat[7]));
+                        seqence.push_back(
+                            std::make_pair(mode_selections[0], mode_repeat[0]));
+                        seqence.push_back(
+                            std::make_pair(mode_selections[1], mode_repeat[1]));
+                        seqence.push_back(
+                            std::make_pair(mode_selections[2], mode_repeat[2]));
+                        seqence.push_back(
+                            std::make_pair(mode_selections[3], mode_repeat[3]));
+                        seqence.push_back(
+                            std::make_pair(mode_selections[4], mode_repeat[4]));
+                        seqence.push_back(
+                            std::make_pair(mode_selections[5], mode_repeat[5]));
+                        seqence.push_back(
+                            std::make_pair(mode_selections[6], mode_repeat[6]));
+                        seqence.push_back(
+                            std::make_pair(mode_selections[7], mode_repeat[7]));
 
-                        // Deallocate frame memory such that it can be reallocated for the 
+                        // Deallocate frame memory such that it can be reallocated for the
                         //  correct frame size in case there was a change in mode.
                         m_view_instance->cleanUp();
                         auto camera = GetActiveCamera();
 
                         camera->adsd3500setEnableDynamicModeSwitching(true);
-                        camera->adsds3500setDynamicModeSwitchingSequence(seqence);
+                        camera->adsds3500setDynamicModeSwitchingSequence(
+                            seqence);
 
                         m_frame_window_position_state = 0;
                         m_view_selection_changed = m_view_selection;
@@ -909,18 +943,19 @@ void ADIMainWindow::ShowStartWizard() {
                         m_ini_params.clear();
                     }
 #pragma endregion // WizardOnlineDynamicMode
-#endif //ENABLE_DYNAMIC_MODE_SWITCHING
+#endif            //ENABLE_DYNAMIC_MODE_SWITCHING
                 } else {
 #pragma region WizardOnlineStandardMode
                     if (wizard_height < 640)
                         wizard_height += 20;
-					else if (wizard_height > 640)
-						wizard_height -= 20;
+                    else if (wizard_height > 640)
+                        wizard_height -= 20;
 
                     if (ImGuiExtensions::ADIComboBox(
-                        "select_mode", "Select Mode", ImGuiSelectableFlags_None,
-                        m_cameraModesDropDown, &m_mode_selection, true)) {
-						m_ini_params.clear();
+                            "select_mode", "Select Mode",
+                            ImGuiSelectableFlags_None, m_cameraModesDropDown,
+                            &m_mode_selection, true)) {
+                        m_ini_params.clear();
                     }
 
                     NewLine(5.0f);
@@ -929,14 +964,16 @@ void ADIMainWindow::ShowStartWizard() {
 
                     NewLine(5.0f);
 
-                    if (ImGuiExtensions::ADIButton("Load Config", !m_is_playing)) {
+                    if (ImGuiExtensions::ADIButton("Load Config",
+                                                   !m_is_playing)) {
 
                         ShowLoadAdsdParamsMenu();
                     }
 
-					ImGui::SameLine();
+                    ImGui::SameLine();
 
-                    if (ImGuiExtensions::ADIButton("Reset Parameters", m_is_open_device)) {
+                    if (ImGuiExtensions::ADIButton("Reset Parameters",
+                                                   m_is_open_device)) {
                         auto camera = GetActiveCamera();
                         if (camera) {
                             camera->resetDepthProcessParams();
@@ -951,32 +988,41 @@ void ADIMainWindow::ShowStartWizard() {
                     NewLine(15.0f);
 
                     //Change colour to green
-                    ImGuiExtensions::ButtonColorChanger colorChangerPlay(m_custom_color_play, !m_is_playing);
+                    ImGuiExtensions::ButtonColorChanger colorChangerPlay(
+                        m_custom_color_play, !m_is_playing);
 
-                    ImGui::Toggle(!m_enable_preview ? "Preview Off" : "Preview On", &m_enable_preview);
+                    ImGui::Toggle(!m_enable_preview ? "Preview Off"
+                                                    : "Preview On",
+                                  &m_enable_preview);
 
-                    if (ImGuiExtensions::ADIButton("Start Streaming", !m_is_playing)) {
+                    if (ImGuiExtensions::ADIButton("Start Streaming",
+                                                   !m_is_playing)) {
 
-                        // Deallocate frame memory such that it can be reallocated for the 
+                        // Deallocate frame memory such that it can be reallocated for the
                         //  correct frame size in case there was a change in mode.
                         if (m_view_instance) {
                             m_view_instance->cleanUp();
                         }
 
                         auto camera = GetActiveCamera();
-                        if (camera && false) { // TODO: Why is this casusing an exception from the Dual ADSD3500
-                            LOG(INFO) << "*** adsd3500setEnableDynamicModeSwitching disabled ***";
-                            camera->adsd3500setEnableDynamicModeSwitching(false);
+                        if (camera &&
+                            false) { // TODO: Why is this casusing an exception from the Dual ADSD3500
+                            LOG(INFO)
+                                << "*** adsd3500setEnableDynamicModeSwitching "
+                                   "disabled ***";
+                            camera->adsd3500setEnableDynamicModeSwitching(
+                                false);
                         }
 
                         m_frame_window_position_state = 0;
                         m_view_selection_changed = m_view_selection;
-                        m_last_mode = m_mode_selection;   // Force use of ini parameters
-                        m_use_modified_ini_params = true; // Force use of ini parameters
+                        m_last_mode =
+                            m_mode_selection; // Force use of ini parameters
+                        m_use_modified_ini_params =
+                            true; // Force use of ini parameters
                         m_is_playing = true;
                         m_ini_params.clear();
                     }
-
                 }
 #pragma endregion // WizardOnlineStandardMode
             }
@@ -988,13 +1034,13 @@ void ADIMainWindow::ShowStartWizard() {
 
 void ADIMainWindow::centreWindow(float width, float height) {
 
-    ImGuiIO& io = ImGui::GetIO(); // Get the display size
+    ImGuiIO &io = ImGui::GetIO(); // Get the display size
     ImVec2 center = ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
     ImVec2 window_size = ImVec2(width, height); // Your window size
 
     // Offset to truly center it
     ImVec2 window_pos = ImVec2(center.x - window_size.x * 0.5f,
-        center.y - window_size.y * 0.5f);
+                               center.y - window_size.y * 0.5f);
 
     // Set position and size before Begin()
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always);
@@ -1002,11 +1048,12 @@ void ADIMainWindow::centreWindow(float width, float height) {
 }
 
 // Minimal spinner function for ImGui (circle dots)
-void ADIMainWindow::Spinner(const char* label, float radius, int thickness, ImU32 color) {
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
+void ADIMainWindow::Spinner(const char *label, float radius, int thickness,
+                            ImU32 color) {
+    ImGuiWindow *window = ImGui::GetCurrentWindow();
     if (window->SkipItems)
         return;
-    ImGuiContext& g = *ImGui::GetCurrentContext();
+    ImGuiContext &g = *ImGui::GetCurrentContext();
     const ImGuiID id = window->GetID(label);
 
     ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -1015,13 +1062,13 @@ void ADIMainWindow::Spinner(const char* label, float radius, int thickness, ImU3
     float angle_min = IM_PI * 2.0f * (t * 0.8f);
     float angle_max = IM_PI * 2.0f * ((t * 0.8f) + 1.0f);
 
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImDrawList *draw_list = ImGui::GetWindowDrawList();
     draw_list->PathClear();
     for (int i = 0; i < num_segments; i++) {
-        float a = angle_min + ((float)i / (float)num_segments) * (angle_max - angle_min);
-        draw_list->PathLineTo(ImVec2(
-            pos.x + radius + cosf(a) * radius,
-            pos.y + radius + sinf(a) * radius));
+        float a = angle_min +
+                  ((float)i / (float)num_segments) * (angle_max - angle_min);
+        draw_list->PathLineTo(ImVec2(pos.x + radius + cosf(a) * radius,
+                                     pos.y + radius + sinf(a) * radius));
     }
     draw_list->PathStroke(color, 0, thickness);
     ImGui::Dummy(ImVec2((radius + thickness) * 2, (radius + thickness) * 2));

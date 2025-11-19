@@ -9,10 +9,10 @@
 #endif
 
 #include <cstdarg> // for va_list
+#include <cstdlib>
+#include <ctime>
 #include <imgui.h>
 #include <iomanip>
-#include <ctime>
-#include <cstdlib>
 #include <random>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -29,12 +29,12 @@ inline ImVec2 operator*(const ImVec2 &v, float f) {
     return ImVec2(v.x * f, v.y * f);
 }
 
-static bool folderExists(const std::string& path) {
+static bool folderExists(const std::string &path) {
     struct stat info;
     return (stat(path.c_str(), &info) == 0 && (info.st_mode & S_IFDIR));
 }
 
-static bool createFolder(const std::string& path) {
+static bool createFolder(const std::string &path) {
 #ifdef _WIN32
     return _mkdir(path.c_str()) == 0 || errno == EEXIST;
 #else
@@ -42,7 +42,8 @@ static bool createFolder(const std::string& path) {
 #endif
 }
 
-static std::string viewerGenerateFileName(const std::string& prefix, const std::string& extension) {
+static std::string viewerGenerateFileName(const std::string &prefix,
+                                          const std::string &extension) {
     // Get current UTC time
     std::time_t now = std::time(nullptr);
     std::tm utc_tm;
@@ -70,9 +71,10 @@ static std::string viewerGenerateFileName(const std::string& prefix, const std::
     return oss.str();
 }
 
-static bool DrawIconButton(const char *id,
-                    std::function<void(ImDrawList *, ImVec2, ImVec2)> drawIcon,
-                    ImU32 bgColor = IM_COL32(60, 60, 60, 255)) {
+static bool
+DrawIconButton(const char *id,
+               std::function<void(ImDrawList *, ImVec2, ImVec2)> drawIcon,
+               ImU32 bgColor = IM_COL32(60, 60, 60, 255)) {
     ImVec2 size(30, 30);
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImDrawList *drawList = ImGui::GetWindowDrawList();
@@ -94,43 +96,46 @@ static bool DrawIconButton(const char *id,
 
 bool ADIMainWindow::cameraButton(std::string &baseFileName) {
     if (DrawIconButton(
-        "Camera",
-        [](ImDrawList* dl, ImVec2 min, ImVec2 max) {
-            ImVec2 center = (min + max) * 0.5f;
-            float w = max.x - min.x;
-            float h = max.y - min.y;
+            "Camera",
+            [](ImDrawList *dl, ImVec2 min, ImVec2 max) {
+                ImVec2 center = (min + max) * 0.5f;
+                float w = max.x - min.x;
+                float h = max.y - min.y;
 
-            // Camera body
-            ImVec2 topLeft(center.x - w * 0.3f, center.y - h * 0.25f);
-            ImVec2 bottomRight(center.x + w * 0.3f, center.y + h * 0.25f);
-            dl->AddRectFilled(topLeft, bottomRight, IM_COL32_WHITE, 3.0f);
+                // Camera body
+                ImVec2 topLeft(center.x - w * 0.3f, center.y - h * 0.25f);
+                ImVec2 bottomRight(center.x + w * 0.3f, center.y + h * 0.25f);
+                dl->AddRectFilled(topLeft, bottomRight, IM_COL32_WHITE, 3.0f);
 
-            // Lens circle
-            ImVec2 lensCenter = center;
-            float lensRadius = h * 0.1f;
-            dl->AddCircleFilled(lensCenter, lensRadius, IM_COL32(50, 50, 50, 255));
+                // Lens circle
+                ImVec2 lensCenter = center;
+                float lensRadius = h * 0.1f;
+                dl->AddCircleFilled(lensCenter, lensRadius,
+                                    IM_COL32(50, 50, 50, 255));
 
-            // Viewfinder bump
-            ImVec2 bumpTL(center.x - w * 0.15f, center.y - h * 0.35f);
-            ImVec2 bumpBR(center.x - w * 0.05f, center.y - h * 0.25f);
-            dl->AddRectFilled(bumpTL, bumpBR, IM_COL32_WHITE, 2.0f);
-        },
-        IM_COL32(80, 80, 80, 255))) {
+                // Viewfinder bump
+                ImVec2 bumpTL(center.x - w * 0.15f, center.y - h * 0.35f);
+                ImVec2 bumpBR(center.x - w * 0.05f, center.y - h * 0.25f);
+                dl->AddRectFilled(bumpTL, bumpBR, IM_COL32_WHITE, 2.0f);
+            },
+            IM_COL32(80, 80, 80, 255))) {
 
-		std::string folder_path = aditof::Utils::getExecutableFolder() + "/captures/";
+        std::string folder_path =
+            aditof::Utils::getExecutableFolder() + "/captures/";
 
         if (!folderExists(folder_path)) {
             if (!createFolder(folder_path)) {
                 LOG(ERROR) << "Failed to create folder for recordings: "
-                    << folder_path;
+                           << folder_path;
 
-				baseFileName = "";
+                baseFileName = "";
 
                 return false;
             }
         }
 
-        std::string base_filename = folder_path + viewerGenerateFileName("aditof_", "");
+        std::string base_filename =
+            folder_path + viewerGenerateFileName("aditof_", "");
         baseFileName = base_filename;
 
         if (m_off_line && m_offline_save_all_frames) {
@@ -142,7 +147,9 @@ bool ADIMainWindow::cameraButton(std::string &baseFileName) {
     return false;
 }
 
-void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool haveAB, bool haveDepth, bool haveXYZ) {
+void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
+                                         bool haveAB, bool haveDepth,
+                                         bool haveXYZ) {
     using namespace aditof;
 
     if ((float)m_view_instance->frameWidth == 0.0 &&
@@ -156,8 +163,10 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
         m_set_temp_win_position_once = false;
     }
 
-    SetWindowPosition(m_dict_win_position["control"].x, m_dict_win_position["control"].y);
-    SetWindowSize(m_dict_win_position["control"].width, m_dict_win_position["control"].height);
+    SetWindowPosition(m_dict_win_position["control"].x,
+                      m_dict_win_position["control"].y);
+    SetWindowSize(m_dict_win_position["control"].width,
+                  m_dict_win_position["control"].height);
 
     if (ImGui::Begin("Control Window", nullptr, overlayFlags)) {
 
@@ -193,43 +202,43 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
             ImGui::SameLine(0.0f, 10.0f);
 
             if (DrawIconButton(
-                "Record",
-                [](ImDrawList* dl, ImVec2 min, ImVec2 max) {
-                    ImVec2 center =
-                        ImVec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
-                    float radius = (max.x - min.x) * 0.2f;
+                    "Record",
+                    [](ImDrawList *dl, ImVec2 min, ImVec2 max) {
+                        ImVec2 center = ImVec2((min.x + max.x) * 0.5f,
+                                               (min.y + max.y) * 0.5f);
+                        float radius = (max.x - min.x) * 0.2f;
 
-                    // Draw a white circle in the center for the record icon
-                    dl->AddCircleFilled(center, radius, IM_COL32_WHITE);
-                },
-                (!m_recordingActive) ? IM_COL32(200, 0, 0, 255)
-                : IM_COL32(0, 200, 0, 255))) {
+                        // Draw a white circle in the center for the record icon
+                        dl->AddCircleFilled(center, radius, IM_COL32_WHITE);
+                    },
+                    (!m_recordingActive) ? IM_COL32(200, 0, 0, 255)
+                                         : IM_COL32(0, 200, 0, 255))) {
 
                 if (!m_recordingActive) {
 
                     aditof::Status status =
                         GetActiveCamera()->startRecording(filePath);
                     if (status == aditof::Status::OK) {
-                        m_view_instance->m_ctrl->setPreviewRate(m_fps_expected, PREVIEW_FRAME_RATE);
+                        m_view_instance->m_ctrl->setPreviewRate(
+                            m_fps_expected, PREVIEW_FRAME_RATE);
                         m_recordingActive = true;
                         LOG(INFO) << "Recording to " << filePath.c_str();
-                    }
-                    else {
-                        m_view_instance->m_ctrl->setPreviewRate(m_fps_expected, m_fps_expected);
+                    } else {
+                        m_view_instance->m_ctrl->setPreviewRate(m_fps_expected,
+                                                                m_fps_expected);
                         LOG(ERROR) << "Unable to start recording.";
                         filePath = "";
                         m_recordingActive = false;
                     }
-                }
-                else {
+                } else {
                     aditof::Status status = GetActiveCamera()->stopRecording();
                     if (status == aditof::Status::OK) {
                         LOG(INFO) << "Recording stopped.";
                         filePath = "";
                         m_recordingActive = false;
-                        m_view_instance->m_ctrl->setPreviewRate(m_fps_expected, m_fps_expected);
-                    }
-                    else {
+                        m_view_instance->m_ctrl->setPreviewRate(m_fps_expected,
+                                                                m_fps_expected);
+                    } else {
                         LOG(ERROR) << "Unable to stop recording.";
                     }
                 }
@@ -237,12 +246,13 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
 
             ImGui::SameLine(0.0f, 10.0f);
 
-            if (DrawIconButton("Stop", [](ImDrawList* dl, ImVec2 min, ImVec2 max) {
-                ImVec2 center = (min + max) * 0.5f;
-                float side = (max.x - min.x) * 0.4f;
-                ImVec2 pMin(center.x - side * 0.5f, center.y - side * 0.5f);
-                ImVec2 pMax(center.x + side * 0.5f, center.y + side * 0.5f);
-                dl->AddRectFilled(pMin, pMax, IM_COL32_WHITE);
+            if (DrawIconButton("Stop", [](ImDrawList *dl, ImVec2 min,
+                                          ImVec2 max) {
+                    ImVec2 center = (min + max) * 0.5f;
+                    float side = (max.x - min.x) * 0.4f;
+                    ImVec2 pMin(center.x - side * 0.5f, center.y - side * 0.5f);
+                    ImVec2 pMax(center.x + side * 0.5f, center.y + side * 0.5f);
+                    dl->AddRectFilled(pMin, pMax, IM_COL32_WHITE);
                 })) {
                 m_is_playing = false;
                 m_fps_frame_received = 0;
@@ -255,8 +265,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
 
             ImGui::SameLine(0.0f, 10.0f);
 
-        }
-        else { // Offline
+        } else { // Offline
 
             uint32_t max_frame_count;
             GetActiveCamera()->getSensor()->getFrameCount(max_frame_count);
@@ -270,61 +279,60 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
             ImGui::SameLine(0.0f, 10.0f);
 
             if (DrawIconButton(
-                "JumpToStart",
-                [](ImDrawList* dl, ImVec2 min, ImVec2 max) {
-                    ImVec2 center = (min + max) * 0.5f;
-                    float w = max.x - min.x;
-                    float h = max.y - min.y;
+                    "JumpToStart",
+                    [](ImDrawList *dl, ImVec2 min, ImVec2 max) {
+                        ImVec2 center = (min + max) * 0.5f;
+                        float w = max.x - min.x;
+                        float h = max.y - min.y;
 
-                    float arrowW = w * 0.2f;
-                    float arrowH = h * 0.35f;
-                    float spacing = w * 0.05f;
+                        float arrowW = w * 0.2f;
+                        float arrowH = h * 0.35f;
+                        float spacing = w * 0.05f;
 
-                    // Triangle
-                    ImVec2 p1(center.x + spacing + arrowW * 0.5f,
-                        center.y - arrowH);
-                    ImVec2 p2(center.x + spacing + arrowW * 0.5f,
-                        center.y + arrowH);
-                    ImVec2 p3(center.x + spacing - arrowW * 0.5f, center.y);
+                        // Triangle
+                        ImVec2 p1(center.x + spacing + arrowW * 0.5f,
+                                  center.y - arrowH);
+                        ImVec2 p2(center.x + spacing + arrowW * 0.5f,
+                                  center.y + arrowH);
+                        ImVec2 p3(center.x + spacing - arrowW * 0.5f, center.y);
 
-                    dl->AddTriangleFilled(p1, p2, p3, IM_COL32_WHITE);
+                        dl->AddTriangleFilled(p1, p2, p3, IM_COL32_WHITE);
 
-                    // Bar (vertical line to the left of triangle)
-                    float barX = center.x - spacing - arrowW * 0.5f;
-                    dl->AddRectFilled(
-                        ImVec2(barX - 1.0f, center.y - arrowH),
-                        ImVec2(barX + 1.0f, center.y + arrowH),
-                        IM_COL32_WHITE);
-                },
-                IM_COL32(60, 60, 60, 255))) {
+                        // Bar (vertical line to the left of triangle)
+                        float barX = center.x - spacing - arrowW * 0.5f;
+                        dl->AddRectFilled(
+                            ImVec2(barX - 1.0f, center.y - arrowH),
+                            ImVec2(barX + 1.0f, center.y + arrowH),
+                            IM_COL32_WHITE);
+                    },
+                    IM_COL32(60, 60, 60, 255))) {
 
                 m_offline_change_frame = true;
                 m_off_line_frame_index = 0;
-
             }
 
             ImGui::SameLine(0.0f, 10.0f);
 
             if (DrawIconButton(
-                "LeftArrow",
-                [](ImDrawList* dl, ImVec2 min, ImVec2 max) {
-                    ImVec2 center = (min + max) * 0.5f;
-                    float w = max.x - min.x;
-                    float h = max.y - min.y;
+                    "LeftArrow",
+                    [](ImDrawList *dl, ImVec2 min, ImVec2 max) {
+                        ImVec2 center = (min + max) * 0.5f;
+                        float w = max.x - min.x;
+                        float h = max.y - min.y;
 
-                    float arrowW = w * 0.25f;
-                    float arrowH = h * 0.3f;
+                        float arrowW = w * 0.25f;
+                        float arrowH = h * 0.3f;
 
-                    ImVec2 p1(center.x + arrowW * 0.5f,
-                        center.y - arrowH); // tip top
-                    ImVec2 p2(center.x + arrowW * 0.5f,
-                        center.y + arrowH); // tip bottom
-                    ImVec2 p3(center.x - arrowW * 0.5f,
-                        center.y); // back center
+                        ImVec2 p1(center.x + arrowW * 0.5f,
+                                  center.y - arrowH); // tip top
+                        ImVec2 p2(center.x + arrowW * 0.5f,
+                                  center.y + arrowH); // tip bottom
+                        ImVec2 p3(center.x - arrowW * 0.5f,
+                                  center.y); // back center
 
-                    dl->AddTriangleFilled(p1, p2, p3, IM_COL32_WHITE);
-                },
-                IM_COL32(50, 50, 50, 255))) {
+                        dl->AddTriangleFilled(p1, p2, p3, IM_COL32_WHITE);
+                    },
+                    IM_COL32(50, 50, 50, 255))) {
 
                 if (m_off_line_frame_index > 0) {
                     m_off_line_frame_index--;
@@ -376,30 +384,30 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
 
                 // TODO
             }
-#endif //0 
+#endif //0
 
             ImGui::SameLine(0.0f, 10.0f);
 
             if (DrawIconButton(
-                "RightArrow",
-                [](ImDrawList* dl, ImVec2 min, ImVec2 max) {
-                    ImVec2 center = (min + max) * 0.5f;
-                    float w = max.x - min.x;
-                    float h = max.y - min.y;
+                    "RightArrow",
+                    [](ImDrawList *dl, ImVec2 min, ImVec2 max) {
+                        ImVec2 center = (min + max) * 0.5f;
+                        float w = max.x - min.x;
+                        float h = max.y - min.y;
 
-                    float arrowW = w * 0.25f;
-                    float arrowH = h * 0.3f;
+                        float arrowW = w * 0.25f;
+                        float arrowH = h * 0.3f;
 
-                    ImVec2 p1(center.x - arrowW * 0.5f,
-                        center.y - arrowH); // tip top
-                    ImVec2 p2(center.x - arrowW * 0.5f,
-                        center.y + arrowH); // tip bottom
-                    ImVec2 p3(center.x + arrowW * 0.5f,
-                        center.y); // back center
+                        ImVec2 p1(center.x - arrowW * 0.5f,
+                                  center.y - arrowH); // tip top
+                        ImVec2 p2(center.x - arrowW * 0.5f,
+                                  center.y + arrowH); // tip bottom
+                        ImVec2 p3(center.x + arrowW * 0.5f,
+                                  center.y); // back center
 
-                    dl->AddTriangleFilled(p1, p2, p3, IM_COL32_WHITE);
-                },
-                IM_COL32(50, 50, 50, 255))) {
+                        dl->AddTriangleFilled(p1, p2, p3, IM_COL32_WHITE);
+                    },
+                    IM_COL32(50, 50, 50, 255))) {
 
                 if (m_off_line_frame_index < max_frame_count) { // TODO: FIXME
                     m_off_line_frame_index++;
@@ -410,33 +418,33 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
             ImGui::SameLine(0.0f, 10.0f);
 
             if (DrawIconButton(
-                "JumpToEnd",
-                [](ImDrawList* dl, ImVec2 min, ImVec2 max) {
-                    ImVec2 center = (min + max) * 0.5f;
-                    float w = max.x - min.x;
-                    float h = max.y - min.y;
+                    "JumpToEnd",
+                    [](ImDrawList *dl, ImVec2 min, ImVec2 max) {
+                        ImVec2 center = (min + max) * 0.5f;
+                        float w = max.x - min.x;
+                        float h = max.y - min.y;
 
-                    float arrowW = w * 0.2f;
-                    float arrowH = h * 0.35f;
-                    float spacing = w * 0.05f;
+                        float arrowW = w * 0.2f;
+                        float arrowH = h * 0.35f;
+                        float spacing = w * 0.05f;
 
-                    // Triangle
-                    ImVec2 p1(center.x - spacing - arrowW * 0.5f,
-                        center.y - arrowH);
-                    ImVec2 p2(center.x - spacing - arrowW * 0.5f,
-                        center.y + arrowH);
-                    ImVec2 p3(center.x - spacing + arrowW * 0.5f, center.y);
+                        // Triangle
+                        ImVec2 p1(center.x - spacing - arrowW * 0.5f,
+                                  center.y - arrowH);
+                        ImVec2 p2(center.x - spacing - arrowW * 0.5f,
+                                  center.y + arrowH);
+                        ImVec2 p3(center.x - spacing + arrowW * 0.5f, center.y);
 
-                    dl->AddTriangleFilled(p1, p2, p3, IM_COL32_WHITE);
+                        dl->AddTriangleFilled(p1, p2, p3, IM_COL32_WHITE);
 
-                    // Bar (vertical line to the right of triangle)
-                    float barX = center.x + spacing + arrowW * 0.5f;
-                    dl->AddRectFilled(
-                        ImVec2(barX - 1.0f, center.y - arrowH),
-                        ImVec2(barX + 1.0f, center.y + arrowH),
-                        IM_COL32_WHITE);
-                },
-                IM_COL32(60, 60, 60, 255))) {
+                        // Bar (vertical line to the right of triangle)
+                        float barX = center.x + spacing + arrowW * 0.5f;
+                        dl->AddRectFilled(
+                            ImVec2(barX - 1.0f, center.y - arrowH),
+                            ImVec2(barX + 1.0f, center.y + arrowH),
+                            IM_COL32_WHITE);
+                    },
+                    IM_COL32(60, 60, 60, 255))) {
 
                 m_off_line_frame_index = max_frame_count - 1;
                 m_offline_change_frame = true;
@@ -444,8 +452,8 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
 
             ImGui::SameLine(0.0f, 10.0f);
 
-            if (DrawIconButton("Stop", [](ImDrawList* dl, ImVec2 min,
-                ImVec2 max) {
+            if (DrawIconButton("Stop", [](ImDrawList *dl, ImVec2 min,
+                                          ImVec2 max) {
                     ImVec2 center = (min + max) * 0.5f;
                     float side = (max.x - min.x) * 0.4f;
                     ImVec2 pMin(center.x - side * 0.5f, center.y - side * 0.5f);
@@ -460,7 +468,8 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
             }
 
             NewLine(5.0f);
-            if (ImGui::SliderInt("Frame #", (int*)&m_off_line_frame_index, 0, max_frame_count - 1, "#: %d")) {
+            if (ImGui::SliderInt("Frame #", (int *)&m_off_line_frame_index, 0,
+                                 max_frame_count - 1, "#: %d")) {
                 m_offline_change_frame = true;
             }
         }
@@ -489,7 +498,8 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool hav
                 PointCloudReset();
             }
             NewLine(5.0f);
-            ImGui::SliderInt("Point Size", &m_point_size, 1, 10, "Point Size: %d px");
+            ImGui::SliderInt("Point Size", &m_point_size, 1, 10,
+                             "Point Size: %d px");
 
             NewLine(5.0f);
         }
@@ -556,23 +566,27 @@ void ADIMainWindow::IniParamWarn(std::string variable, std::string validVal) {
 
     ImGui::OpenPopup("Ini Error Modal");
 
-    if (ImGui::BeginPopupModal("Ini Error Modal", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Ini Error Modal", NULL,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text(validVal.c_str());
 
         if (ImGui::Button("OK")) {
             ImGui::CloseCurrentPopup();
         }
 
-        ImGui::EndPopup();  // Required
+        ImGui::EndPopup(); // Required
     }
 }
 
-bool ADIMainWindow::EntryInt32_t(const char* label, int32_t& input, const int32_t min, const int32_t max) {
+bool ADIMainWindow::EntryInt32_t(const char *label, int32_t &input,
+                                 const int32_t min, const int32_t max) {
     int32_t previous = input;
     if (ImGui::InputInt(label, &input)) {
         if (input < min || input > max) {
             input = previous;
-            std::string warn = "Valid values are between " + std::to_string(min) + " and " + std::to_string(max);
+            std::string warn = "Valid values are between " +
+                               std::to_string(min) + " and " +
+                               std::to_string(max);
             IniParamWarn(label, warn.c_str());
         }
     }
@@ -598,22 +612,26 @@ void ADIMainWindow::ShowIniWindow(bool showModify) {
     static int32_t fps = 0;
 
     if (m_ini_params.empty()) {
-        status = GetActiveCamera()->getDepthParamtersMap(m_mode_selection, m_ini_params);
+        status = GetActiveCamera()->getDepthParamtersMap(m_mode_selection,
+                                                         m_ini_params);
         if (status != aditof::Status::OK) {
             LOG(ERROR) << "Could not get ini params";
-        }
-        else {
+        } else {
             abThreshMin = std::stof(m_ini_params["abThreshMin"]);
             confThresh = std::stof(m_ini_params["confThresh"]);
             radialThreshMin = std::stof(m_ini_params["radialThreshMin"]);
             radialThreshMax = std::stof(m_ini_params["radialThreshMax"]);
-            jblfApplyFlag = (static_cast<int>(std::round(std::stof(m_ini_params["jblfApplyFlag"]))) == 1);
-            jblfWindowSize = static_cast<int>(std::round(std::stof(m_ini_params["jblfWindowSize"])));
+            jblfApplyFlag = (static_cast<int>(std::round(std::stof(
+                                 m_ini_params["jblfApplyFlag"]))) == 1);
+            jblfWindowSize = static_cast<int>(
+                std::round(std::stof(m_ini_params["jblfWindowSize"])));
             jblfGaussianSigma = std::stof(m_ini_params["jblfGaussianSigma"]);
-            jblfExponentialTerm = std::stof(m_ini_params["jblfExponentialTerm"]);
+            jblfExponentialTerm =
+                std::stof(m_ini_params["jblfExponentialTerm"]);
             jblfMaxEdge = std::stof(m_ini_params["jblfMaxEdge"]);
             jblfABThreshold = std::stof(m_ini_params["jblfABThreshold"]);
-            headerSize = static_cast<int>(std::round(std::stof(m_ini_params["headerSize"])));
+            headerSize = static_cast<int>(
+                std::round(std::stof(m_ini_params["headerSize"])));
             metadata = (headerSize == 128);
             fps = static_cast<int>(std::round(std::stof(m_ini_params["fps"])));
         }
@@ -623,10 +641,12 @@ void ADIMainWindow::ShowIniWindow(bool showModify) {
 
     EntryInt32_t("abThreshMin", abThreshMin, 0, 65535);
     EntryInt32_t("confThresh", confThresh, 0, 255);
-    EntryInt32_t("radialThreshMin", radialThreshMin, 0, 65535); // TODO: compare min and max relative sizes
+    EntryInt32_t("radialThreshMin", radialThreshMin, 0,
+                 65535); // TODO: compare min and max relative sizes
     EntryInt32_t("radialThreshMax", radialThreshMax, 0, 65535);
     ImGui::Checkbox("jblfApplyFlag", &jblfApplyFlag);
-    EntryInt32_t("jblfWindowSize", jblfWindowSize, 3, 7); // TODO: Make this a drop down
+    EntryInt32_t("jblfWindowSize", jblfWindowSize, 3,
+                 7); // TODO: Make this a drop down
     EntryInt32_t("jblfGaussianSigma", jblfGaussianSigma, 0, 65535);
     EntryInt32_t("jblfExponentialTerm", jblfExponentialTerm, 0, 255);
     EntryInt32_t("jblfMaxEdge", jblfMaxEdge, 0, 64);
@@ -634,17 +654,15 @@ void ADIMainWindow::ShowIniWindow(bool showModify) {
     EntryInt32_t("fps", fps, 0, 60);
 
     // modify ini params
-	m_modified_ini_params["abSumThresh"] = std::to_string(1.0f); // Unused, but needed for now.
+    m_modified_ini_params["abSumThresh"] =
+        std::to_string(1.0f); // Unused, but needed for now.
     m_modified_ini_params["abThreshMin"] = std::to_string(abThreshMin);
     m_modified_ini_params["confThresh"] = std::to_string(confThresh);
-    m_modified_ini_params["radialThreshMin"] =
-        std::to_string(radialThreshMin);
-    m_modified_ini_params["radialThreshMax"] =
-        std::to_string(radialThreshMax);
+    m_modified_ini_params["radialThreshMin"] = std::to_string(radialThreshMin);
+    m_modified_ini_params["radialThreshMax"] = std::to_string(radialThreshMax);
     if (jblfApplyFlag) {
         m_modified_ini_params["jblfApplyFlag"] = std::to_string(1);
-    }
-    else {
+    } else {
         m_modified_ini_params["jblfApplyFlag"] = std::to_string(0);
     }
     m_modified_ini_params["jblfWindowSize"] = std::to_string(jblfWindowSize);
@@ -653,8 +671,7 @@ void ADIMainWindow::ShowIniWindow(bool showModify) {
     m_modified_ini_params["jblfExponentialTerm"] =
         std::to_string(jblfExponentialTerm);
     m_modified_ini_params["jblfMaxEdge"] = std::to_string(jblfMaxEdge);
-    m_modified_ini_params["jblfABThreshold"] =
-        std::to_string(jblfABThreshold);
+    m_modified_ini_params["jblfABThreshold"] = std::to_string(jblfABThreshold);
     m_modified_ini_params["fps"] = std::to_string(fps);
 
     if (showModify) {
