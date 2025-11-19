@@ -61,6 +61,9 @@ else()
     message(FATAL_ERROR "Platform not supported")
 endif()
 
+# Disable Wayland support for GLFW to avoid missing protocol file dependencies
+set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "Build support for Wayland" FORCE)
+
 add_subdirectory("${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/glfw" "${CMAKE_BINARY_DIR}/glfw")
 
 set(IMGUI_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2)
