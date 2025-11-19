@@ -6,32 +6,43 @@ cmake_minimum_required(VERSION 3.10)
 # set the project name
 project(ADIToFGUI LANGUAGES CXX)
 
-# Check for CUDA support on ARM64
-if(ENABLE_CUDA_ACCELERATION AND (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64"))
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+option(ENABLE_CUDA_ACCELERATION "Enable CUDA GPU acceleration if available" ON)
+
+# Disable ARM and CUDA support on Windows - use x86 SIMD (AVX2) instead
+if(WIN32)
+    set(USE_CUDA OFF)
+    set(USE_ARM_NEON OFF)
+    message(STATUS "Windows platform: ARM NEON and CUDA disabled, using x86 SIMD (AVX2)")
+# Check for CUDA support on ARM64 (Linux/embedded only)
+elseif(ENABLE_CUDA_ACCELERATION AND (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64"))
     # Try to enable CUDA on ARM64 platforms (Jetson)
     include(CheckLanguage)
     check_language(CUDA)
     if(CMAKE_CUDA_COMPILER)
         enable_language(CUDA)
         set(USE_CUDA ON)
+        set(USE_ARM_NEON ON)
         set(CMAKE_CUDA_STANDARD 14)
         set(CMAKE_CUDA_STANDARD_REQUIRED ON)
         message(STATUS "CUDA support enabled for ARM64")
     else()
         set(USE_CUDA OFF)
+        set(USE_ARM_NEON ON)
         message(STATUS "CUDA not found, using NEON optimizations only")
     endif()
 else()
     set(USE_CUDA OFF)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        set(USE_ARM_NEON ON)
         message(STATUS "CUDA acceleration disabled (ENABLE_CUDA_ACCELERATION=OFF), using NEON only")
+    else()
+        set(USE_ARM_NEON OFF)
+        message(STATUS "Using standard x86 SIMD optimizations (AVX2)")
     endif()
 endif()
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-option(ENABLE_CUDA_ACCELERATION "Enable CUDA GPU acceleration if available" ON)
 
 option(ENBABLE_PASSIVE_IR "Allow passive IR (PCM) mode" OFF)
 
@@ -61,10 +72,15 @@ set(ADIToF_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(IMGUIMD__SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/imgui_md)
 set(M4DC_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/m4dc)
 
+# Collect all source files EXCEPT platform-specific optimized versions
 file(GLOB ADIToF_SOURCES CONFIGURE_DEPENDS "${ADIToF_SOURCE_DIR}/*.cpp")
 
-# Add ARM NEON optimized source files for ARM64 platforms
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+# Remove ARM NEON and CUDA files from the list (we'll add them conditionally)
+list(FILTER ADIToF_SOURCES EXCLUDE REGEX ".*ADIView_neon\\.cpp$")
+list(FILTER ADIToF_SOURCES EXCLUDE REGEX ".*ADIView_cuda_wrapper\\.cpp$")
+
+# Add ARM NEON optimized source files for ARM64 platforms (not on Windows)
+if(USE_ARM_NEON)
     list(APPEND ADIToF_SOURCES "${ADIToF_SOURCE_DIR}/ADIView_neon.cpp")
     message(STATUS "Adding ARM NEON optimized sources")
     
@@ -72,13 +88,28 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "a
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         add_compile_options(-march=armv8-a+simd)
     endif()
+else()
+    message(STATUS "ARM NEON sources excluded")
 endif()
 
-# Add CUDA source files if CUDA is available
+# Add CUDA source files if CUDA is available (not on Windows)
 if(USE_CUDA)
     list(APPEND ADIToF_SOURCES "${ADIToF_SOURCE_DIR}/ADIView_cuda_wrapper.cpp")
     set(CUDA_SOURCES "${ADIToF_SOURCE_DIR}/ADIView_cuda.cu")
     message(STATUS "Adding CUDA accelerated sources")
+else()
+    message(STATUS "CUDA sources excluded")
+endif()
+
+# Enable x86 SIMD (AVX2) on Windows
+if(WIN32)
+    if(MSVC)
+        add_compile_options(/arch:AVX2)
+        message(STATUS "Enabling AVX2 optimizations for Windows (MSVC)")
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        add_compile_options(-mavx2 -mfma)
+        message(STATUS "Enabling AVX2 optimizations for Windows (GCC/Clang)")
+    endif()
 endif()
 
 if(USE_CUDA)
