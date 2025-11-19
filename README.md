@@ -2,9 +2,7 @@
 
 ## Latest Release
 
-* [Empty](https://github.com/analogdevicesinc/ADCAM/releases)
-* Release notes: [Empty](doc/releasenotes.md)
-* Documentation: [Empty](doc/user-guide/ADTF3175D-EvalKit-610.md) 
+* [ADCAM Release 0.1.0-a.1](https://github.com/analogdevicesinc/ADCAM/releases/tag/v0.1.0-a.1)
 
 ## Overview
 
