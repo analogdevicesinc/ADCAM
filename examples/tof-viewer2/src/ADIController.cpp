@@ -10,18 +10,18 @@
 #else
 #include <aditof/log.h>
 #endif
+#include <chrono>
+#include <cmath>
 #include <iostream>
 #include <memory>
-#include <chrono>
 #include <unordered_map>
-#include <cmath>
 
 using namespace adicontroller;
 
-#include <deque>
 #include <cstddef>
+#include <deque>
 class TrendWindow {
-public:
+  public:
     TrendWindow(size_t windowSize = 20) : maxSize(windowSize) {}
 
     void add(double value) {
@@ -34,7 +34,8 @@ public:
     // Computes the slope of best-fit line (linear regression)
     // Returns 0 if not enough points
     double calculate_slope() const {
-        if (window.size() < maxSize) return 0.0;
+        if (window.size() < maxSize)
+            return 0.0;
 
         size_t n = window.size();
         double sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumXX = 0.0;
@@ -45,7 +46,8 @@ public:
             sumXX += i * i;
         }
         double denom = n * sumXX - sumX * sumX;
-        if (denom == 0.0) return 0.0; // Avoid division by zero
+        if (denom == 0.0)
+            return 0.0; // Avoid division by zero
 
         double m = (n * sumXY - sumX * sumY) / denom;
         return m;
@@ -57,11 +59,9 @@ public:
         return slope > threshold;
     }
 
-    void clear() {
-        window.clear();
-    }
+    void clear() { window.clear(); }
 
-private:
+  private:
     size_t maxSize;
     std::deque<double> window;
 };
@@ -134,7 +134,7 @@ void ADIController::setMode(const uint8_t &mode) {
 }
 
 std::shared_ptr<aditof::Frame> ADIController::getFrame() {
-    return m_queue.empty()? nullptr : m_queue.dequeue();
+    return m_queue.empty() ? nullptr : m_queue.dequeue();
 }
 
 bool ADIController::requestFrame() {
@@ -152,8 +152,10 @@ bool ADIController::requestFrame() {
 
 bool ADIController::hasCamera() const { return !m_cameras.empty(); }
 
-void ADIController::calculateFrameLoss(const uint32_t frameNumber, uint32_t &prevFrameNumber, uint32_t &currentFrameNumber) {
-    
+void ADIController::calculateFrameLoss(const uint32_t frameNumber,
+                                       uint32_t &prevFrameNumber,
+                                       uint32_t &currentFrameNumber) {
+
     // Do frame loss calculation.
     prevFrameNumber = currentFrameNumber;
     currentFrameNumber = frameNumber;
@@ -163,13 +165,14 @@ void ADIController::calculateFrameLoss(const uint32_t frameNumber, uint32_t &pre
     }
 }
 
-
 void ADIController::captureFrames() {
     while (!m_stopFlag.load()) {
 
-        if (m_preview_rate == 1) { // Allow the viewer to request frames as needed
+        if (m_preview_rate ==
+            1) { // Allow the viewer to request frames as needed
             std::unique_lock<std::mutex> lock(m_requestMutex);
-            m_requestCv.wait(lock, [&] { return m_frameRequested || m_stopFlag; });
+            m_requestCv.wait(lock,
+                             [&] { return m_frameRequested || m_stopFlag; });
         }
 
         if (m_stopFlag) {
@@ -204,22 +207,25 @@ void ADIController::captureFrames() {
         auto currentTime = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed = currentTime - m_fps_startTime;
         if (elapsed.count() >= 5) {
-            m_framerate = static_cast<float>(local_frame_counter) / static_cast<float>(elapsed.count());
+            m_framerate = static_cast<float>(local_frame_counter) /
+                          static_cast<float>(elapsed.count());
             local_frame_counter = 0;
             m_fps_startTime = currentTime;
         }
 
-        aditof::Metadata* metadata;
-        status = frame->getData("metadata", (uint16_t**)&metadata);
+        aditof::Metadata *metadata;
+        status = frame->getData("metadata", (uint16_t **)&metadata);
         if (status == aditof::Status::OK && metadata != nullptr) {
-            m_rxTimeLookUp[metadata->frameNumber] = std::chrono::high_resolution_clock::now();
-            calculateFrameLoss(metadata->frameNumber, m_prev_frame_number, m_current_frame_number);
+            m_rxTimeLookUp[metadata->frameNumber] =
+                std::chrono::high_resolution_clock::now();
+            calculateFrameLoss(metadata->frameNumber, m_prev_frame_number,
+                               m_current_frame_number);
         }
 
-		if (!shouldDropFrame(m_frame_counter)) {
+        if (!shouldDropFrame(m_frame_counter)) {
             m_queue.enqueue(frame);
-		}
-        
+        }
+
         m_frameRequested = false;
     }
 }
@@ -229,7 +235,10 @@ bool ADIController::OutputDeltaTime(uint32_t frameNumber) {
     if (it != m_rxTimeLookUp.end()) {
         long long duration;
 
-        duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - m_rxTimeLookUp[frameNumber]).count();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                       std::chrono::high_resolution_clock::now() -
+                       m_rxTimeLookUp[frameNumber])
+                       .count();
         m_rxTimeLookUp.erase(frameNumber);
         iw.add(duration);
 
@@ -245,14 +254,15 @@ bool ADIController::OutputDeltaTime(uint32_t frameNumber) {
 bool ADIController::shouldDropFrame(uint32_t frameNum) {
     if (m_frame_rate == 0) {
         m_frame_rate = 10; // Prevent error, fake frame rate.
-        LOG(ERROR) << "m_frame_rate == 0 -> Using a default frame rate of " << m_frame_rate;
+        LOG(ERROR) << "m_frame_rate == 0 -> Using a default frame rate of "
+                   << m_frame_rate;
     }
     uint32_t out_idx_this = (frameNum * m_preview_rate) / m_frame_rate;
     uint32_t out_idx_next = ((frameNum + 1) * m_preview_rate) / m_frame_rate;
     return (out_idx_this == out_idx_next);
 }
 
-aditof::Status ADIController::getFramesLost(uint32_t& framesLost) {
+aditof::Status ADIController::getFramesLost(uint32_t &framesLost) {
     framesLost = m_frames_lost;
 
     return aditof::Status::OK;
@@ -261,29 +271,30 @@ aditof::Status ADIController::getFramesLost(uint32_t& framesLost) {
 aditof::Status ADIController::getFrameRate(uint32_t &fps) {
     fps = static_cast<uint32_t>(std::round(m_framerate));
 
-	return aditof::Status::OK;
+    return aditof::Status::OK;
 }
 
-aditof::Status ADIController::getFramesReceived(uint32_t& framesRecevied) {
+aditof::Status ADIController::getFramesReceived(uint32_t &framesRecevied) {
     framesRecevied = static_cast<uint32_t>(m_frame_counter);
 
     return aditof::Status::OK;
 }
 
-aditof::Status ADIController::setPreviewRate(uint32_t frameRate, uint32_t previewRate) {
+aditof::Status ADIController::setPreviewRate(uint32_t frameRate,
+                                             uint32_t previewRate) {
 
- 	m_preview_rate = previewRate;
+    m_preview_rate = previewRate;
     m_frame_rate = frameRate;
 
-	return aditof::Status::OK;
+    return aditof::Status::OK;
 }
 
 aditof::Status ADIController::requestFrameOffline(uint32_t index) {
 
-    if (m_stopFlag.load()) { 
+    if (m_stopFlag.load()) {
         //PRB25
-		//LOG(ERROR) << "Camera is stopped, cannot request frame.";
-        //return aditof::Status::GENERIC_ERROR; 
+        //LOG(ERROR) << "Camera is stopped, cannot request frame.";
+        //return aditof::Status::GENERIC_ERROR;
     }
 
     std::unique_lock<std::mutex> lock(m_requestMutex);
@@ -296,10 +307,11 @@ aditof::Status ADIController::requestFrameOffline(uint32_t index) {
 
     m_frame_counter++;
 
-    aditof::Metadata* metadata;
-    status = frame->getData("metadata", (uint16_t**)&metadata);
+    aditof::Metadata *metadata;
+    status = frame->getData("metadata", (uint16_t **)&metadata);
     if (status == aditof::Status::OK && metadata != nullptr) {
-        calculateFrameLoss(metadata->frameNumber, m_prev_frame_number, m_current_frame_number);
+        calculateFrameLoss(metadata->frameNumber, m_prev_frame_number,
+                           m_current_frame_number);
     }
 
     m_queue.enqueue(frame);

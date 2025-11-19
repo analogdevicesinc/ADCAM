@@ -12,27 +12,27 @@
 #include <fstream>
 #include <stdio.h>
 
-#include <iostream>
-#include <deque>
 #include <chrono>
+#include <deque>
+#include <iostream>
 #include <numeric>
 
 #include "ADIController.h"
-#include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
+#include "imgui.h"
 #include <ADIShader.h>
 #include <aditof/frame.h>
 
 #ifdef __ARM_NEON or __ARM_NEON__
 
-#define AB_SIMD /* ARM NEON optimized */
+#define AB_SIMD    /* ARM NEON optimized */
 #define DEPTH_SIMD /* ARM NEON optimized */
-#define PC_SIMD /* ARM NEON optimized */
+#define PC_SIMD    /* ARM NEON optimized */
 
 #else
 
-#define AB_SIMD /* Much faster, so leave this active */
+#define AB_SIMD    /* Much faster, so leave this active */
 #define DEPTH_SIMD /* Much faster, so leave this active */
 //#define PC_SIMD
 
@@ -176,20 +176,20 @@ class ADIView {
 		* @brief Creates AB buffer data
 		*/
     void _displayAbImage();
-    void normalizeABBuffer(uint16_t* abBuffer, uint16_t abWidth,
-        uint16_t abHeight, bool advanceScaling,
-        bool useLogScaling);
+    void normalizeABBuffer(uint16_t *abBuffer, uint16_t abWidth,
+                           uint16_t abHeight, bool advanceScaling,
+                           bool useLogScaling);
 #ifdef AB_SIMD
     void _displayAbImage_SIMD();
-    void normalizeABBuffer_SIMD(uint16_t* abBuffer, uint16_t abWidth,
-        uint16_t abHeight, bool advanceScaling,
-        bool useLogScaling);
+    void normalizeABBuffer_SIMD(uint16_t *abBuffer, uint16_t abWidth,
+                                uint16_t abHeight, bool advanceScaling,
+                                bool useLogScaling);
 #endif
 #if defined(__aarch64__) || defined(__ARM_NEON)
     void _displayAbImage_NEON();
-    void normalizeABBuffer_NEON(uint16_t* abBuffer, uint16_t abWidth,
-        uint16_t abHeight, bool advanceScaling,
-        bool useLogScaling);
+    void normalizeABBuffer_NEON(uint16_t *abBuffer, uint16_t abWidth,
+                                uint16_t abHeight, bool advanceScaling,
+                                bool useLogScaling);
 #endif
 #ifdef USE_CUDA
     void _displayAbImage_CUDA();
@@ -216,8 +216,8 @@ class ADIView {
     void hsvColorMap(uint16_t video_data, int max, int min, float &fRed,
                      float &fGreen, float &fBlue);
 
-    void ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
-   
+    void ColorConvertHSVtoRGB(float h, float s, float v, float &out_r,
+                              float &out_g, float &out_b);
 
     std::string m_viewName;
     bool m_center;
@@ -252,19 +252,22 @@ class ADIView {
     const size_t N = 50;
 
     // Call this before your function
-    auto startTimer() {
-		return std::chrono::high_resolution_clock::now();
-    }
+    auto startTimer() { return std::chrono::high_resolution_clock::now(); }
 
     // Call this after your function; updates 'times' and returns running average in ms
-    double endTimerAndUpdate(std::chrono::time_point<std::chrono::high_resolution_clock> timerStart, std::deque<long long> *times) {
+    double endTimerAndUpdate(
+        std::chrono::time_point<std::chrono::high_resolution_clock> timerStart,
+        std::deque<long long> *times) {
         auto end = std::chrono::high_resolution_clock::now();
         long long duration;
-    
-        duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - timerStart).count();
-        
+
+        duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                       end - timerStart)
+                       .count();
+
         times->push_back(duration);
-        if (times->size() > N) times->pop_front();
+        if (times->size() > N)
+            times->pop_front();
 
         double sum = std::accumulate(times->begin(), times->end(), 0.0);
         return sum / times->size() / 1e6; // Average in milliseconds

@@ -1,8 +1,8 @@
 #include "ADIMainWindow.h"
+#include "ADIOpenFile.h"
+#include "aditof/status_definitions.h"
 #include "aditof/system.h"
 #include "aditof/version.h"
-#include "aditof/status_definitions.h"
-#include "ADIOpenFile.h"
 
 #ifdef USE_GLOG
 #include <glog/logging.h>
@@ -82,7 +82,9 @@ void ADIMainWindow::InitCamera(std::string filePath) {
             s = s + ":" + std::to_string(modeDetails.baseResolutionWidth) +
                 "x" + std::to_string(modeDetails.baseResolutionHeight) + ",";
             if (!modeDetails.isPCM) {
-                std::string append = (modeDetails.numberOfPhases == 2) ? "Short Range" : "Long Range";
+                std::string append = (modeDetails.numberOfPhases == 2)
+                                         ? "Short Range"
+                                         : "Long Range";
                 s = s + append;
             } else {
                 s = s + "PCM";
@@ -119,7 +121,7 @@ void ADIMainWindow::PrepareCamera(uint8_t mode) {
             return;
         }
     }
-#endif 
+#endif
     if (mode == m_last_mode) {
         if (!m_modified_ini_params.empty()) {
             if (m_use_modified_ini_params) {
@@ -148,9 +150,9 @@ void ADIMainWindow::PrepareCamera(uint8_t mode) {
     status = GetActiveCamera()->adsd3500GetFrameRate(m_fps_expected);
 
     if (m_enable_preview) {
-        m_view_instance->m_ctrl->setPreviewRate(m_fps_expected, PREVIEW_FRAME_RATE);
-    }
-    else {
+        m_view_instance->m_ctrl->setPreviewRate(m_fps_expected,
+                                                PREVIEW_FRAME_RATE);
+    } else {
         m_view_instance->m_ctrl->setPreviewRate(m_fps_expected, m_fps_expected);
     }
 
@@ -203,11 +205,11 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
             if (!m_off_line) {
                 m_view_instance->m_ctrl->StartCapture(m_fps_expected);
                 m_view_instance->m_ctrl->requestFrame();
-            }
-            else { // Offline: Always get the first frame
+            } else { // Offline: Always get the first frame
                 if (m_offline_change_frame) {
                     m_view_instance->m_ctrl->requestFrame();
-                    m_view_instance->m_ctrl->requestFrameOffline(m_off_line_frame_index);
+                    m_view_instance->m_ctrl->requestFrameOffline(
+                        m_off_line_frame_index);
                     m_offline_change_frame = false;
                 }
             }
@@ -228,12 +230,14 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
         if (frame != nullptr) {
 
             bool diverging = false;
-            aditof::Metadata* metadata;
-            aditof::Status status = frame->getData("metadata", (uint16_t**)&metadata);
+            aditof::Metadata *metadata;
+            aditof::Status status =
+                frame->getData("metadata", (uint16_t **)&metadata);
             if (status == aditof::Status::OK && metadata != nullptr) {
-				diverging = m_view_instance->m_ctrl->OutputDeltaTime(metadata->frameNumber);
+                diverging = m_view_instance->m_ctrl->OutputDeltaTime(
+                    metadata->frameNumber);
 
-				//LOG(INFO) << "Diverging: " << diverging;
+                //LOG(INFO) << "Diverging: " << diverging;
             }
 
             bool haveAB = frame->haveDataType("ab");
@@ -246,14 +250,15 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
             numberAvailableDataTypes += haveDepth ? 1 : 0;
             numberAvailableDataTypes += haveXYZ ? 1 : 0;
 
-            ImGuiIO& io = ImGui::GetIO();
+            ImGuiIO &io = ImGui::GetIO();
             if (io.KeyShift) {
-                
+
                 if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) {
                     m_depth_line_values.clear();
                     m_depthLine.clear();
                     m_frame_window_position_state++;
-                    if (m_frame_window_position_state > numberAvailableDataTypes)
+                    if (m_frame_window_position_state >
+                        numberAvailableDataTypes)
                         m_frame_window_position_state = 0;
                 }
 
@@ -262,7 +267,8 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
                     m_depthLine.clear();
                     m_frame_window_position_state--;
                     if (m_frame_window_position_state < 0)
-                        m_frame_window_position_state = numberAvailableDataTypes;
+                        m_frame_window_position_state =
+                            numberAvailableDataTypes;
                 }
             }
 
@@ -271,13 +277,11 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
                     m_xyz_position = &m_dict_win_position["fr-main"];
                     m_ab_position = &m_dict_win_position["fr-sub1"];
                     m_depth_position = &m_dict_win_position["fr-sub2"];
-                }
-                else if (m_frame_window_position_state == 1) {
+                } else if (m_frame_window_position_state == 1) {
                     m_xyz_position = &m_dict_win_position["fr-sub2"];
                     m_ab_position = &m_dict_win_position["fr-main"];
                     m_depth_position = &m_dict_win_position["fr-sub1"];
-                }
-                else if (m_frame_window_position_state == 2) {
+                } else if (m_frame_window_position_state == 2) {
                     m_xyz_position = &m_dict_win_position["fr-sub1"];
                     m_ab_position = &m_dict_win_position["fr-sub2"];
                     m_depth_position = &m_dict_win_position["fr-main"];
@@ -286,21 +290,19 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
 
                 if (!haveAB) {
 
-					if (m_frame_window_position_state == 0) {
-						m_xyz_position = &m_dict_win_position["fr-main"];
-						m_depth_position = &m_dict_win_position["fr-sub1"];
-					}
-					else {
-						m_xyz_position = &m_dict_win_position["fr-sub1"];
-						m_depth_position = &m_dict_win_position["fr-main"];
-					}
+                    if (m_frame_window_position_state == 0) {
+                        m_xyz_position = &m_dict_win_position["fr-main"];
+                        m_depth_position = &m_dict_win_position["fr-sub1"];
+                    } else {
+                        m_xyz_position = &m_dict_win_position["fr-sub1"];
+                        m_depth_position = &m_dict_win_position["fr-main"];
+                    }
                 } else if (!haveDepth) {
 
                     if (m_frame_window_position_state == 0) {
                         m_xyz_position = &m_dict_win_position["fr-main"];
                         m_ab_position = &m_dict_win_position["fr-sub1"];
-                    }
-                    else {
+                    } else {
                         m_xyz_position = &m_dict_win_position["fr-sub1"];
                         m_ab_position = &m_dict_win_position["fr-main"];
                     }
@@ -309,8 +311,7 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
                     if (m_frame_window_position_state == 0) {
                         m_depth_position = &m_dict_win_position["fr-main"];
                         m_ab_position = &m_dict_win_position["fr-sub1"];
-                    }
-                    else {
+                    } else {
                         m_depth_position = &m_dict_win_position["fr-sub1"];
                         m_ab_position = &m_dict_win_position["fr-main"];
                     }
@@ -388,17 +389,18 @@ void ADIMainWindow::RefreshDevices() {
                                                      std::to_string(ix));
         }
     } else {
-        
+
         status = m_system.getCameraList(m_cameras_list);
-        
+
         if (!m_skip_network_cameras) {
             // Add network camera - reuse the same list instead of calling getCameraList again
             std::vector<std::shared_ptr<aditof::Camera>> networkCameras;
             m_system.getCameraList(networkCameras, m_cameraIp + m_ip_suffix);
             // Append network cameras to the existing list
-            m_cameras_list.insert(m_cameras_list.end(), networkCameras.begin(), networkCameras.end());
+            m_cameras_list.insert(m_cameras_list.end(), networkCameras.begin(),
+                                  networkCameras.end());
         }
-        
+
         // Build the connected devices list once after collecting all cameras
         for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
             m_connected_devices.emplace_back(ix, "ToF Camera " +

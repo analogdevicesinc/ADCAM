@@ -160,11 +160,11 @@ class ADIController {
 
     bool OutputDeltaTime(uint32_t frameNumber);
 
-	aditof::Status getFrameRate(uint32_t& fps);
-	aditof::Status getFramesReceived(uint32_t& framesRecevied);
+    aditof::Status getFrameRate(uint32_t &fps);
+    aditof::Status getFramesReceived(uint32_t &framesRecevied);
     aditof::Status setPreviewRate(uint32_t frameRate, uint32_t previewRate = 1);
-    aditof::Status getFramesLost(uint32_t& framesLost);
-    
+    aditof::Status getFramesLost(uint32_t &framesLost);
+
     std::vector<std::shared_ptr<aditof::Camera>> m_cameras;
     bool panicStop = false;
     size_t panicCount = 0;
@@ -175,9 +175,13 @@ class ADIController {
 		* @brief Sets a thread while capturing camera frames.
 		*/
     void captureFrames();
-    void calculateFrameLoss(const uint32_t frameNumber, uint32_t& prevFrameNumber, uint32_t& currentFrameNumber);
+    void calculateFrameLoss(const uint32_t frameNumber,
+                            uint32_t &prevFrameNumber,
+                            uint32_t &currentFrameNumber);
     bool shouldDropFrame(uint32_t frameNum);
-    std::unordered_map<uint32_t, std::chrono::time_point<std::chrono::high_resolution_clock>> m_rxTimeLookUp;
+    std::unordered_map<
+        uint32_t, std::chrono::time_point<std::chrono::high_resolution_clock>>
+        m_rxTimeLookUp;
 
   private:
     std::thread m_workerThread;

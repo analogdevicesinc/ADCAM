@@ -12,10 +12,10 @@
 #include "ADITypes.h"
 #include "ADIView.h"
 
-#include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include "backends/imgui_impl_opengl3_loader.h"
+#include "imgui.h"
 #include "imgui_toggle.h"
 #include "implot.h"
 #include <GLFW/glfw3.h>
@@ -250,7 +250,7 @@ class ADIMainWindow {
 		* @brief Deletes all buffers and
 		*        frees up memory
 		*/
-  
+
     void OpenGLCleanUp();
 
     /**
@@ -289,7 +289,7 @@ class ADIMainWindow {
 		* @brief Create the necessary OpenGL vertex attributes and buffers based on
 		* 		 current vertices extracted from XYZ data
 		*/
-    int32_t PreparePointCloudVertices(GLuint &vbo, GLuint&vao);
+    int32_t PreparePointCloudVertices(GLuint &vbo, GLuint &vao);
 
     /**
 		* @brief Resets to camera default position, as well as vertex point size
@@ -399,21 +399,21 @@ class ADIMainWindow {
 		*/
     void CameraStop();
 
-    int32_t synchronizeVideo(std::shared_ptr<aditof::Frame>& frame);
+    int32_t synchronizeVideo(std::shared_ptr<aditof::Frame> &frame);
 
     /**
 		* @brief Displays pixel information while mouse hovers over
 		*/
     void RenderFrameHoverInfo(ImVec2 hoveredImagePixel, uint16_t *currentImage,
-                        int imageWidth, bool isHovered,
-                        ADI_Image_Format_t format, std::string units);
+                              int imageWidth, bool isHovered,
+                              ADI_Image_Format_t format, std::string units);
 
     /**
 		* @brief Returns the hovered pixel value
 		*/
     void GetHoveredImagePix(ImVec2 &hoveredImagePixel, ImVec2 imageStartPos,
-                            ImVec2 mousePos,
-                            ImVec2 display_depth_dimensions, ImVec2 source_depth_image_dimensions);
+                            ImVec2 mousePos, ImVec2 display_depth_dimensions,
+                            ImVec2 source_depth_image_dimensions);
 
     /**
 		* @brief Returns current application path
@@ -431,8 +431,9 @@ class ADIMainWindow {
 		*/
     void DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverging);
     float DisplayFrameWindow(ImVec2 windowSize, ImVec2 &displayUpdate,
-                            ImVec2 &size);
-    void DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool haveAB, bool haveDepth, bool haveXYZ);
+                             ImVec2 &size);
+    void DisplayControlWindow(ImGuiWindowFlags overlayFlags, bool haveAB,
+                              bool haveDepth, bool haveXYZ);
 
     /**
 		* @brief Displays AB Window
@@ -453,7 +454,8 @@ class ADIMainWindow {
      * @brief print out warning message in popup window if ini param is out of valid range
     */
     void IniParamWarn(std::string variable, std::string validVal);
-    bool EntryInt32_t(const char* label, int32_t& input, const int32_t min, const int32_t max);
+    bool EntryInt32_t(const char *label, int32_t &input, const int32_t min,
+                      const int32_t max);
 
     void CustomizeMenus();
 
@@ -496,12 +498,18 @@ class ADIMainWindow {
     void NewLine(float spacing);
     void ShowStartWizard();
     bool SaveAllFramesUpdate();
-    bool cameraButton(std::string& baseFileName);
-    int32_t SaveTextureAsJPEG(const char* filename, GLuint textureID, uint32_t width, uint32_t height);
-    int32_t SaveConfidenceAsJPEG(const char* filename, const std::shared_ptr<aditof::Frame> frame, uint32_t width, uint32_t height);
-    void SavePointCloudPLYBinary(const char* filename, const float* points, size_t num_points);
-    void SaveMetaAsTxt(const char* filename, std::shared_ptr<aditof::Frame> frame);
-    ImFont* LoadFont(const unsigned char* ext_font, const unsigned int ext_font_len, const float size);
+    bool cameraButton(std::string &baseFileName);
+    int32_t SaveTextureAsJPEG(const char *filename, GLuint textureID,
+                              uint32_t width, uint32_t height);
+    int32_t SaveConfidenceAsJPEG(const char *filename,
+                                 const std::shared_ptr<aditof::Frame> frame,
+                                 uint32_t width, uint32_t height);
+    void SavePointCloudPLYBinary(const char *filename, const float *points,
+                                 size_t num_points);
+    void SaveMetaAsTxt(const char *filename,
+                       std::shared_ptr<aditof::Frame> frame);
+    ImFont *LoadFont(const unsigned char *ext_font,
+                     const unsigned int ext_font_len, const float size);
     void centreWindow(float width, float height);
     float WindowCalcX(Rect w, float buffer = 0.0f) {
         return w.x + w.width + buffer;
@@ -509,12 +517,12 @@ class ADIMainWindow {
     float WindowCalcY(Rect w, float buffer = 0.0f) {
         return w.y + w.height + buffer;
     }
-    void Spinner(const char* label, float radius, int thickness, ImU32 color);
+    void Spinner(const char *label, float radius, int thickness, ImU32 color);
 
     bool m_isWorking = false;
-	bool getIsWorking() const { return m_isWorking; }
-	void setIsWorking(bool isWorking) { m_isWorking = isWorking; }
-    void GetYawPitchRoll(float& yaw, float& pitch, float& roll);
+    bool getIsWorking() const { return m_isWorking; }
+    void setIsWorking(bool isWorking) { m_isWorking = isWorking; }
+    void GetYawPitchRoll(float &yaw, float &pitch, float &roll);
 
     // The type of movement that a mouse movement should be interpreted as (if any)
     //
@@ -556,7 +564,7 @@ class ADIMainWindow {
     int32_t m_point_size = 1;
     GLuint m_gl_pc_colourTex;
     GLuint m_gl_pc_depthTex;
-    
+
     // Optimizations for Jetson Orin Nano
     GLuint m_persistent_vbo = 0;
     GLuint m_persistent_vao = 0;
@@ -649,7 +657,7 @@ class ADIMainWindow {
     bool m_flash_main_window = false;
     int32_t m_user_frame_rate = 0;
     std::atomic<bool> m_offline_change_frame;
-	std::string m_base_file_name;
+    std::string m_base_file_name;
 };
 } // namespace adiMainWindow
 #endif //ADIMAINWINDOW_H

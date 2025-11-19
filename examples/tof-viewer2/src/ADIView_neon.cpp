@@ -6,9 +6,9 @@
 /********************************************************************************/
 
 #include "ADIView.h"
+#include <algorithm>
 #include <arm_neon.h>
 #include <cmath>
-#include <algorithm>
 
 #ifdef USE_GLOG
 #include <glog/logging.h>
@@ -19,11 +19,9 @@
 using namespace adiviewer;
 
 // ARM NEON optimized AB buffer normalization
-void ADIView::normalizeABBuffer_NEON(
-    uint16_t* abBuffer, uint16_t abWidth,
-    uint16_t abHeight, bool advanceScaling,
-    bool useLogScaling
-) {
+void ADIView::normalizeABBuffer_NEON(uint16_t *abBuffer, uint16_t abWidth,
+                                     uint16_t abHeight, bool advanceScaling,
+                                     bool useLogScaling) {
     size_t imageSize = abHeight * abWidth;
     uint32_t min_value_of_AB_pixel = 0xFFFF;
     uint32_t max_value_of_AB_pixel = 1;
@@ -33,33 +31,36 @@ void ADIView::normalizeABBuffer_NEON(
     if (advanceScaling) {
         uint16x8_t vmin = vdupq_n_u16(0xFFFF);
         uint16x8_t vmax = vdupq_n_u16(0);
-        
+
         size_t i = 0;
         for (; i + neon_width <= imageSize; i += neon_width) {
             uint16x8_t v = vld1q_u16(abBuffer + i);
             vmin = vminq_u16(vmin, v);
             vmax = vmaxq_u16(vmax, v);
         }
-        
+
         // Horizontal reduction
         uint16_t min_buf[neon_width], max_buf[neon_width];
         vst1q_u16(min_buf, vmin);
         vst1q_u16(max_buf, vmax);
-        
+
         for (int j = 0; j < neon_width; ++j) {
-            min_value_of_AB_pixel = std::min(min_value_of_AB_pixel, (uint32_t)min_buf[j]);
-            max_value_of_AB_pixel = std::max(max_value_of_AB_pixel, (uint32_t)max_buf[j]);
+            min_value_of_AB_pixel =
+                std::min(min_value_of_AB_pixel, (uint32_t)min_buf[j]);
+            max_value_of_AB_pixel =
+                std::max(max_value_of_AB_pixel, (uint32_t)max_buf[j]);
         }
-        
+
         // Scalar tail
         for (; i < imageSize; ++i) {
-            min_value_of_AB_pixel = std::min(min_value_of_AB_pixel, (uint32_t)abBuffer[i]);
-            max_value_of_AB_pixel = std::max(max_value_of_AB_pixel, (uint32_t)abBuffer[i]);
+            min_value_of_AB_pixel =
+                std::min(min_value_of_AB_pixel, (uint32_t)abBuffer[i]);
+            max_value_of_AB_pixel =
+                std::max(max_value_of_AB_pixel, (uint32_t)abBuffer[i]);
         }
-        
+
         max_value_of_AB_pixel -= min_value_of_AB_pixel;
-    }
-    else {
+    } else {
         uint32_t m_maxABPixelValue = (1 << 13) - 1;
         max_value_of_AB_pixel = m_maxABPixelValue;
         min_value_of_AB_pixel = 0;
@@ -78,87 +79,95 @@ void ADIView::normalizeABBuffer_NEON(
     for (uint16_t y = 0; y < abHeight; ++y) {
         size_t row_start = y * abWidth;
         size_t x = 0;
-        
+
         for (; x + neon_width <= abWidth; x += neon_width) {
             // Load 8 uint16 values
             uint16x8_t pix = vld1q_u16(abBuffer + row_start + x);
-            
+
             // Subtract minimum (with saturation)
             uint16x8_t pix_sub = vqsubq_u16(pix, minV);
-            
+
             // Convert to float32 for normalization (process 4 at a time)
             uint16x4_t pix_lo = vget_low_u16(pix_sub);
             uint16x4_t pix_hi = vget_high_u16(pix_sub);
-            
+
             uint32x4_t pix32_lo = vmovl_u16(pix_lo);
             uint32x4_t pix32_hi = vmovl_u16(pix_hi);
-            
+
             float32x4_t flo = vcvtq_f32_u32(pix32_lo);
             float32x4_t fhi = vcvtq_f32_u32(pix32_hi);
-            
+
             // Normalize
             flo = vmulq_f32(flo, normV);
             fhi = vmulq_f32(fhi, normV);
-            
+
             // Clamp to [0, 255]
             float32x4_t zero = vdupq_n_f32(0.0f);
             float32x4_t max_val = vdupq_n_f32(255.0f);
             flo = vminq_f32(vmaxq_f32(flo, zero), max_val);
             fhi = vminq_f32(vmaxq_f32(fhi, zero), max_val);
-            
+
             // Convert back to uint16
             uint32x4_t ilo = vcvtq_u32_f32(flo);
             uint32x4_t ihi = vcvtq_u32_f32(fhi);
-            
+
             uint16x4_t out_lo = vmovn_u32(ilo);
             uint16x4_t out_hi = vmovn_u32(ihi);
-            
+
             uint16x8_t out = vcombine_u16(out_lo, out_hi);
-            
+
             // Store result
             vst1q_u16(abBuffer + row_start + x, out);
-            
+
             // Update min/max
             global_vmin = vminq_u16(global_vmin, out);
             global_vmax = vmaxq_u16(global_vmax, out);
         }
-        
+
         // Scalar tail for this row
         for (; x < abWidth; ++x) {
             int val = int(abBuffer[row_start + x]) - int(min_value_of_AB_pixel);
             float pix = float(val) * norm_factor;
-            if (pix < 0.0f) pix = 0.0f;
-            if (pix > 255.0f) pix = 255.0f;
+            if (pix < 0.0f)
+                pix = 0.0f;
+            if (pix > 255.0f)
+                pix = 255.0f;
             abBuffer[row_start + x] = (uint8_t)pix;
         }
     }
-    
+
     // Scalar reduction for new min/max
     uint16_t min_buf[neon_width], max_buf[neon_width];
     vst1q_u16(min_buf, global_vmin);
     vst1q_u16(max_buf, global_vmax);
-    
+
     for (int j = 0; j < neon_width; ++j) {
-        new_min_value_of_AB_pixel = std::min(new_min_value_of_AB_pixel, (uint32_t)min_buf[j]);
-        new_max_value_of_AB_pixel = std::max(new_max_value_of_AB_pixel, (uint32_t)max_buf[j]);
+        new_min_value_of_AB_pixel =
+            std::min(new_min_value_of_AB_pixel, (uint32_t)min_buf[j]);
+        new_max_value_of_AB_pixel =
+            std::max(new_max_value_of_AB_pixel, (uint32_t)max_buf[j]);
     }
 
     // --- Log scaling ---
     if (useLogScaling) {
         max_value_of_AB_pixel = new_max_value_of_AB_pixel;
         min_value_of_AB_pixel = new_min_value_of_AB_pixel;
-        double maxLogVal = log10(1.0 + double(max_value_of_AB_pixel - min_value_of_AB_pixel));
-        
+        double maxLogVal =
+            log10(1.0 + double(max_value_of_AB_pixel - min_value_of_AB_pixel));
+
         for (uint16_t y = 0; y < abHeight; ++y) {
             size_t row_start = y * abWidth;
-            
+
             // Log scaling is harder to vectorize efficiently, use scalar
             for (size_t x = 0; x < abWidth; ++x) {
-                double pix = double(abBuffer[row_start + x]) - min_value_of_AB_pixel;
+                double pix =
+                    double(abBuffer[row_start + x]) - min_value_of_AB_pixel;
                 double logPix = log10(1.0 + pix);
                 pix = (logPix / maxLogVal) * 255.0;
-                if (pix < 0.0) pix = 0.0;
-                if (pix > 255.0) pix = 255.0;
+                if (pix < 0.0)
+                    pix = 0.0;
+                if (pix > 255.0)
+                    pix = 255.0;
                 abBuffer[row_start + x] = (uint8_t)pix;
             }
         }
@@ -196,8 +205,9 @@ void ADIView::_displayAbImage_NEON() {
 
         std::lock_guard<std::mutex> lock(ab_data_ready_mtx);
 
-        uint16_t* _ab_video_data = nullptr;
-        auto camera = m_ctrl->m_cameras[static_cast<unsigned int>(m_ctrl->getCameraInUse())];
+        uint16_t *_ab_video_data = nullptr;
+        auto camera = m_ctrl->m_cameras[static_cast<unsigned int>(
+            m_ctrl->getCameraInUse())];
 
         m_capturedFrame->getData("ab", &ab_video_data);
 
@@ -220,9 +230,11 @@ void ADIView::_displayAbImage_NEON() {
             LOG(ERROR) << __func__ << ": Cannot allocate _ab_video_data.";
             return;
         }
-        memcpy(_ab_video_data, ab_video_data, frameHeight * frameWidth * sizeof(uint16_t));
+        memcpy(_ab_video_data, ab_video_data,
+               frameHeight * frameWidth * sizeof(uint16_t));
 
-        normalizeABBuffer_NEON(_ab_video_data, frameWidth, frameHeight, getAutoScale(), getLogImage());
+        normalizeABBuffer_NEON(_ab_video_data, frameWidth, frameHeight,
+                               getAutoScale(), getLogImage());
 
         size_t imageSize = frameHeight * frameWidth;
         size_t bgrSize = 0;
@@ -236,14 +248,14 @@ void ADIView::_displayAbImage_NEON() {
         for (int y = 0; y < frameHeight; ++y) {
             size_t row_start = y * frameWidth;
             size_t x = 0;
-            
+
             for (; x + neon_width <= frameWidth; x += neon_width) {
                 uint16x8_t v = vld1q_u16(_ab_video_data + row_start + x);
                 uint8x8_t v8 = vmovn_u16(v);
-                
+
                 uint8_t buf[neon_width];
                 vst1_u8(buf, v8);
-                
+
                 // Replicate to BGR
                 for (int j = 0; j < neon_width; ++j) {
                     uint8_t pix = buf[j];
@@ -252,7 +264,7 @@ void ADIView::_displayAbImage_NEON() {
                     ab_video_data_8bit[bgrSize++] = pix;
                 }
             }
-            
+
             // Scalar tail
             for (; x < frameWidth; ++x) {
                 uint8_t pix = (uint8_t)_ab_video_data[row_start + x];
@@ -272,7 +284,8 @@ void ADIView::_displayAbImage_NEON() {
 #ifdef AB_TIME
         {
             std::ostringstream oss;
-            oss << "AB (NEON): " << endTimerAndUpdate(timerStart, &timeABQ) << " ms" << std::endl;
+            oss << "AB (NEON): " << endTimerAndUpdate(timerStart, &timeABQ)
+                << " ms" << std::endl;
             OutputDebugStringA(oss.str().c_str());
         }
 #endif
@@ -315,7 +328,7 @@ void ADIView::_displayDepthImage_NEON() {
         auto timerStart = startTimer();
 #endif
 
-        uint16_t* data;
+        uint16_t *data;
         m_capturedFrame->getData("depth", &depth_video_data);
 
         if (depth_video_data == nullptr) {
@@ -347,44 +360,49 @@ void ADIView::_displayDepthImage_NEON() {
         for (; i + PixelBlock <= imageSize; i += PixelBlock) {
             // Load 8 uint16 values
             uint16x8_t vSrc16 = vld1q_u16(&depth_video_data[i]);
-            
+
             // Check for zeros (pixels to be masked)
             uint16x8_t zeroMask = vceqq_u16(vSrc16, vdupq_n_u16(0));
-            
+
             // Process in two batches of 4
             uint16x4_t vSrc16_lo = vget_low_u16(vSrc16);
             uint16x4_t vSrc16_hi = vget_high_u16(vSrc16);
-            
+
             uint32x4_t vSrc32_lo = vmovl_u16(vSrc16_lo);
             uint32x4_t vSrc32_hi = vmovl_u16(vSrc16_hi);
-            
+
             float32x4_t vSrcF_lo = vcvtq_f32_u32(vSrc32_lo);
             float32x4_t vSrcF_hi = vcvtq_f32_u32(vSrc32_hi);
-            
+
             // Clamp and normalize
             vSrcF_lo = vminq_f32(vmaxq_f32(vSrcF_lo, minRangeV), maxRangeV);
             vSrcF_hi = vminq_f32(vmaxq_f32(vSrcF_hi, minRangeV), maxRangeV);
-            
-            float32x4_t vHue_lo = vmulq_f32(vsubq_f32(vSrcF_lo, minRangeV), rangeV);
-            float32x4_t vHue_hi = vmulq_f32(vsubq_f32(vSrcF_hi, minRangeV), rangeV);
-            
+
+            float32x4_t vHue_lo =
+                vmulq_f32(vsubq_f32(vSrcF_lo, minRangeV), rangeV);
+            float32x4_t vHue_hi =
+                vmulq_f32(vsubq_f32(vSrcF_hi, minRangeV), rangeV);
+
             // Store and convert to RGB (scalar for now, HSV->RGB is complex to vectorize)
             float hues[PixelBlock];
             vst1q_f32(&hues[0], vHue_lo);
             vst1q_f32(&hues[4], vHue_hi);
-            
+
             for (int j = 0; j < PixelBlock; ++j) {
                 if (depth_video_data[i + j] == 0) {
                     depth_video_data_8bit[bgrSize++] = 0;
                     depth_video_data_8bit[bgrSize++] = 0;
                     depth_video_data_8bit[bgrSize++] = 0;
-                }
-                else {
+                } else {
                     float fRed, fGreen, fBlue;
-                    ColorConvertHSVtoRGB(hues[j], 1.f, 1.f, fRed, fGreen, fBlue);
-                    depth_video_data_8bit[bgrSize++] = static_cast<uint8_t>(fBlue * PixelMax);
-                    depth_video_data_8bit[bgrSize++] = static_cast<uint8_t>(fGreen * PixelMax);
-                    depth_video_data_8bit[bgrSize++] = static_cast<uint8_t>(fRed * PixelMax);
+                    ColorConvertHSVtoRGB(hues[j], 1.f, 1.f, fRed, fGreen,
+                                         fBlue);
+                    depth_video_data_8bit[bgrSize++] =
+                        static_cast<uint8_t>(fBlue * PixelMax);
+                    depth_video_data_8bit[bgrSize++] =
+                        static_cast<uint8_t>(fGreen * PixelMax);
+                    depth_video_data_8bit[bgrSize++] =
+                        static_cast<uint8_t>(fRed * PixelMax);
                 }
             }
         }
@@ -395,20 +413,25 @@ void ADIView::_displayDepthImage_NEON() {
                 depth_video_data_8bit[bgrSize++] = 0;
                 depth_video_data_8bit[bgrSize++] = 0;
                 depth_video_data_8bit[bgrSize++] = 0;
-            }
-            else {
+            } else {
                 float fRed, fGreen, fBlue;
-                hsvColorMap(depth_video_data[i], maxRange, minRange, fRed, fGreen, fBlue);
-                depth_video_data_8bit[bgrSize++] = static_cast<uint8_t>(fBlue * PixelMax);
-                depth_video_data_8bit[bgrSize++] = static_cast<uint8_t>(fGreen * PixelMax);
-                depth_video_data_8bit[bgrSize++] = static_cast<uint8_t>(fRed * PixelMax);
+                hsvColorMap(depth_video_data[i], maxRange, minRange, fRed,
+                            fGreen, fBlue);
+                depth_video_data_8bit[bgrSize++] =
+                    static_cast<uint8_t>(fBlue * PixelMax);
+                depth_video_data_8bit[bgrSize++] =
+                    static_cast<uint8_t>(fGreen * PixelMax);
+                depth_video_data_8bit[bgrSize++] =
+                    static_cast<uint8_t>(fRed * PixelMax);
             }
         }
 
 #ifdef DEPTH_TIME
         {
             std::ostringstream oss;
-            oss << "Depth (NEON): " << endTimerAndUpdate(timerStart, &timeDepthQ) << " ms" << std::endl;
+            oss << "Depth (NEON): "
+                << endTimerAndUpdate(timerStart, &timeDepthQ) << " ms"
+                << std::endl;
             OutputDebugStringA(oss.str().c_str());
         }
 #endif
@@ -451,7 +474,7 @@ void ADIView::_displayPointCloudImage_NEON() {
         auto timerStart = startTimer();
 #endif
 
-        m_capturedFrame->getData("xyz", (uint16_t**)&pointCloud_video_data);
+        m_capturedFrame->getData("xyz", (uint16_t **)&pointCloud_video_data);
 
         if (pointCloud_video_data == nullptr) {
             return;
@@ -465,7 +488,8 @@ void ADIView::_displayPointCloudImage_NEON() {
         frameWidth = static_cast<int>(frameXyzDetails.width);
 
         size_t frameSize = frameHeight * frameWidth * 3;
-        if (normalized_vertices == nullptr || pointcloudTableSize != frameSize) {
+        if (normalized_vertices == nullptr ||
+            pointcloudTableSize != frameSize) {
             if (normalized_vertices) {
                 delete[] normalized_vertices;
             }
@@ -494,9 +518,12 @@ void ADIView::_displayPointCloudImage_NEON() {
 
         for (uint32_t i = 0; i < pointcloudTableSize; i += 3) {
             // XYZ normalization
-            normalized_vertices[bgrSize++] = static_cast<float>(pointCloud_video_data[i]) / Max_X;
-            normalized_vertices[bgrSize++] = static_cast<float>(pointCloud_video_data[i + 1]) / Max_Y;
-            normalized_vertices[bgrSize++] = static_cast<float>(pointCloud_video_data[i + 2]) / Max_Z;
+            normalized_vertices[bgrSize++] =
+                static_cast<float>(pointCloud_video_data[i]) / Max_X;
+            normalized_vertices[bgrSize++] =
+                static_cast<float>(pointCloud_video_data[i + 1]) / Max_Y;
+            normalized_vertices[bgrSize++] =
+                static_cast<float>(pointCloud_video_data[i + 2]) / Max_Z;
 
             // RGB
             if ((int16_t)pointCloud_video_data[i + 2] == 0) {
@@ -504,20 +531,17 @@ void ADIView::_displayPointCloudImage_NEON() {
                 if (m_pccolour == 1) {
                     cntr += 3;
                 }
-            }
-            else {
+            } else {
                 if (m_pccolour == 2) {
                     fRed = fGreen = fBlue = 1.0f;
-                }
-                else if (m_pccolour == 1 && haveAb) {
+                } else if (m_pccolour == 1 && haveAb) {
                     fRed = (float)ab_video_data_8bit[cntr] / 255.0f;
                     fGreen = (float)ab_video_data_8bit[cntr + 1] / 255.0f;
                     fBlue = (float)ab_video_data_8bit[cntr + 2] / 255.0f;
                     cntr += 3;
-                }
-                else {
-                    hsvColorMap((pointCloud_video_data[i + 2]), maxRange, minRange,
-                        fRed, fGreen, fBlue);
+                } else {
+                    hsvColorMap((pointCloud_video_data[i + 2]), maxRange,
+                                minRange, fRed, fGreen, fBlue);
                 }
             }
             normalized_vertices[bgrSize++] = fRed;
@@ -537,7 +561,8 @@ void ADIView::_displayPointCloudImage_NEON() {
 #ifdef PC_TIME
         {
             std::ostringstream oss;
-            oss << "PC (NEON): " << endTimerAndUpdate(timerStart, &timePCQ) << " ms" << std::endl;
+            oss << "PC (NEON): " << endTimerAndUpdate(timerStart, &timePCQ)
+                << " ms" << std::endl;
             OutputDebugStringA(oss.str().c_str());
         }
 #endif

@@ -1,5 +1,5 @@
-#include "ADIMainWindow.h"
 #include "ADIImGUIExtensions.h"
+#include "ADIMainWindow.h"
 
 #ifdef USE_GLOG
 #include <glog/logging.h>
@@ -12,7 +12,8 @@ using namespace adiMainWindow;
 #include <cstdarg> // for va_list
 #include <imgui.h>
 
-void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverging) {
+void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
+                                      bool diverging) {
     using namespace aditof;
     static bool show_ini_window = false;
 
@@ -43,11 +44,12 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverg
         m_set_temp_win_position_once = false;
     }
 
-    SetWindowPosition(m_dict_win_position["info"].x, m_dict_win_position["info"].y);
-    SetWindowSize(m_dict_win_position["info"].width, m_dict_win_position["info"].height);
+    SetWindowPosition(m_dict_win_position["info"].x,
+                      m_dict_win_position["info"].y);
+    SetWindowSize(m_dict_win_position["info"].width,
+                  m_dict_win_position["info"].height);
 
-    if (ImGui::Begin("Information Window", nullptr,
-                     overlayFlags)) {
+    if (ImGui::Begin("Information Window", nullptr, overlayFlags)) {
 
         std::string formattedIP;
         for (int i = 0; i < m_cameraIp.length(); i++)
@@ -58,8 +60,8 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverg
         float col1Width = ImGui::CalcTextSize(col1Text).x + padding;
 
         if (ImGui::BeginTable("Information Table", 2)) {
-            ImGui::TableSetupColumn(
-                "Type", ImGuiTableColumnFlags_WidthFixed, col1Width);
+            ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed,
+                                    col1Width);
             ImGui::TableSetupColumn("Value",
                                     ImGuiTableColumnFlags_WidthStretch);
 
@@ -80,10 +82,11 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverg
             ImGui::Text("Preview Mode");
             ImGui::TableSetColumnIndex(1);
             if (m_enable_preview) {
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255)); // RGBA for red
-            }
-            else {
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); // RGBA for green
+                ImGui::PushStyleColor(ImGuiCol_Text,
+                                      IM_COL32(255, 0, 0, 255)); // RGBA for red
+            } else {
+                ImGui::PushStyleColor(
+                    ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); // RGBA for green
             }
             ImGui::Text("%s", m_enable_preview ? "On" : "Off");
             ImGui::PopStyleColor();
@@ -92,7 +95,8 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverg
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("Mode");
             ImGui::TableSetColumnIndex(1);
-            std::string s = m_cameraModesLookup[static_cast<uint16_t>(camera_mode)]; 
+            std::string s =
+                m_cameraModesLookup[static_cast<uint16_t>(camera_mode)];
             ImGui::Text(s.c_str());
 
             if (m_fps_expected) {
@@ -104,16 +108,16 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverg
             }
 
             static uint32_t fps;
-			m_view_instance->m_ctrl->getFrameRate(fps);
+            m_view_instance->m_ctrl->getFrameRate(fps);
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("Current fps");
             ImGui::TableSetColumnIndex(1);
             if (m_off_line) {
                 ImGui::Text("N/A");
-            }
-            else {
-                ImGui::Text("%i", fps);;
+            } else {
+                ImGui::Text("%i", fps);
+                ;
             }
 
             ImGui::TableNextRow();
@@ -121,10 +125,11 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverg
             ImGui::Text("Frame Rate Warning");
             ImGui::TableSetColumnIndex(1);
             if (diverging) {
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255)); // RGBA for red
-            }
-            else {
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); // RGBA for green
+                ImGui::PushStyleColor(ImGuiCol_Text,
+                                      IM_COL32(255, 0, 0, 255)); // RGBA for red
+            } else {
+                ImGui::PushStyleColor(
+                    ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); // RGBA for green
             }
             ImGui::Text("%s", diverging ? "Too High" : "Good");
             ImGui::PopStyleColor();
@@ -150,7 +155,8 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverg
                     if (m_off_line) {
                         ImGui::Text("N/A");
                     } else {
-                        ImGui::Text("%i", frame_received);;
+                        ImGui::Text("%i", frame_received);
+                        ;
                     }
 
                     ImGui::TableNextRow();
@@ -159,9 +165,9 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverg
                     ImGui::TableSetColumnIndex(1);
                     if (m_off_line) {
                         ImGui::Text("N/A");
-                    }
-                    else {
-                        ImGui::Text("%i", frames_lost);;
+                    } else {
+                        ImGui::Text("%i", frames_lost);
+                        ;
                     }
 
                     ImGui::TableNextRow();
@@ -188,11 +194,11 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverg
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("Point Cloud Camera PoS");
             ImGui::TableSetColumnIndex(1);
-            ImGui::Text("(%0.1f, %0.1f, %0.1f)", m_camera_position_vec[0], m_camera_position_vec[1],
-                m_camera_position_vec[2]);
+            ImGui::Text("(%0.1f, %0.1f, %0.1f)", m_camera_position_vec[0],
+                        m_camera_position_vec[1], m_camera_position_vec[2]);
 
-			float roll, pitch, yaw;
-			GetYawPitchRoll(yaw, pitch, roll);
+            float roll, pitch, yaw;
+            GetYawPitchRoll(yaw, pitch, roll);
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("Camera (Y, P, R)");
