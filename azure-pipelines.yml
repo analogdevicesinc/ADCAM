@@ -52,7 +52,13 @@ jobs:
       cd libaditof
       git fetch origin main
       git checkout main
-    displayName: "Update submodule to main branch"
+    displayName: "Update libaditof to main branch"
+
+  - script: |
+      cd ToF
+      git fetch origin main
+      git checkout main
+    displayName: "Update ToF to main branch"
 
   - task: Cache@2
     condition: and(

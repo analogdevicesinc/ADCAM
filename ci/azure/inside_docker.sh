@@ -1,5 +1,10 @@
 #!/bin/bash
 
+sudo apt-get update
+sudo apt-get install -y wget
+wget https://github.com/Kitware/CMake/releases/download/v3.22.0/cmake-3.22.0-linux-x86_64.sh
+sudo sh cmake-3.22.0-linux-x86_64.sh --skip-license --prefix=/usr/local
+
 git config --global --add safe.directory /ToF/libaditof
 git config --global --add safe.directory /ToF/libaditof/glog
 git config --global --add safe.directory /ToF/libaditof/protobuf
