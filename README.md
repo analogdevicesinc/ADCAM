@@ -89,9 +89,13 @@ Note, prior to committing to the repo it is important to format the source code,
 ```console
 sudo apt update
 sudo apt install cmake g++ \
-     libopencv-contrib-dev libopencv-dev \
+     libopencv-dev \
      libgl1-mesa-dev libglfw3-dev \
-     doxygen graphviz
+     doxygen graphviz \
+     libxinerama-dev \
+     libxcursor-dev \
+     libxi-dev \
+     libxrandr-dev
 ```
 
 For Linux builds install the necessary version of Python dev libraries. For example for Ubuntu 22.04 with Python 3.10 as the default Python:
