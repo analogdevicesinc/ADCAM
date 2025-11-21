@@ -32,6 +32,7 @@
 import aditofpython as tof
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import sys
 import os
 import struct
@@ -138,6 +139,8 @@ image_ab = np.array(frame.getData("ab"), copy=False)
 # Get the confidence frame
 image_conf = np.array(frame.getData("conf"), copy=False)
 
+image_xyz= np.array(frame.getData("xyz"), copy=False)
+
 if ((frameDataDetails.width != 1024 and frameDataDetails.height != 1024)):
     image_conf2 = image_conf.flatten()
     count = 0
@@ -173,38 +176,94 @@ print("Frame number from metadata: ", frame_num)
 print("Mode from metadata: ", imager_mode)
 
 if int(isdisplay)==1:
-    # Create a figure with 4 subplots (3 images + 1 metadata text)
-    fig, axs = plt.subplots(1, 4, figsize=(18, 5))  # 1 row, 4 columns
-
+    # Create a figure with 5 subplots (3 images + 1 metadata text + 1 point cloud)
+    fig = plt.figure(figsize=(20, 8))
+    
     # Plot the depth image
-    axs[0].imshow(image_depth, cmap='jet')
-    axs[0].set_title("Depth Image")
-    axs[0].axis("off")
+    ax1 = fig.add_subplot(2, 3, 1)
+    im1 = ax1.imshow(image_depth, cmap='jet')
+    ax1.set_title("Depth Image")
+    ax1.axis("off")
+    fig.colorbar(im1, ax=ax1)
 
     # Plot the AB image
-    axs[1].imshow(image_ab, cmap='gray')
-    axs[1].set_title("AB Image")
-    axs[1].axis("off")
+    ax2 = fig.add_subplot(2, 3, 2)
+    im2 = ax2.imshow(image_ab, cmap='gray')
+    ax2.set_title("AB Image")
+    ax2.axis("off")
+    fig.colorbar(im2, ax=ax2)
 
     # Plot the Confidence image
-    axs[2].imshow(image_conf, cmap='gray')
-    axs[2].set_title("Confidence Image")
-    axs[2].axis("off")
-
-    # Add colorbars
-    fig.colorbar(axs[0].imshow(image_depth, cmap='jet'), ax=axs[0])
-    fig.colorbar(axs[1].imshow(image_ab, cmap='gray'), ax=axs[1])
-    fig.colorbar(axs[2].imshow(image_conf, cmap='gray'), ax=axs[2])
+    ax3 = fig.add_subplot(2, 3, 3)
+    im3 = ax3.imshow(image_conf, cmap='gray')
+    ax3.set_title("Confidence Image")
+    ax3.axis("off")
+    fig.colorbar(im3, ax=ax3)
 
     # Metadata as text in the fourth subplot
-    axs[3].axis("off")  # Hide axes
+    ax4 = fig.add_subplot(2, 3, 4)
+    ax4.axis("off")  # Hide axes
     metadata_text = (
         f"Sensor Temp: {sensor_temp}°C\n"
         f"Laser Temp: {laser_temp}°C\n"
         f"Frame #: {frame_num}\n"
         f"Mode: {imager_mode}"
     )
-    axs[3].text(0.1, 0.5, metadata_text, fontsize=12, verticalalignment='center')
+    ax4.text(0.1, 0.5, metadata_text, fontsize=12, verticalalignment='center')
+
+    # Point cloud visualization
+    ax5 = fig.add_subplot(2, 3, (5, 6), projection='3d')
+    
+    # Reshape XYZ data - assuming it's in format [x, y, z, x, y, z, ...]
+    # XYZ data is int16 (signed 16-bit), with each coordinate being one int16 value
+    print(f"XYZ data shape: {image_xyz.shape}, dtype: {image_xyz.dtype}")
+    
+    # Ensure data is interpreted as signed int16
+    if image_xyz.dtype != np.int16:
+        image_xyz = image_xyz.view(np.int16)
+    
+    xyz_reshaped = image_xyz.reshape(-1, 3)
+    
+    # Extract X, Y, Z coordinates
+    x = xyz_reshaped[:, 0].astype(np.int16)
+    y = xyz_reshaped[:, 1].astype(np.int16)
+    z = xyz_reshaped[:, 2].astype(np.int16)
+    
+    print(f"X range: [{x.min()}, {x.max()}], Y range: [{y.min()}, {y.max()}], Z range: [{z.min()}, {z.max()}]")
+    
+    # Filter out invalid points (z == 0)
+    valid_mask = z != 0
+    x_valid = x[valid_mask]
+    y_valid = y[valid_mask]
+    z_valid = z[valid_mask]
+    
+    # Downsample for better performance (every 10th point)
+    downsample_factor = 10
+    x_display = x_valid[::downsample_factor]
+    y_display = y_valid[::downsample_factor]
+    z_display = z_valid[::downsample_factor]
+    
+    # Create point cloud scatter plot colored by depth (Z)
+    scatter = ax5.scatter(x_display, y_display, z_display, 
+                         c=z_display, cmap='jet', 
+                         s=1, marker='.')
+    
+    ax5.set_xlabel('X')
+    ax5.set_ylabel('Y')
+    ax5.set_zlabel('Z (Depth)')
+    ax5.set_title("Point Cloud")
+    fig.colorbar(scatter, ax=ax5, shrink=0.5)
+    
+    # Set equal aspect ratio for better visualization
+    max_range = np.array([x_display.max()-x_display.min(), 
+                         y_display.max()-y_display.min(), 
+                         z_display.max()-z_display.min()]).max() / 2.0
+    mid_x = (x_display.max()+x_display.min()) * 0.5
+    mid_y = (y_display.max()+y_display.min()) * 0.5
+    mid_z = (z_display.max()+z_display.min()) * 0.5
+    ax5.set_xlim(mid_x - max_range, mid_x + max_range)
+    ax5.set_ylim(mid_y - max_range, mid_y + max_range)
+    ax5.set_zlim(mid_z - max_range, mid_z + max_range)
 
     plt.tight_layout()
     plt.show()
@@ -213,5 +272,6 @@ else:
     image_depth.tofile("depth_mode_" + str(mode) + ".bin")
     image_ab.tofile("ab_mode_" + str(mode) + ".bin")
     image_conf.tofile("conf_mode_" + str(mode) + ".bin")
+    image_xyz.tofile("xyz_mode_" + str(mode) + ".bin")
 
 
