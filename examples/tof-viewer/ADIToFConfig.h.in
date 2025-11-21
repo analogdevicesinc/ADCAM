@@ -1,3 +1,0 @@
-// the configured options and settings for ADIToF
-#define ADIToFGUI_VERSION_MAJOR @ADIToFGUI_VERSION_MAJOR@
-#define ADIToFGUI_VERSION_MINOR @ADIToFGUI_VERSION_MINOR@
