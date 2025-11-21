@@ -115,7 +115,8 @@ def generate_confidence(conf_frame, directory, base_filename, index):
     o3d.io.write_image(safe_join(directory, f'conf_{base_filename}_{index}{PNG_EXT}'), img)
 
 def generate_pcloud(xyz_frame, directory, base_filename, index, height, width):
-    xyz_frame = np.resize(xyz_frame, (height * width, 3))
+    xyz_frame = xyz_frame.view(np.int16)
+    xyz_frame = xyz_frame.reshape(-1, 3)
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(xyz_frame)
     point_cloud.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
