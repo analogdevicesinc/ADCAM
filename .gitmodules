@@ -7,5 +7,5 @@
 	url = https://github.com/analogdevicesinc/ToF-drivers.git
 	branch = dev-6.2.0
 [submodule "dependencies/third-party/imgui2/imgui"]
-	path = dependencies/third-party/imgui2/imgui
+	path = dependencies/third-party/imgui/imgui
 	url = https://github.com/ocornut/imgui.git

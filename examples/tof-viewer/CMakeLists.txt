@@ -64,16 +64,16 @@ endif()
 # Disable Wayland support for GLFW to avoid missing protocol file dependencies
 set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "Build support for Wayland" FORCE)
 
-add_subdirectory("${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/glfw" "${CMAKE_BINARY_DIR}/glfw")
+add_subdirectory("${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui/glfw" "${CMAKE_BINARY_DIR}/glfw")
 
-set(IMGUI_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2)
-set(IMGUI_TOGGLE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/imgui_toggle)
-set(IMPLOT_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/implot)
-set(IMOGUIZMO_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/imoguizmo)
-set(GLM_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/glm)
+set(IMGUI_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui)
+set(IMGUI_TOGGLE_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui/imgui_toggle)
+set(IMPLOT_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui/implot)
+set(IMOGUIZMO_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui/imoguizmo)
+set(GLM_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui/glm)
 set(ADIToF_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(IMGUIMD__SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/imgui_md)
-set(M4DC_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui2/m4dc)
+set(IMGUIMD__SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui/imgui_md)
+set(M4DC_SOURCE_DIR ${CMAKE_SOURCE_DIR}/dependencies/third-party/imgui/m4dc)
 
 # Collect all source files EXCEPT platform-specific optimized versions
 file(GLOB ADIToF_SOURCES CONFIGURE_DEPENDS "${ADIToF_SOURCE_DIR}/*.cpp")

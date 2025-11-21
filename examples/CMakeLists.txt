@@ -3,22 +3,12 @@ project(examples)
 
 add_subdirectory(first-frame)
 add_subdirectory(data_collect)
-if (NOT NXP)
-    add_subdirectory(tof-viewer2)
-    #add_subdirectory(tof-viewer)
-endif()
+add_subdirectory(tof-viewer)
 
 include(GNUInstallDirs)
 
-if (NXP)
-    install(PROGRAMS
-        $<TARGET_FILE:first-frame>
-        $<TARGET_FILE:data_collect>
-        DESTINATION ${CMAKE_INSTALL_BINDIR} )
-else()
-    install(PROGRAMS
-        $<TARGET_FILE:first-frame>
-        $<TARGET_FILE:data_collect>
-        $<TARGET_FILE:ADIToFGUI>
-        DESTINATION ${CMAKE_INSTALL_BINDIR} )
-endif()
+install(PROGRAMS
+    $<TARGET_FILE:first-frame>
+    $<TARGET_FILE:data_collect>
+    $<TARGET_FILE:ADIToFGUI>
+    DESTINATION ${CMAKE_INSTALL_BINDIR} )
