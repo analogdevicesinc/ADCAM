@@ -16,6 +16,7 @@ set(PY_EXAMPLES
     skeletal_tracking_in_pointcloud
     data_collect
     showPointCloud
+    rawparser
 )
 
 foreach(ex ${PY_EXAMPLES})

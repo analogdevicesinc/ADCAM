@@ -327,7 +327,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    status = camera->setControl("setFPS", std::to_string(fps));
+    status = camera->adsd3500SetFrameRate(fps);
     if (status != Status::OK) {
         LOG(ERROR) << "Error setting camera FPS to " << fps;
         return -1;
@@ -365,7 +365,7 @@ int main(int argc, char *argv[]) {
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    long long runtime_in_ms = ((long long)n_frames / (long long)fps) * 1000;
+    long long runtime_in_ms = (((long long)n_frames * 1000) / (long long)fps);
     long long max_runtime_in_ms = 600000; // 10 minutes
 
     LOG(INFO) << "Starting capture of " << n_frames << " frames.";
