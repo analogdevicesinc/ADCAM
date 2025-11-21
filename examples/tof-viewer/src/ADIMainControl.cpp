@@ -497,9 +497,12 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             if (ImGuiExtensions::ADIButton("Reset", true)) {
                 PointCloudReset();
             }
-            NewLine(5.0f);
-            ImGui::SliderInt("Point Size", &m_point_size, 1, 10,
-                             "Point Size: %d px");
+
+            // Temporarily disable point size adjustment given that
+            //  point size can impact performance negatively on some systems
+            //NewLine(5.0f);
+            //ImGui::SliderInt("Point Size", &m_point_size, 1, 10,
+            //                 "Point Size: %d px");
 
             NewLine(5.0f);
         }
