@@ -89,7 +89,7 @@ class ADIController {
 		* @brief				Opens a currently saved recording and plays it back
 		* @param	fileName	Chosen recording file name
 		*/
-    int startPlayback(const std::string &fileName);
+    int setPlaybackFile(const std::string &fileName);
 
     /**
 		* @brief	Stops current playback recording

@@ -765,7 +765,7 @@ void ADIMainWindow::ShowStartWizard() {
                 if (camera != nullptr) {
 
                     m_offline_change_frame = true;
-                    camera->startPlayback(fileName);
+                    camera->setPlaybackFile(fileName);
 
                     m_off_line_frame_index = 0;
                     m_frame_window_position_state = 0;

@@ -186,7 +186,7 @@ def main():
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
-    status = camera1.startPlayback(args.filename)
+    status = camera1.setPlaybackFile(args.filename)
     status = camera1.setMode(0)
     status = camera1.start()
 
@@ -232,7 +232,6 @@ def main():
 
     print(f"Processed {frame_idx} frames.")
 
-    camera1.stopPlayback()
     camera1.stop()
 
 if __name__ == "__main__":
