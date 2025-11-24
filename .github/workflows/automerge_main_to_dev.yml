@@ -10,18 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Manually clone the repository
-        run: |
-          git init
-          git remote add origin https://github.com/${{ github.repository }}.git
-          git fetch origin main
-          git fetch origin dev-1.0.0-b.1
-          git checkout -b dev-1.0.0-b.1 origin/dev-1.0.0-b.1
+      - name: Checkout main branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: true
 
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+       
+      - name: Ensure dev branch exists
+        run: |
+          if git ls-remote --exit-code --heads origin dev-1.0.0-b.1; then
+            echo "Branch exists on remote"
+            git fetch origin dev-1.0.0-b.1
+            git checkout dev-1.0.0-b.1
+          else
+            echo "Branch does not exist, creating it"
+            git checkout -b dev-1.0.0-b.1
+          fi
+   
 
       - name: Force replace dev branch with main branch contents (including submodules)
         run: |
