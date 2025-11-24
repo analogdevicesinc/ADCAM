@@ -98,7 +98,7 @@ void ADIMainWindow::InitCamera(std::string filePath) {
         }
     } else {
         // PRB25
-        //camera->startPlayback(filePath);
+        //camera->setPlaybackFile(filePath);
     }
     m_cameraWorkerDone = true;
     m_is_open_device = true;
