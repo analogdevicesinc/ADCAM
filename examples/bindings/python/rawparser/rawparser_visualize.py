@@ -339,20 +339,19 @@ def main():
         epilog="""
 Examples:
   # Auto-detect and show metadata only (default)
-  python visualize_data.py --directory ./recording_output
-  python visualize_data.py -d ./recording_output
+  python visualize_data.py ./recording_output
   
   # Show PNG images only
-  python visualize_data.py -d ./recording_output --view png
-  python visualize_data.py -d ./recording_output -v png
+  python visualize_data.py ./recording_output --view png
+  python visualize_data.py ./recording_output -v png
   
   # Show point cloud only
-  python visualize_data.py -d ./recording_output --view pointcloud
-  python visualize_data.py -d ./recording_output -v pointcloud
+  python visualize_data.py ./recording_output --view pointcloud
+  python visualize_data.py ./recording_output -v pointcloud
         """
     )
     
-    parser.add_argument('--directory', '-d', type=str, required=True,
+    parser.add_argument('directory', type=str,
                        help='Path to directory containing data files (metadata, PNG, PLY)')
     
     parser.add_argument('--view', '-v', type=str, default='metadata',
