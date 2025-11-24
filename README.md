@@ -102,6 +102,23 @@ For Linux builds install the necessary version of Python dev libraries. For exam
 ```console
 sudo apt install python3.10-dev
 ```
+
+In addition the depth compute libraries are required. 
+
+You can get the two library from the ADCAM release software, but please note in which case it is under an evaluation license.
+
+For a non-eval license please contact us at *tof@analog.com*.
+
+These libraries must be in a folder called **libs** that in one level below the cloned ADCAM repo folder. For example:
+```
+(aditofpython_env) analog@analog-desktop:~/dev/ADCAM$ pwd
+/home/analog/dev/ADCAM
+(aditofpython_env) analog@analog-desktop:~/dev/ADCAM$ tree ../libs
+../libs
+├── libtofi_compute.so
+└── libtofi_config.so
+```
+
 ### Building the SDK
 ```
 git clone https://github.com/analogdevicesinc/ADCAM.git
