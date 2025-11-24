@@ -409,7 +409,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                     },
                     IM_COL32(50, 50, 50, 255))) {
 
-                if (m_off_line_frame_index < max_frame_count) { // TODO: FIXME
+                if (m_off_line_frame_index < max_frame_count - 1) {
                     m_off_line_frame_index++;
                     m_offline_change_frame = true;
                 }
