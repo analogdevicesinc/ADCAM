@@ -333,7 +333,7 @@ void ADIMainWindow::OpenGLCleanUp() {
     //glDeleteTextures(1, &m_gl_pc_depthTex);  // TODO: Find out why deleting this causes issues.
     glDeleteVertexArrays(1, &m_view_instance->vertexArrayObject);
     glDeleteBuffers(1, &m_view_instance->vertexBufferObject);
-    
+
     // Clean up persistent point cloud buffers
     if (m_buffers_initialized) {
         glDeleteVertexArrays(1, &m_persistent_vao);
@@ -343,7 +343,7 @@ void ADIMainWindow::OpenGLCleanUp() {
         m_last_vertex_size = 0;
         m_buffers_initialized = false;
     }
-    
+
     glDeleteProgram(m_view_instance->pcShader.Id());
     m_view_instance->pcShader.RemoveShaders();
 }
