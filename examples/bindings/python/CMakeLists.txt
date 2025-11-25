@@ -14,7 +14,6 @@ set(PY_EXAMPLES
     streaming
     skeletal_tracking
     skeletal_tracking_in_pointcloud
-    data_collect
     showPointCloud
     rawparser
 )
