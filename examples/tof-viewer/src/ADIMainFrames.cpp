@@ -1,8 +1,34 @@
-// clang-format off
-// IMPORTANT: glad/gl.h must be included first to avoid conflicts with ImGui OpenGL loader
-#include <glad/gl.h>
-// clang-format on
-
+/*
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Analog Devices, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
 #include "imoguizmo.hpp"
@@ -202,7 +228,7 @@ int32_t ADIMainWindow::synchronizeVideo(std::shared_ptr<aditof::Frame> &frame) {
             m_view_instance->m_imshowMutex);
         m_view_instance->m_barrierCv.wait(imshow_lock, [&]() {
             return m_view_instance->m_waitKeyBarrier ==
-                   m_view_instance->numOfThreads;
+                   (int32_t)m_view_instance->numOfThreads;
         });
         m_view_instance->m_waitKeyBarrier = 0;
         /*********************************/
@@ -344,9 +370,8 @@ void ADIMainWindow::DisplayActiveBrightnessWindow(
 
     ImVec2 size;
 
-    auto imageScale =
-        DisplayFrameWindow(ImVec2(m_ab_position->width, m_ab_position->height),
-                           m_display_ab_dimensions, size);
+    DisplayFrameWindow(ImVec2(m_ab_position->width, m_ab_position->height),
+                       m_display_ab_dimensions, size);
 
     SetWindowPosition(m_ab_position->x, m_ab_position->y);
     SetWindowSize(m_ab_position->width, m_ab_position->height);
@@ -438,7 +463,7 @@ static std::vector<ImVec2> GetLinePixels(int x0, int y0, int x1, int y1) {
 void ADIMainWindow::DisplayDepthWindow(ImGuiWindowFlags overlayFlags) {
     ImVec2 size;
 
-    auto imageScale = DisplayFrameWindow(
+    DisplayFrameWindow(
         ImVec2(m_depth_position->width, m_depth_position->height),
         m_display_depth_dimensions, size);
 
@@ -661,9 +686,8 @@ void ADIMainWindow::InitOpenGLPointCloudTexture() {
 void ADIMainWindow::DisplayPointCloudWindow(ImGuiWindowFlags overlayFlags) {
     ImVec2 size;
 
-    auto imageScale = DisplayFrameWindow(
-        ImVec2(m_xyz_position->width, m_xyz_position->height),
-        m_display_point_cloud_dimensions, size);
+    DisplayFrameWindow(ImVec2(m_xyz_position->width, m_xyz_position->height),
+                       m_display_point_cloud_dimensions, size);
 
     SetWindowPosition(m_xyz_position->x, m_xyz_position->y);
     SetWindowSize(m_xyz_position->width, m_xyz_position->height);
@@ -859,12 +883,15 @@ float ADIMainWindow::Radians(float degrees) {
 
 void ADIMainWindow::GetYawPitchRoll(float &yaw, float &pitch, float &roll) {
     // Extract rotation matrix (upper-left 3x3)
-    float r00 = m_model_mat[0][0], r01 = m_model_mat[0][1],
-          r02 = m_model_mat[0][2];
-    float r10 = m_model_mat[1][0], r11 = m_model_mat[1][1],
-          r12 = m_model_mat[1][2];
-    float r20 = m_model_mat[2][0], r21 = m_model_mat[2][1],
-          r22 = m_model_mat[2][2];
+    //float r00 = m_model_mat[0][0];
+    //float r01 = m_model_mat[0][1];
+    float r02 = m_model_mat[0][2];
+    float r10 = m_model_mat[1][0];
+    float r11 = m_model_mat[1][1];
+    float r12 = m_model_mat[1][2];
+    //float r20 = m_model_mat[2][0];
+    //float r21 = m_model_mat[2][1];
+    float r22 = m_model_mat[2][2];
 
     // Assuming rotation order is yaw (Y), pitch (X), roll (Z):
     // Yaw (around Y): atan2(r02, r22)
@@ -887,7 +914,7 @@ void ADIMainWindow::ProcessInputs(GLFWwindow *window) {
     ImGuiIO &io = ImGui::GetIO(); //Get mouse events
     //Sensitivity
     const float maxFov = 45.0f;
-    float cameraSpeed = 2.5f * m_delta_time;
+    //float cameraSpeed = 2.5f * m_delta_time;
     float dRoll = 0.0f;
     float dPitch = 0.0f;
     float dYaw = 0.0f;
