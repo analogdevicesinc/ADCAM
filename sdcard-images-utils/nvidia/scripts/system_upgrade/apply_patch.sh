@@ -13,8 +13,8 @@ function apply_ubuntu_overlay()
         sudo cp $ROOTDIR/ubuntu_overlay/etc/systemd/network/10-rndis0.network      		/etc/systemd/network/
 
         echo "Updating the usb device mode configuration"
-	sed -i 's/^net_dhcp_lease_time=15$/net_dhcp_lease_time=1500/' /opt/nvidia/l4t-usb-device-mode/nv-l4t-usb-device-mode-config.sh
-	grep -Fxq 'sudo ip link set l4tbr0 mtu 15000' /opt/nvidia/l4t-usb-device-mode/nv-l4t-usb-device-mode-start.sh || sed -i '255i sudo ip link set l4tbr0 mtu 15000' /opt/nvidia/l4t-usb-device-mode/nv-l4t-usb-device-mode-start.sh
+	sudo sed -i 's/^net_dhcp_lease_time=15$/net_dhcp_lease_time=1500/' /opt/nvidia/l4t-usb-device-mode/nv-l4t-usb-device-mode-config.sh
+	grep -Fxq 'sudo ip link set l4tbr0 mtu 15000' /opt/nvidia/l4t-usb-device-mode/nv-l4t-usb-device-mode-start.sh || sudo sed -i '255i sudo ip link set l4tbr0 mtu 15000' /opt/nvidia/l4t-usb-device-mode/nv-l4t-usb-device-mode-start.sh
 
 	echo "Copy all the service files"
 	sudo cp $ROOTDIR/ubuntu_overlay/etc/systemd/system/*.service 		/etc/systemd/system/
