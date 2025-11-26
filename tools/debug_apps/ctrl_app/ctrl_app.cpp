@@ -27,52 +27,50 @@ using namespace std;
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 #define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (0x009819d1)
 #define CTRL_SIZE 4099
-#define MEDIA_DEVICE 	"/dev/media0"
+#define MEDIA_DEVICE "/dev/media0"
 
 #define VER_MAJ 1
 #define VER_MIN 1
 #define VER_PATCH 0
 
-bool findDevicePathsAtVideo(const std::string &video,
-		std::string &subdev_path,
-		std::string &device_name) {
+bool findDevicePathsAtVideo(const std::string &video, std::string &subdev_path,
+                            std::string &device_name) {
 
-	char *buf;
-	int size = 0;
-	size_t pos;
+    char *buf;
+    int size = 0;
+    size_t pos;
 
-	/* Run media-ctl to get the video processing pipes */
-	char cmd[64];
-	sprintf(cmd, "media-ctl -d %s --print-dot", video.c_str());
-	FILE *fp = popen(cmd, "r");
-	if (!fp) {
-		std::cout << "Error running media-ctl";
-		return false;
-	}
+    /* Run media-ctl to get the video processing pipes */
+    char cmd[64];
+    sprintf(cmd, "media-ctl -d %s --print-dot", video.c_str());
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        std::cout << "Error running media-ctl";
+        return false;
+    }
 
-	/* Read the media-ctl output stream */
-	buf = (char *)malloc(128 * 1024);
-	while (!feof(fp)) {
-		fread(&buf[size], 1, 1, fp);
-		size++;
-	}
-	pclose(fp);
-	buf[size] = '\0';
+    /* Read the media-ctl output stream */
+    buf = (char *)malloc(128 * 1024);
+    while (!feof(fp)) {
+        auto sz = fread(&buf[size], 1, 1, fp);
+        size++;
+    }
+    pclose(fp);
+    buf[size] = '\0';
 
-	/* Search command media-ctl for device/subdevice name */
-	string str(buf);
-	free(buf);
+    /* Search command media-ctl for device/subdevice name */
+    string str(buf);
+    free(buf);
 
-
-	if (str.find("adsd3500") != string::npos) {
-		device_name = "adsd3500";
-		pos = str.find("adsd3500");
-		subdev_path = str.substr(pos + strlen("adsd3500") + 9,
-				strlen("/dev/v4l-subdevX"));
-	} else {
-		return false;
-	}
-	return true;
+    if (str.find("adsd3500") != string::npos) {
+        device_name = "adsd3500";
+        pos = str.find("adsd3500");
+        subdev_path = str.substr(pos + strlen("adsd3500") + 9,
+                                 strlen("/dev/v4l-subdevX"));
+    } else {
+        return false;
+    }
+    return true;
 }
 
 static int xioctl(int fd, int request, void *arg) {
@@ -131,8 +129,8 @@ int main(int argc, char **argv) {
 
     status = findDevicePathsAtVideo(video, subdevPath, deviceName);
     if (!status) {
-	    std::cout << "failed to find device paths at video: " << video;
-	    return status;
+        std::cout << "failed to find device paths at video: " << video;
+        return status;
     }
 
     int fd = open(subdevPath.c_str(), O_RDWR | O_NONBLOCK);

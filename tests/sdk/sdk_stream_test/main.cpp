@@ -351,8 +351,6 @@ int main(int argc, char *argv[]) {
         aditof::Frame frame;
         FrameDetails fDetails;
 
-        auto warmup_start = std::chrono::steady_clock::now();
-
         FrameHandler frameSaver;
         if (saveOutput) {
             frameSaver.storeFramesToSingleFile(true);
