@@ -1,3 +1,35 @@
+/*
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Analog Devices, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "ADIMainWindow.h"
 #include "ADIOpenFile.h"
 #include "aditof/status_definitions.h"
@@ -72,7 +104,7 @@ void ADIMainWindow::InitCamera(std::string filePath) {
         camera->getAvailableModes(_cameraModes);
         sort(_cameraModes.begin(), _cameraModes.end());
 
-        for (int i = 0; i < _cameraModes.size(); ++i) {
+        for (uint32_t i = 0; i < (uint32_t)_cameraModes.size(); ++i) {
             aditof::DepthSensorModeDetails modeDetails;
 
             auto sensor = camera->getSensor();
@@ -93,7 +125,7 @@ void ADIMainWindow::InitCamera(std::string filePath) {
             m_cameraModesLookup[modeDetails.modeNumber] = s;
         }
 
-        for (int i = 0; i < _cameraModes.size(); i++) {
+        for (uint32_t i = 0; i < (uint32_t)_cameraModes.size(); i++) {
             m_cameraModes.emplace_back(i, _cameraModes.at(i));
         }
     } else {
@@ -145,7 +177,7 @@ void ADIMainWindow::PrepareCamera(uint8_t mode) {
 
     aditof::CameraDetails camDetails;
     status = GetActiveCamera()->getDetails(camDetails);
-    int totalCaptures = camDetails.frameType.totalCaptures;
+    //int32_t totalCaptures = camDetails.frameType.totalCaptures;
 
     status = GetActiveCamera()->adsd3500GetFrameRate(m_fps_expected);
 
@@ -182,7 +214,7 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
         ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-    const bool imageIsHovered = ImGui::IsItemHovered();
+    //const bool imageIsHovered = ImGui::IsItemHovered();
 
     if (m_view_instance == nullptr) {
         return;
@@ -384,27 +416,36 @@ void ADIMainWindow::RefreshDevices() {
     aditof::Status status;
     if (m_off_line) {
         status = m_system.getCameraList(m_cameras_list, "offline:");
-        for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
-            m_connected_devices.emplace_back(ix, "ToF Camera " +
-                                                     std::to_string(ix));
+        if (status != aditof::Status::OK) {
+            LOG(WARNING) << "Unable to get Offline camera list.";
+        } else {
+            for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
+                m_connected_devices.emplace_back(ix, "ToF Camera " +
+                                                         std::to_string(ix));
+            }
         }
     } else {
 
         status = m_system.getCameraList(m_cameras_list);
+        if (status != aditof::Status::OK) {
+            LOG(WARNING) << "Unable to get Camera list.";
+        } else {
+            if (!m_skip_network_cameras) {
+                // Add network camera - reuse the same list instead of calling getCameraList again
+                std::vector<std::shared_ptr<aditof::Camera>> networkCameras;
+                m_system.getCameraList(networkCameras,
+                                       m_cameraIp + m_ip_suffix);
+                // Append network cameras to the existing list
+                m_cameras_list.insert(m_cameras_list.end(),
+                                      networkCameras.begin(),
+                                      networkCameras.end());
+            }
 
-        if (!m_skip_network_cameras) {
-            // Add network camera - reuse the same list instead of calling getCameraList again
-            std::vector<std::shared_ptr<aditof::Camera>> networkCameras;
-            m_system.getCameraList(networkCameras, m_cameraIp + m_ip_suffix);
-            // Append network cameras to the existing list
-            m_cameras_list.insert(m_cameras_list.end(), networkCameras.begin(),
-                                  networkCameras.end());
-        }
-
-        // Build the connected devices list once after collecting all cameras
-        for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
-            m_connected_devices.emplace_back(ix, "ToF Camera " +
-                                                     std::to_string(ix));
+            // Build the connected devices list once after collecting all cameras
+            for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
+                m_connected_devices.emplace_back(ix, "ToF Camera " +
+                                                         std::to_string(ix));
+            }
         }
     }
 
@@ -429,7 +470,7 @@ void ADIMainWindow::HandleInterruptCallback() {
     aditof::SensorInterruptCallback cb = [this](aditof::Adsd3500Status status) {
         LOG(WARNING) << "status: " << status;
         ImGui::Begin("Interrupt");
-        ImGui::Text("%i", status);
+        ImGui::Text("%i", (int32_t)status);
         ImGui::End();
     };
     aditof::Status ret_status = aditof::Status::OK;

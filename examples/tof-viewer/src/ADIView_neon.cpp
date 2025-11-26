@@ -1,10 +1,34 @@
-/********************************************************************************/
-/*                                                                              */
-/* Copyright (c) 2025 Analog Devices Inc.                                       */
-/* ARM NEON optimized implementations for ADIView                               */
-/*                                                                              */
-/********************************************************************************/
-
+/*
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Analog Devices, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #include "ADIView.h"
 #include <algorithm>
 #include <arm_neon.h>
@@ -44,7 +68,7 @@ void ADIView::normalizeABBuffer_NEON(uint16_t *abBuffer, uint16_t abWidth,
         vst1q_u16(min_buf, vmin);
         vst1q_u16(max_buf, vmax);
 
-        for (int j = 0; j < neon_width; ++j) {
+        for (int j = 0; j < (int)neon_width; ++j) {
             min_value_of_AB_pixel =
                 std::min(min_value_of_AB_pixel, (uint32_t)min_buf[j]);
             max_value_of_AB_pixel =
@@ -141,7 +165,7 @@ void ADIView::normalizeABBuffer_NEON(uint16_t *abBuffer, uint16_t abWidth,
     vst1q_u16(min_buf, global_vmin);
     vst1q_u16(max_buf, global_vmax);
 
-    for (int j = 0; j < neon_width; ++j) {
+    for (int j = 0; j < (int)neon_width; ++j) {
         new_min_value_of_AB_pixel =
             std::min(new_min_value_of_AB_pixel, (uint32_t)min_buf[j]);
         new_max_value_of_AB_pixel =
@@ -236,7 +260,6 @@ void ADIView::_displayAbImage_NEON() {
         normalizeABBuffer_NEON(_ab_video_data, frameWidth, frameHeight,
                                getAutoScale(), getLogImage());
 
-        size_t imageSize = frameHeight * frameWidth;
         size_t bgrSize = 0;
 
         if (ab_video_data_8bit == nullptr) {
@@ -245,7 +268,7 @@ void ADIView::_displayAbImage_NEON() {
 
         // NEON-optimized BGR packing
         const size_t neon_width = 8;
-        for (int y = 0; y < frameHeight; ++y) {
+        for (int y = 0; y < (int)frameHeight; ++y) {
             size_t row_start = y * frameWidth;
             size_t x = 0;
 
@@ -257,7 +280,7 @@ void ADIView::_displayAbImage_NEON() {
                 vst1_u8(buf, v8);
 
                 // Replicate to BGR
-                for (int j = 0; j < neon_width; ++j) {
+                for (int j = 0; j < (int)neon_width; ++j) {
                     uint8_t pix = buf[j];
                     ab_video_data_8bit[bgrSize++] = pix;
                     ab_video_data_8bit[bgrSize++] = pix;
@@ -328,7 +351,6 @@ void ADIView::_displayDepthImage_NEON() {
         auto timerStart = startTimer();
 #endif
 
-        uint16_t *data;
         m_capturedFrame->getData("depth", &depth_video_data);
 
         if (depth_video_data == nullptr) {
@@ -360,9 +382,6 @@ void ADIView::_displayDepthImage_NEON() {
         for (; i + PixelBlock <= imageSize; i += PixelBlock) {
             // Load 8 uint16 values
             uint16x8_t vSrc16 = vld1q_u16(&depth_video_data[i]);
-
-            // Check for zeros (pixels to be masked)
-            uint16x8_t zeroMask = vceqq_u16(vSrc16, vdupq_n_u16(0));
 
             // Process in two batches of 4
             uint16x4_t vSrc16_lo = vget_low_u16(vSrc16);
@@ -512,9 +531,9 @@ void ADIView::_displayPointCloudImage_NEON() {
         }
 
         // NEON-accelerated XYZ conversion
-        float32x4_t maxXV = vdupq_n_f32(Max_X);
-        float32x4_t maxYV = vdupq_n_f32(Max_Y);
-        float32x4_t maxZV = vdupq_n_f32(Max_Z);
+        //float32x4_t maxXV = vdupq_n_f32(Max_X);
+        //float32x4_t maxYV = vdupq_n_f32(Max_Y);
+        //float32x4_t maxZV = vdupq_n_f32(Max_Z);
 
         for (uint32_t i = 0; i < pointcloudTableSize; i += 3) {
             // XYZ normalization

@@ -1,11 +1,34 @@
-/********************************************************************************/
-/*                                                                              */
-/* Copyright (c) Microsoft Corporation. All rights reserved.					*/
-/* Portions Copyright(c) 2020 Analog Devices Inc.								*/
-/* Licensed under the MIT License.												*/
-/*																				*/
-/********************************************************************************/
-
+/*
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Analog Devices, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #include "ADIView.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -54,9 +77,11 @@ using namespace adiviewer;
 using namespace adicontroller;
 
 ADIView::ADIView(std::shared_ptr<ADIController> ctrl, const std::string &name)
-    : m_ctrl(ctrl), m_viewName(name), m_center(true), m_waitKeyBarrier(0),
-      m_distanceVal(0), m_smallSignal(false), m_crtSmallSignalState(false) {
+    : m_ctrl(ctrl), m_viewName(name), m_distanceVal(0), m_smallSignal(false),
+      m_crtSmallSignalState(false) {
 
+    m_center = true;
+    m_waitKeyBarrier = 0;
     m_depthFrameAvailable = false;
     m_pcFrameAvailable = false;
     m_abFrameAvailable = false;
@@ -1146,19 +1171,19 @@ unsigned int texture;
 void ADIView::startCamera() {
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
-    float vertices[] = {
+    /*float vertices[] = {
         // positions          // colors       // texture coords
         0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top right
         0.5f,  -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
         -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom left
         -0.5f, 0.5f,  0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f  // top left
-    };
+    };*/
 
     // Set up index
-    unsigned int indices[] = {
+    /*unsigned int indices[] = {
         0, 1, 3, // first triangle
         1, 2, 3  // second triangle
-    };
+    };*/
 
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
