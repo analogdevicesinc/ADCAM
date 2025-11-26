@@ -5,26 +5,26 @@
 # *****************************************************************************
 # *****************************************************************************/
 
-#include <string>
+#include <fstream>
 #include <iostream>
 #include <sstream>
-#include <fstream>
+#include <string>
 
-#include <fcntl.h>
-#include <errno.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <malloc.h>
 #include <cstring>
-#include <stdbool.h>
-#include <sys/mman.h>
-#include <sys/ioctl.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <linux/videodev2.h>
+#include <malloc.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 using namespace std;
 
 #define IOCTL_TRIES 1
-#define CLEAR(x) memset (&(x), 0, sizeof (x))
+#define CLEAR(x) memset(&(x), 0, sizeof(x))
 #define BUF_SIZE 4096
 #define CTRL_SIZE 4099
 #define DATA_BUFF (uint32_t)(934052)
@@ -38,236 +38,227 @@ using namespace std;
 #define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (0x009819e1)
 #endif
 
-bool findDevicePathsAtVideo(const std::string &video,
-		std::string &subdev_path,
-		std::string &device_name) {
+bool findDevicePathsAtVideo(const std::string &video, std::string &subdev_path,
+                            std::string &device_name) {
 
-	char *buf;
-	int size = 0;
-	size_t pos;
+    char *buf;
+    int size = 0;
+    size_t pos;
 
-	/* Run media-ctl to get the video processing pipes */
-	char cmd[64];
-	sprintf(cmd, "media-ctl -d %s --print-dot", video.c_str());
-	FILE *fp = popen(cmd, "r");
-	if (!fp) {
-		std::cout << "Error running media-ctl";
-		return false;
-	}
+    /* Run media-ctl to get the video processing pipes */
+    char cmd[64];
+    sprintf(cmd, "media-ctl -d %s --print-dot", video.c_str());
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        std::cout << "Error running media-ctl";
+        return false;
+    }
 
-	/* Read the media-ctl output stream */
-	buf = (char *)malloc(128 * 1024);
-	while (!feof(fp)) {
-		fread(&buf[size], 1, 1, fp);
-		size++;
-	}
-	pclose(fp);
-	buf[size] = '\0';
+    /* Read the media-ctl output stream */
+    buf = (char *)malloc(128 * 1024);
+    while (!feof(fp)) {
+        auto sz = fread(&buf[size], 1, 1, fp);
+        size++;
+    }
+    pclose(fp);
+    buf[size] = '\0';
 
-	/* Search command media-ctl for device/subdevice name */
-	string str(buf);
-	free(buf);
+    /* Search command media-ctl for device/subdevice name */
+    string str(buf);
+    free(buf);
 
-
-	if (str.find("adsd3500") != string::npos) {
-		device_name = "adsd3500";
-		pos = str.find("adsd3500");
-		subdev_path = str.substr(pos + strlen("adsd3500") + 9,
-				strlen("/dev/v4l-subdevX"));
-	} else {
-		return false;
-	}
-	return true;
+    if (str.find("adsd3500") != string::npos) {
+        device_name = "adsd3500";
+        pos = str.find("adsd3500");
+        subdev_path = str.substr(pos + strlen("adsd3500") + 9,
+                                 strlen("/dev/v4l-subdevX"));
+    } else {
+        return false;
+    }
+    return true;
 }
 
-static int xioctl(int fd, int request, void *arg)
-{
-	    int r;
-	    int tries = IOCTL_TRIES;
-	    do {
-	        r = ioctl(fd, request, arg);
-	    } while (--tries > 0 && r == -1 && EINTR == errno);
+static int xioctl(int fd, int request, void *arg) {
+    int r;
+    int tries = IOCTL_TRIES;
+    do {
+        r = ioctl(fd, request, arg);
+    } while (--tries > 0 && r == -1 && EINTR == errno);
 
-	    return r;
+    return r;
 }
 
-bool v4l2_ctrl_set(int fd, uint32_t id, uint8_t *val)
-{
-	static struct v4l2_ext_control extCtrl;
-	static struct v4l2_ext_controls extCtrls;
+bool v4l2_ctrl_set(int fd, uint32_t id, uint8_t *val) {
+    static struct v4l2_ext_control extCtrl;
+    static struct v4l2_ext_controls extCtrls;
 
-	extCtrl.size = CTRL_SIZE * sizeof(char);
-	extCtrl.p_u8 = val;
-	extCtrl.id = id;
-	memset(&extCtrls, 0, sizeof(struct v4l2_ext_controls));
-	extCtrls.controls = &extCtrl;
-	extCtrls.count = 1;
-	if (xioctl(fd, VIDIOC_S_EXT_CTRLS, &extCtrls) == -1) {
-		std::cout << "Failed to set ctrl with id " << id<<std::endl;
-		return false;
-	}
-		
-	return true;
+    extCtrl.size = CTRL_SIZE * sizeof(char);
+    extCtrl.p_u8 = val;
+    extCtrl.id = id;
+    memset(&extCtrls, 0, sizeof(struct v4l2_ext_controls));
+    extCtrls.controls = &extCtrl;
+    extCtrls.count = 1;
+    if (xioctl(fd, VIDIOC_S_EXT_CTRLS, &extCtrls) == -1) {
+        std::cout << "Failed to set ctrl with id " << id << std::endl;
+        return false;
+    }
+
+    return true;
 }
 
-bool v4l2_ctrl_get(int fd, uint32_t id, uint8_t *val)
-{
-	static struct v4l2_ext_control extCtrl;
-	static struct v4l2_ext_controls extCtrls;
+bool v4l2_ctrl_get(int fd, uint32_t id, uint8_t *val) {
+    static struct v4l2_ext_control extCtrl;
+    static struct v4l2_ext_controls extCtrls;
 
-	extCtrl.size = CTRL_SIZE * sizeof(char);
-	extCtrl.p_u8 = val;
-	extCtrl.id = id;
-	memset(&extCtrls, 0, sizeof(struct v4l2_ext_controls));
-	extCtrls.controls = &extCtrl;
-	extCtrls.count = 1;
-	if (xioctl(fd, VIDIOC_G_EXT_CTRLS, &extCtrls) == -1) {
-		std::cout << "Failed to get ctrl with id " << id;
-			return false;
-	}
+    extCtrl.size = CTRL_SIZE * sizeof(char);
+    extCtrl.p_u8 = val;
+    extCtrl.id = id;
+    memset(&extCtrls, 0, sizeof(struct v4l2_ext_controls));
+    extCtrls.controls = &extCtrl;
+    extCtrls.count = 1;
+    if (xioctl(fd, VIDIOC_G_EXT_CTRLS, &extCtrls) == -1) {
+        std::cout << "Failed to get ctrl with id " << id;
+        return false;
+    }
 
-	return true;
+    return true;
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 
-	uint8_t data[CTRL_SIZE] = {0};
-	char binbuff[BUF_SIZE] = {0};
-	uint32_t chunkSize = 2048u;
-	uint32_t sizeOfBinary = 0u;
-	uint32_t checksum = 0u;
-	uint32_t packetsNeeded = 0u;
-	bool status = true;
+    uint8_t data[CTRL_SIZE] = {0};
+    char binbuff[BUF_SIZE] = {0};
+    uint32_t chunkSize = 2048u;
+    uint32_t sizeOfBinary = 0u;
+    uint32_t checksum = 0u;
+    uint32_t packetsNeeded = 0u;
+    bool status = true;
 
-	std::string video = "/dev/media0";
-	std::string deviceName = "adsd3500";
-	std::string subdevPath;
+    std::string video = "/dev/media0";
+    std::string deviceName = "adsd3500";
+    std::string subdevPath;
 
-	status = findDevicePathsAtVideo(video, subdevPath, deviceName);
-	if (!status) {
-		std::cout << "failed to find device paths at video: " << video;
-		return status;
-	}
+    status = findDevicePathsAtVideo(video, subdevPath, deviceName);
+    if (!status) {
+        std::cout << "failed to find device paths at video: " << video;
+        return status;
+    }
 
-	int fd = open(subdevPath.c_str(), O_RDWR | O_NONBLOCK);
-	if (fd == -1)
-       	{
-		std::cout << "Failed to open the camera" << std::endl;
-		return -1;
-	}
-	
-	std::ofstream fp(argv[1], std::ofstream::binary);
-	if (!fp)
-	{
-		std::cout<<"Cannot open file!"<<std::endl;
-		return 1;
-	}
-		
-	//Find the binary file size
-	fp.seekp(0, fp.beg);
+    int fd = open(subdevPath.c_str(), O_RDWR | O_NONBLOCK);
+    if (fd == -1) {
+        std::cout << "Failed to open the camera" << std::endl;
+        return -1;
+    }
 
-	//Go to burst
-	data[0] = 1; //WRITE
-	data[2] = 4;
-	data[3] = 0x00;
-	data[4] = 0x19;
-	data[5] = 0x00;
-	data[6] = 0x00;
-	v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
-	usleep(110 * 1000);
-	//Write header and readback response
-	memset(data, 0x00, 16);
-	data[0] = 1; //WRITE
-	data[2] = 16;
-	
-	data[3] = 0xAD;
-	data[6] = 0x17;
-	data[11] = 0x17;
-	//data[15] = 1;
-	v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+    std::ofstream fp(argv[1], std::ofstream::binary);
+    if (!fp) {
+        std::cout << "Cannot open file!" << std::endl;
+        return 1;
+    }
 
-	usleep(1000 * 1);	
+    //Find the binary file size
+    fp.seekp(0, fp.beg);
 
-	data[0] = 0;
-	data[2] = 16;
-	v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
-	usleep(110 * 1000);
-	v4l2_ctrl_get(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
-	std::cout<<"Done reading response header "<<std::endl;
+    //Go to burst
+    data[0] = 1; //WRITE
+    data[2] = 4;
+    data[3] = 0x00;
+    data[4] = 0x19;
+    data[5] = 0x00;
+    data[6] = 0x00;
+    v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+    usleep(110 * 1000);
+    //Write header and readback response
+    memset(data, 0x00, 16);
+    data[0] = 1; //WRITE
+    data[2] = 16;
 
-	std::cout<<"Header data: ";
-	for (int i = 3; i < 19; i++)
-		printf("%02x", data[i]);
-	std::cout<<std::endl;
+    data[3] = 0xAD;
+    data[6] = 0x17;
+    data[11] = 0x17;
+    //data[15] = 1;
+    v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
 
-	chunkSize = (data[5] << 8) | data[4];
-	sizeOfBinary = (data[10] << 24) | (data[9] << 16) | (data[8] << 8) | data[7];
-	
-	//sizeOfBinary = DATA_BUFF;
-	for (uint32_t i=3; i<11; i++)
-		checksum += data[i];
+    usleep(1000 * 1);
 
-	packetsNeeded = sizeOfBinary / chunkSize;
-	std::cout<<"Packets Needed: "<<packetsNeeded<<std::endl;
+    data[0] = 0;
+    data[2] = 16;
+    v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+    usleep(110 * 1000);
+    v4l2_ctrl_get(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+    std::cout << "Done reading response header " << std::endl;
 
-	for (uint32_t i=1; i<=packetsNeeded; i++)
-	{
-		data[0] = 0;
-		data[1] = chunkSize >> 8;
-		data[2] = chunkSize & 0xFF;
-		
-		usleep(1000 * 30);
+    std::cout << "Header data: ";
+    for (int i = 3; i < 19; i++)
+        printf("%02x", data[i]);
+    std::cout << std::endl;
 
-		bool retval = v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
-		v4l2_ctrl_get(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
-		if (retval == false)
-		{
-			return -1;
-		}
-		memcpy(binbuff, &data[3], chunkSize);
-		fp.write(binbuff, chunkSize);
+    chunkSize = (data[5] << 8) | data[4];
+    sizeOfBinary =
+        (data[10] << 24) | (data[9] << 16) | (data[8] << 8) | data[7];
 
-		std::cout<<"Packet number : "<<i<<" / "<<packetsNeeded << "\r";
-		fflush(stdout);
-	}
+    //sizeOfBinary = DATA_BUFF;
+    for (uint32_t i = 3; i < 11; i++)
+        checksum += data[i];
 
-	std::cout << std::endl;
-	chunkSize = sizeOfBinary % chunkSize;
+    packetsNeeded = sizeOfBinary / chunkSize;
+    std::cout << "Packets Needed: " << packetsNeeded << std::endl;
 
-	if (chunkSize)
-	{
-		std::cout<<"Remaining bytes : "<<chunkSize<< std::endl;
+    for (uint32_t i = 1; i <= packetsNeeded; i++) {
+        data[0] = 0;
+        data[1] = chunkSize >> 8;
+        data[2] = chunkSize & 0xFF;
 
-		usleep(1000 * 30);
+        usleep(1000 * 30);
 
-		data[0] = 0;
-		data[1] = chunkSize >> 8;
-		data[2] = chunkSize & 0xFF;
-		
-		v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
-		usleep(110 * 1000);
-		v4l2_ctrl_get(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
-		memcpy(binbuff, &data[3], chunkSize);
-		//fp.write(binbuff, chunkSize - 4);
-        	fp.write(binbuff, chunkSize);
-		std::cout<<"Packet number : "<<packetsNeeded + 1<<" / "<<packetsNeeded + 1<<std::endl;
-	}
+        bool retval =
+            v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+        v4l2_ctrl_get(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+        if (retval == false) {
+            return -1;
+        }
+        memcpy(binbuff, &data[3], chunkSize);
+        fp.write(binbuff, chunkSize);
 
-	std::cout<<"Binary size : "<<sizeOfBinary<<std::endl;
-	std::cout<<std::endl;
-	
+        std::cout << "Packet number : " << i << " / " << packetsNeeded << "\r";
+        fflush(stdout);
+    }
 
-	//Exit burst
-	memset(data, 0x00, 16);
-	data[0] = 1; //WRITE
-	data[2] = 16;
-	data[3] = 0xAD;
-	data[6] = 0x10;
-	data[11] = 0x10;
-	v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+    std::cout << std::endl;
+    chunkSize = sizeOfBinary % chunkSize;
 
-	fp.close();
-	
-	return 0;
+    if (chunkSize) {
+        std::cout << "Remaining bytes : " << chunkSize << std::endl;
+
+        usleep(1000 * 30);
+
+        data[0] = 0;
+        data[1] = chunkSize >> 8;
+        data[2] = chunkSize & 0xFF;
+
+        v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+        usleep(110 * 1000);
+        v4l2_ctrl_get(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+        memcpy(binbuff, &data[3], chunkSize);
+        //fp.write(binbuff, chunkSize - 4);
+        fp.write(binbuff, chunkSize);
+        std::cout << "Packet number : " << packetsNeeded + 1 << " / "
+                  << packetsNeeded + 1 << std::endl;
+    }
+
+    std::cout << "Binary size : " << sizeOfBinary << std::endl;
+    std::cout << std::endl;
+
+    //Exit burst
+    memset(data, 0x00, 16);
+    data[0] = 1; //WRITE
+    data[2] = 16;
+    data[3] = 0xAD;
+    data[6] = 0x10;
+    data[11] = 0x10;
+    v4l2_ctrl_set(fd, V4L2_CID_ADSD3500_DEV_CHIP_CONFIG, data);
+
+    fp.close();
+
+    return 0;
 }
