@@ -158,7 +158,6 @@ int main(int argc, char *argv[]) {
     std::string configFile;
     std::string ip;
     uint8_t mode = 0;
-    uint8_t frameChoice = 0;
 
     if (!command_map["-m"].value.empty()) {
         mode = std::stoi(command_map["-m"].value);
@@ -170,10 +169,6 @@ int main(int argc, char *argv[]) {
 
     if (!command_map["-ip"].value.empty()) {
         ip = "ip:" + command_map["-ip"].value;
-    }
-
-    if (!command_map["-fc"].value.empty()) {
-        frameChoice = std::stoi(command_map["-fc"].value);
     }
 
     System system;
