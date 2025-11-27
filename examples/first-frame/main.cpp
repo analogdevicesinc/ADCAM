@@ -86,7 +86,6 @@ Status save_frame(aditof::Frame &frame, std::string frameType,
     uint16_t *data1;
     FrameDataDetails fDetails;
     Status status = Status::OK;
-
     status = frame.getData(frameType, &data1);
     if (status != Status::OK) {
         LOG(ERROR) << "Could not get frame data " + frameType + "!";
@@ -113,7 +112,7 @@ int main(int argc, char *argv[]) {
         {"-h", {"--help", false, "", "", false}},
         {"-ip", {"--ip", false, "", "", true}},
         {"-m", {"--m", false, "", "0", true}},
-        {"-fc",{"--fc", false, "","0",true}},
+        {"-fc", {"--fc", false, "", "0", true}},
         {"-config", {"--config", false, "last", "", false}}};
 
     CommandParser command;
@@ -179,7 +178,7 @@ int main(int argc, char *argv[]) {
         ip = "ip:" + command_map["-ip"].value;
     }
 
-    if(!command_map["-fc"].value.empty()){
+    if (!command_map["-fc"].value.empty()) {
         frameChoice = std::stoi(command_map["-fc"].value);
     }
 
