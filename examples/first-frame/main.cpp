@@ -52,7 +52,7 @@ static const char Help_Menu[] =
     R"(First-frame usage:
     first-frame
     first-frame (-h | --help)
-    first-frame [-ip | --ip <ip>] [-m | --m <mode>] [-config | --config <config_file.json>]
+    first-frame [-ip | --ip <ip>] [-m | --m <mode>] [-fc | --fc <frame-content>][-config | --config <config_file.json>]
 
     Arguments:
       config_file.json   Input config_default.json file (which has *.ccb and *.cfg)
@@ -60,6 +60,7 @@ static const char Help_Menu[] =
     Options:
       -h --help          Show this screen.
       -m --m <mode>      Mode to capture data in. [default: 0]
+      -fc --fc <frame-content>  frames to capture . [defaule: 0]
 
     NOTE: -m | --m argument supports both index and string (0/sr-native)
 
@@ -71,6 +72,12 @@ static const char Help_Menu[] =
         4: pcm-native
         5: long-range mixed
         6: short-range mixed
+
+    Frame Content (-fc | --fc) options are:
+        0: All frames (depth, AB, confidence, xyz)
+        1: depth only
+        2: depth and AB only
+        3: depth and Confidence only
 )";
 
 Status save_frame(aditof::Frame &frame, std::string frameType,
@@ -106,6 +113,7 @@ int main(int argc, char *argv[]) {
         {"-h", {"--help", false, "", "", false}},
         {"-ip", {"--ip", false, "", "", true}},
         {"-m", {"--m", false, "", "0", true}},
+        {"-fc",{"--fc", false, "","0",true}},
         {"-config", {"--config", false, "last", "", false}}};
 
     CommandParser command;
@@ -157,6 +165,7 @@ int main(int argc, char *argv[]) {
     std::string configFile;
     std::string ip;
     uint8_t mode = 0;
+    uint8_t frameChoice = 0;
 
     if (!command_map["-m"].value.empty()) {
         mode = std::stoi(command_map["-m"].value);
@@ -168,6 +177,10 @@ int main(int argc, char *argv[]) {
 
     if (!command_map["-ip"].value.empty()) {
         ip = "ip:" + command_map["-ip"].value;
+    }
+
+    if(!command_map["-fc"].value.empty()){
+        frameChoice = std::stoi(command_map["-fc"].value);
     }
 
     System system;
