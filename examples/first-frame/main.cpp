@@ -240,6 +240,12 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    status = camera->setframeContent(frameChoice);
+    if (status != Status::OK) {
+        LOG(ERROR) << "Invalid frame choice!";
+        return 0;
+    }
+
     status = camera->setMode(mode);
     if (status != Status::OK) {
         LOG(ERROR) << "Could not set camera mode!";
