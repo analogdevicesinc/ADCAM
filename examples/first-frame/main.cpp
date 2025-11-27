@@ -73,11 +73,6 @@ static const char Help_Menu[] =
         5: long-range mixed
         6: short-range mixed
 
-    Frame Content (-fc | --fc) options are:
-        0: All frames (depth, AB, confidence, xyz)
-        1: depth only
-        2: depth and AB only
-        3: depth and Confidence only
 )";
 
 Status save_frame(aditof::Frame &frame, std::string frameType,
@@ -112,7 +107,6 @@ int main(int argc, char *argv[]) {
         {"-h", {"--help", false, "", "", false}},
         {"-ip", {"--ip", false, "", "", true}},
         {"-m", {"--m", false, "", "0", true}},
-        {"-fc", {"--fc", false, "", "0", true}},
         {"-config", {"--config", false, "last", "", false}}};
 
     CommandParser command;
@@ -236,12 +230,6 @@ int main(int argc, char *argv[]) {
     camera->getAvailableModes(availableModes);
     if (availableModes.empty()) {
         std::cout << "no mode available!";
-        return 0;
-    }
-
-    status = camera->setframeContent(frameChoice);
-    if (status != Status::OK) {
-        LOG(ERROR) << "Invalid frame choice!";
         return 0;
     }
 
