@@ -52,7 +52,7 @@ static const char Help_Menu[] =
     R"(First-frame usage:
     first-frame
     first-frame (-h | --help)
-    first-frame [-ip | --ip <ip>] [-m | --m <mode>] [-fc | --fc <frame-content>][-config | --config <config_file.json>]
+    first-frame [-ip | --ip <ip>] [-m | --m <mode>] [-config | --config <config_file.json>]
 
     Arguments:
       config_file.json   Input config_default.json file (which has *.ccb and *.cfg)
@@ -60,7 +60,6 @@ static const char Help_Menu[] =
     Options:
       -h --help          Show this screen.
       -m --m <mode>      Mode to capture data in. [default: 0]
-      -fc --fc <frame-content>  frames to capture . [defaule: 0]
 
     NOTE: -m | --m argument supports both index and string (0/sr-native)
 
