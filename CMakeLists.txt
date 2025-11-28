@@ -21,6 +21,11 @@ option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
 option(WITH_NETWORK "Build network interface?" OFF)
+if (WITH_NETWORK)
+    option(WITH_NETWORK_COMPRESSION "Build network interface to compress data?" ON)
+else()
+    option(WITH_NETWORK_COMPRESSION "Build network interface to compress data?" OFF)
+endif()
 
 ################################# FIXED #######################################
 
@@ -117,6 +122,10 @@ endif()
 
 if (WITH_NETWORK)
         add_definitions(-DHAS_NETWORK)
+endif()
+
+if (WITH_NETWORK_COMPRESSION)
+        add_definitions(-DHAS_NETWORK_COMPRESSION_LZ4)
 endif()
 
 if(SOM_TYPE STREQUAL "Dual")
