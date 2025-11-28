@@ -53,6 +53,9 @@
 #include <string>
 #include <sys/time.h>
 #include <thread>
+#ifdef HAS_NETWORK_COMPRESSION_LZ4
+    #include <lz4.h>
+#endif //HAS_NETWORK_COMPRESSION_LZ4
 
 using namespace google::protobuf::io;
 
@@ -127,6 +130,7 @@ static std::unique_ptr<zmq::socket_t> monitor_socket;
 bool send_async = false;
 const auto get_frame_timeout =
     std::chrono::milliseconds(1000); // time to wait for a frame to be captured
+uint8_t *buff_frame_compressed = nullptr;
 
 struct clientData {
     bool hasFragments;
@@ -134,6 +138,11 @@ struct clientData {
 };
 
 static void close_zmq_connection() {
+
+    if (buff_frame_compressed != nullptr) {
+        delete[] buff_frame_compressed;
+        buff_frame_compressed = nullptr;
+    }
 
     // Stop the sensor if not already stopped
     if (!gotStream_off && camDepthSensor) {
@@ -904,6 +913,24 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
                     goCaptureFrame = true;
                 }
                 cvGetFrame.notify_one();
+
+                // 3. Do compression if enabled
+#ifdef HAS_NETWORK_COMPRESSION_LZ4
+                int maxCompressedSize = LZ4_compressBound(buff_frame_length);
+                buff_frame_compressed = new uint8_t[maxCompressedSize];
+                if (buff_frame_compressed != nullptr) {
+                    delete[] buff_frame_compressed;
+                    buff_frame_compressed = nullptr;
+                }
+                buff_frame_compressed = new uint8_t[maxCompressedSize];
+                int compressedSize = LZ4_compress_default(
+                    (const char *)buff_frame_to_send, (char *)buff_frame_compressed,
+                    buff_frame_length, maxCompressedSize);
+                if (compressedSize > 0) {
+                    buff_frame_length = compressedSize;
+                    std::swap(buff_frame_to_send, buff_frame_compressed);
+                }
+#endif
 
                 // 4. Send current frame over network
 

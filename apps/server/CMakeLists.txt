@@ -34,6 +34,10 @@ set(NET_PROTO_HRDS "${CMAKE_BINARY_DIR}/buffer.pb.h")
     )
 target_link_libraries(${PROJECT_NAME} PRIVATE aditof)
 
+if (WITH_NETWORK_COMPRESSION)
+    target_link_libraries(${PROJECT_NAME} PRIVATE lz4)
+endif()
+
 # ZMQ
 set(CPPZMQ_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../libaditof/cppzmq")
 set(LIBZMQ_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../libaditof/libzmq/include")
@@ -47,6 +51,5 @@ else()
     target_include_directories(${PROJECT_NAME} PRIVATE ${CPPZMQ_INSTALL_DIR} ${LIBZMQ_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} PUBLIC libzmq-static)
 endif()
-
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 14)
