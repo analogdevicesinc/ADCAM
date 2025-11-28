@@ -311,8 +311,51 @@ static void captureFrameFromHardware() {
         // Send frames to PC via ZMQ socket.
         auto getFramefuture = std::async(std::launch::async, [&]() {
             // Get a new frame from the sensor
+#ifdef HAS_NETWORK_COMPRESSION_LZ4 
+            camDepthSensor->getFrame((uint16_t *)buff_frame_to_be_captured);
+            auto start = std::chrono::high_resolution_clock::now();
+            int *compressedSize = nullptr;
+            buff_frame_length = processedFrameSize * sizeof(uint16_t);
+            int maxCompressedSize = LZ4_compressBound(buff_frame_length);
+            if (buff_frame_compressed != nullptr) {
+                delete[] buff_frame_compressed;
+                buff_frame_compressed = nullptr;
+            }
+            buff_frame_compressed = new uint8_t[3 + sizeof(*compressedSize) + maxCompressedSize];
+            if (buff_frame_compressed != nullptr) {
+                buff_frame_compressed[0] = 'L';
+                buff_frame_compressed[1] = 'Z';
+                buff_frame_compressed[2] = '4';
+                compressedSize = (int *)(buff_frame_compressed + 3);
+                *compressedSize = LZ4_compress_default(
+                    (const char *)buff_frame_to_be_captured, (char *)(buff_frame_compressed + sizeof(*compressedSize) + 3),
+                    buff_frame_length, maxCompressedSize);
+                if (*compressedSize > 0) {
+                    //std::swap(buff_frame_to_be_captured, buff_frame_compressed);
+                    auto bfl = buff_frame_length;
+                    buff_frame_length = 3 + sizeof(*compressedSize) + *compressedSize;
+                    if (buff_frame_length < 2 * 1024 * 1024) {
+                        LOG(INFO) << "" << bfl << " -> " << buff_frame_length;
+                    }
+                    memcpy(buff_frame_to_be_captured, buff_frame_compressed, buff_frame_length);    
+                    if (buff_frame_compressed != nullptr) {
+                        delete[] buff_frame_compressed;
+                        buff_frame_compressed = nullptr;
+                    }
+                    auto end = std::chrono::high_resolution_clock::now();
+                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                    if (duration > 20) {
+                        LOG(WARNING) << "LZ4 compression took " << duration << " milliseconds.";
+                    }
+                    return aditof::Status::OK;
+                }
+            }
+
+            return aditof::Status::GENERIC_ERROR;
+#else
             return camDepthSensor->getFrame(
                 (uint16_t *)buff_frame_to_be_captured);
+#endif //HAS_NETWORK_COMPRESSION_LZ4
         });
 
         if (getFramefuture.wait_for(get_frame_timeout) ==
@@ -822,7 +865,7 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
                 buff_frame_to_be_captured =
                     new uint8_t[processedFrameSize * sizeof(uint16_t)];
 
-                buff_frame_length = processedFrameSize * 2;
+                buff_frame_length = processedFrameSize * sizeof(uint16_t);
             }
 
             buff_send.set_status(static_cast<::payload::Status>(status));
@@ -915,20 +958,32 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
                 cvGetFrame.notify_one();
 
                 // 3. Do compression if enabled
-#ifdef HAS_NETWORK_COMPRESSION_LZ4
+#ifdef HAS_NETWORK_COMPRESSION_LZ4 
+                LOG(INFO) << "Compressing frame using LZ4: A";
+                int *compressedSize = nullptr;
                 int maxCompressedSize = LZ4_compressBound(buff_frame_length);
                 buff_frame_compressed = new uint8_t[maxCompressedSize];
                 if (buff_frame_compressed != nullptr) {
+                    LOG(INFO) << "Compressing frame using LZ4: B";
                     delete[] buff_frame_compressed;
                     buff_frame_compressed = nullptr;
                 }
-                buff_frame_compressed = new uint8_t[maxCompressedSize];
-                int compressedSize = LZ4_compress_default(
-                    (const char *)buff_frame_to_send, (char *)buff_frame_compressed,
-                    buff_frame_length, maxCompressedSize);
-                if (compressedSize > 0) {
-                    buff_frame_length = compressedSize;
-                    std::swap(buff_frame_to_send, buff_frame_compressed);
+                buff_frame_compressed = new uint8_t[3 + sizeof(*compressedSize) + maxCompressedSize];
+                if (buff_frame_compressed != nullptr) {
+                    LOG(INFO) << "Compressing frame using LZ4: C";
+                    buff_frame_compressed[0] = 'L';
+                    buff_frame_compressed[1] = 'Z';
+                    buff_frame_compressed[2] = '4';
+                    compressedSize = (int *)(buff_frame_compressed + 3);
+                    *compressedSize = LZ4_compress_default(
+                        (const char *)buff_frame_to_send, (char *)(buff_frame_compressed + sizeof(*compressedSize) + 3),
+                        buff_frame_length, maxCompressedSize);
+                    if (*compressedSize > 0) {
+                        LOG(INFO) << "Compressing frame using LZ4: D";
+                        buff_frame_length = *compressedSize;
+                        std::swap(buff_frame_to_send, buff_frame_compressed);
+                        delete[] buff_frame_to_be_captured;
+                    }
                 }
 #endif
 
