@@ -22,7 +22,7 @@ option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
 option(WITH_NETWORK "Build network interface?" OFF)
 if (WITH_NETWORK)
-    option(WITH_NETWORK_COMPRESSION "Build network interface to compress data?" ON)
+	option(WITH_NETWORK_COMPRESSION "Build network interface to compress data?" ON)
 endif()
 
 ################################# FIXED #######################################
