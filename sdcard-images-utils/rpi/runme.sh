@@ -99,6 +99,7 @@ function build_kernel()
 	mv -v modules.tar.gz $PATCH_DIR
 	cp -v arch/arm64/boot/Image.gz $PATCH_DIR/
 	cp -v arch/arm64/boot/dts/broadcom/bcm2712-rpi-5-b.dtb $PATCH_DIR
+	cp -v arch/arm/boot/dts/overlays/adsd3500.dtbo $PATCH_DIR
 
 	echo "Build kernel completed!!!!"
 }
