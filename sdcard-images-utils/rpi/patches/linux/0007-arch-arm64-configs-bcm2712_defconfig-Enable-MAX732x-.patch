@@ -1,0 +1,29 @@
+From 38490b3315f0b181068ba78325137e9ce17d1328 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Mon, 1 Dec 2025 16:35:23 +0530
+Subject: [PATCH 7/9] arch: arm64: configs: bcm2712_defconfig: Enable MAX732x
+ GPIO expander
+
+Enable CONFIG_GPIO_MAX732X as a module in the bcm2712_defconfig to
+provide support for the Maxim MAX7327 GPIO expander.
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ arch/arm64/configs/bcm2712_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/bcm2712_defconfig b/arch/arm64/configs/bcm2712_defconfig
+index af57cdac508b..4f191fa2754e 100644
+--- a/arch/arm64/configs/bcm2712_defconfig
++++ b/arch/arm64/configs/bcm2712_defconfig
+@@ -788,6 +788,7 @@ CONFIG_GPIO_SYSFS=y
+ CONFIG_GPIO_BCM_VIRT=y
+ CONFIG_GPIO_FXL6408=m
+ CONFIG_GPIO_MAX7300=m
++CONFIG_GPIO_MAX732X=m
+ CONFIG_GPIO_PCA953X=m
+ CONFIG_GPIO_PCA953X_IRQ=y
+ CONFIG_GPIO_PCF857X=m
+-- 
+2.25.1
+
