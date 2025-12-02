@@ -1,0 +1,101 @@
+From 596c402b628d91514c74649472206f4ab8eae0e8 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 2 Dec 2025 14:07:47 +0530
+Subject: [PATCH 9/9] arch: arm: boot: dts: overlays: add ADSD3500 camera
+ overlay with MAX7327 GPIOs
+
+This overlay enables the ADSD3500 ToF camera on the Raspberry Pi 5,
+configuring the sensor at I2C address 0x38 and mapping its CSI endpoint.
+It also exposes the MAX7327 GPIO expander for controlling camera reset signals.
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ arch/arm/boot/dts/overlays/Makefile           |  1 +
+ .../boot/dts/overlays/adsd3500-overlay.dts    | 63 +++++++++++++++++++
+ 2 files changed, 64 insertions(+)
+ create mode 100644 arch/arm/boot/dts/overlays/adsd3500-overlay.dts
+
+diff --git a/arch/arm/boot/dts/overlays/Makefile b/arch/arm/boot/dts/overlays/Makefile
+index 77f3ecb1e2e7..cb9529d15262 100644
+--- a/arch/arm/boot/dts/overlays/Makefile
++++ b/arch/arm/boot/dts/overlays/Makefile
+@@ -11,6 +11,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
+ 	ads1015.dtbo \
+ 	ads1115.dtbo \
+ 	ads7846.dtbo \
++	adsd3500.dtbo \
+ 	adv7282m.dtbo \
+ 	adv728x-m.dtbo \
+ 	akkordion-iqdacplus.dtbo \
+diff --git a/arch/arm/boot/dts/overlays/adsd3500-overlay.dts b/arch/arm/boot/dts/overlays/adsd3500-overlay.dts
+new file mode 100644
+index 000000000000..5ab86aa79029
+--- /dev/null
++++ b/arch/arm/boot/dts/overlays/adsd3500-overlay.dts
+@@ -0,0 +1,63 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/dts-v1/;
++/plugin/;
++
++/ {
++    compatible = "brcm,bcm2712";
++
++    fragment@0 {
++        target = <&i2c_csi_dsi0>;
++        __overlay__ {
++            #address-cells = <1>;
++            #size-cells = <0>;
++            status = "okay";
++
++            cam0_sensor: adsd3500@38 {
++                compatible = "adi,adsd3500";
++                reg = <0x38>;
++                status = "okay";
++                port {
++                    cam0_sensor_ep: endpoint {
++                        remote-endpoint = <&csi0_ep>;
++                        data-lanes = <1 2>;
++                        clock-lanes = <0>;
++                        link-frequencies = /bits/ 64 <732000000>;
++                    };
++                };
++            };
++        };
++    };
++
++    fragment@1 {
++        target = <&csi0>;
++        __overlay__ {
++            status = "okay";
++
++            port {
++                csi0_ep: endpoint {
++                    remote-endpoint = <&cam0_sensor_ep>;
++                    clock-lanes = <0>;
++                    data-lanes = <1 2>;
++                    clock-noncontinuous;
++                };
++            };
++        };
++    };
++
++    fragment@2 {
++        target = <&i2c_csi_dsi0>;
++        __overlay__ {
++            gpio@68 {
++                compatible = "maxim,max7327";
++                reg = <0x68>;
++                status = "okay";
++                gpio-controller;
++                #gpio-cells = <2>;
++                gpio-line-names = "EN_1P8", "EN_0P8", "P2", "I2CM SEL",
++                                  "ISP_BS3/ISP_INT", "NET HOST_IO_SEL", "ISP_BS0",
++                                  "ISP_BS1", "HOST_IO_DIR", "ISP_BS4", "ISP_BS5",
++                                  "FSYNC_DIR", "EN_VAUX", "EN_VAUX_LS", "EN_SYS";
++            };
++        };
++    };
++};
+-- 
+2.25.1
+
