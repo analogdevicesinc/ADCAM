@@ -38,7 +38,8 @@
 // CUDA kernel declarations for AB buffer processing
 void normalizeABBuffer_CUDA(uint16_t *d_abBuffer, uint16_t *h_abBuffer,
                             uint16_t abWidth, uint16_t abHeight,
-                            bool advanceScaling, bool useLogScaling);
+                            bool advanceScaling, bool useLogScaling,
+                            uint8_t bitsInAb);
 
 void convertABtoBGR_CUDA(uint16_t *d_abBuffer, uint8_t *d_bgrBuffer,
                          uint8_t *h_bgrBuffer, int width, int height);

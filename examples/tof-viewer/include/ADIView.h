@@ -84,7 +84,8 @@ class ADIView {
 		* @brief Constructor
 		*/
     ADIView(std::shared_ptr<adicontroller::ADIController> ctrl,
-            const std::string &name);
+            const std::string &name, bool enableAB = true,
+            bool enableDepth = true, bool enableXYZ = true);
 
     /**
 		* @brief Destructor
@@ -144,6 +145,12 @@ class ADIView {
     std::thread m_depthImageWorker;
     std::thread m_abImageWorker;
     std::thread m_pointCloudImageWorker;
+
+    // Flags to track which threads are actually created
+    bool m_abThreadCreated = false;
+    bool m_depthThreadCreated = false;
+    bool m_xyzThreadCreated = false;
+
     std::condition_variable m_frameCapturedCv;
     uint16_t *ab_video_data;
     uint16_t *depth_video_data;
