@@ -1,0 +1,87 @@
+From b5c2607e2cd937598329e88562e21703196e0e9f Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 2 Dec 2025 14:01:20 +0530
+Subject: [PATCH 8/9] arch: arm64: boot: dts: bcm2712-rpi-5-b: set GPIO34/35 as
+ GPIO instead of I2C4
+
+GPIO34 (CD0_IO0_MICCLK) and GPIO35 (CD0_IO0_MICDAT0) were previously
+assigned to I2C4 in the RP1 pinctrl. These pins are now needed as
+general-purpose GPIOs for camera reset/interrupt control. This patch
+updates the pinctrl settings and disables the internal pull-ups.
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ .../arm64/boot/dts/broadcom/bcm2712-rpi-5-b.dts | 17 ++---------------
+ arch/arm64/boot/dts/broadcom/bcm2712-rpi.dtsi   |  3 ---
+ arch/arm64/boot/dts/broadcom/rp1.dtsi           |  4 ++--
+ 3 files changed, 4 insertions(+), 20 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/broadcom/bcm2712-rpi-5-b.dts b/arch/arm64/boot/dts/broadcom/bcm2712-rpi-5-b.dts
+index 2d56aa951fd2..811697f3178d 100644
+--- a/arch/arm64/boot/dts/broadcom/bcm2712-rpi-5-b.dts
++++ b/arch/arm64/boot/dts/broadcom/bcm2712-rpi-5-b.dts
+@@ -85,19 +85,6 @@ cam1_clk: cam1_clk {
+ 		status = "disabled";
+ 	};
+ 
+-	cam0_clk: cam0_clk {
+-		compatible = "fixed-clock";
+-		#clock-cells = <0>;
+-		status = "disabled";
+-	};
+-
+-	cam0_reg: cam0_reg {
+-		compatible = "regulator-fixed";
+-		regulator-name = "cam0_reg";
+-		enable-active-high;
+-		gpio = <&rp1_gpio 34 0>;  // CD0_IO0_MICCLK, to MIPI 0 connector
+-	};
+-
+ 	cam1_reg: cam1_reg {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "cam1_reg";
+@@ -667,8 +654,8 @@ &rp1_gpio {
+ 		"ETH_RST_N", // GPIO32
+ 		"-", // GPIO33
+ 
+-		"CD0_IO0_MICCLK", // GPIO34
+-		"CD0_IO0_MICDAT0", // GPIO35
++		"GPIO34", // GPIO34
++		"GPIO35", // GPIO35
+ 		"RP1_PCIE_CLKREQ_N", // GPIO36
+ 		"-", // GPIO37
+ 		"CD0_SDA", // GPIO38
+diff --git a/arch/arm64/boot/dts/broadcom/bcm2712-rpi.dtsi b/arch/arm64/boot/dts/broadcom/bcm2712-rpi.dtsi
+index 2f6e4a569b3e..cd346cbadbdb 100644
+--- a/arch/arm64/boot/dts/broadcom/bcm2712-rpi.dtsi
++++ b/arch/arm64/boot/dts/broadcom/bcm2712-rpi.dtsi
+@@ -249,9 +249,6 @@ __overrides__ {
+ 		watchdog = <&watchdog>, "early-watchdog?";
+ 		wifiaddr = <&wifi>, "local-mac-address[";
+ 
+-		cam0_reg = <&cam0_reg>,"status";
+-		cam0_reg_gpio = <&cam0_reg>,"gpio:4",
+-				<&cam0_reg>,"gpio:0=", <&gpio>;
+ 		cam1_reg = <&cam1_reg>,"status";
+ 		cam1_reg_gpio = <&cam1_reg>,"gpio:4",
+ 				<&cam1_reg>,"gpio:0=", <&gpio>;
+diff --git a/arch/arm64/boot/dts/broadcom/rp1.dtsi b/arch/arm64/boot/dts/broadcom/rp1.dtsi
+index 6a29960db576..b614b1995f82 100644
+--- a/arch/arm64/boot/dts/broadcom/rp1.dtsi
++++ b/arch/arm64/boot/dts/broadcom/rp1.dtsi
+@@ -675,10 +675,10 @@ rp1_i2s1_18_21: rp1_i2s1_18_21 {
+ 			};
+ 
+ 			rp1_i2c4_34_35: rp1_i2c4_34_35 {
+-				function = "i2c4";
++				function = "gpio";
+ 				pins = "gpio34", "gpio35";
+ 				drive-strength = <12>;
+-				bias-pull-up;
++				bias-disable;
+ 			};
+ 			rp1_i2c6_38_39: rp1_i2c6_38_39 {
+ 				function = "i2c6";
+-- 
+2.25.1
+
