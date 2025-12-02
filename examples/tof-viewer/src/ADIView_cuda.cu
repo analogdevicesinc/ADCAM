@@ -275,7 +275,8 @@ __global__ void processPointCloudKernel(int16_t *xyz, float *vertices,
 
 void normalizeABBuffer_CUDA(uint16_t *d_abBuffer, uint16_t *h_abBuffer,
                             uint16_t abWidth, uint16_t abHeight,
-                            bool advanceScaling, bool useLogScaling) {
+                            bool advanceScaling, bool useLogScaling,
+                            uint8_t bitsInAb) {
     int imageSize = abWidth * abHeight;
 
     // Allocate device memory if not already allocated
@@ -326,7 +327,7 @@ void normalizeABBuffer_CUDA(uint16_t *d_abBuffer, uint16_t *h_abBuffer,
 
         maxVal -= minVal;
     } else {
-        maxVal = (1 << 13) - 1;
+        maxVal = (1 << bitsInAb) - 1;
         minVal = 0;
     }
 
