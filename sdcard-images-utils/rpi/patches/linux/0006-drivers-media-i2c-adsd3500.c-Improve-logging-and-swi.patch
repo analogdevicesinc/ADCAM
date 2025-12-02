@@ -1,0 +1,131 @@
+From d288fbc9921da4a4b90f00c61f92d3a7adb7f2be Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Mon, 1 Dec 2025 16:33:13 +0530
+Subject: [PATCH 6/9] drivers: media: i2c: adsd3500.c: Improve logging and
+ switch to init_state() for pad configuration
+
+This patch enhances the ADSD3500 V4L2 sensor driver by improving
+diagnostic logging and updating the subdev initialization flow to use
+init_state()
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/adsd3500.c | 34 ++++++++++++++++++++++++----------
+ 1 file changed, 24 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/media/i2c/adsd3500.c b/drivers/media/i2c/adsd3500.c
+index 57937d65699d..197119255d4c 100755
+--- a/drivers/media/i2c/adsd3500.c
++++ b/drivers/media/i2c/adsd3500.c
+@@ -1346,7 +1346,7 @@ static int adsd3500_set_format(struct v4l2_subdev *sd,
+ 	const struct adsd3500_mode_info *new_mode;
+ 	int ret;
+ 
+-	dev_dbg(adsd3500->dev, "set_fmt: %x %dx%d %d\n",
++	dev_info(adsd3500->dev, "set_fmt: %x %dx%d %d\n",
+ 		format->format.code, format->format.width,
+ 		format->format.height, format->which);
+ 
+@@ -1396,6 +1396,7 @@ static int adsd3500_set_format(struct v4l2_subdev *sd,
+ 
+ 	mutex_unlock(&adsd3500->lock);
+ 
++	dev_info(adsd3500->dev, "%s: Exit\n", __func__);
+ 	return 0;
+ }
+ 
+@@ -1460,6 +1461,8 @@ static int adsd3500_start_streaming(struct adsd3500 *adsd3500)
+ {
+ 	int ret;
+ 
++	dev_info(adsd3500->dev, "%s\n", __func__);
++
+ 	ret = regmap_write(adsd3500->regmap, STREAM_ON_CMD, STREAM_ON_VAL);
+ 	if (ret < 0)
+ 		dev_err(adsd3500->dev, "Write of STREAM-ON command failed.\n");
+@@ -1478,6 +1481,8 @@ static int adsd3500_stop_streaming(struct adsd3500 *adsd3500)
+ {
+ 	int ret;
+ 
++	dev_info(adsd3500->dev, "%s\n", __func__);
++
+ 	if(adsd3500->pwm_fsync != NULL && adsd3500->curr_sync_mode == FSYNC_HIZ){
+ 		pwm_disable(adsd3500->pwm_fsync);
+ 		msleep(1000 / adsd3500->framerate);
+@@ -1495,7 +1500,7 @@ static int adsd3500_s_stream(struct v4l2_subdev *subdev, int enable)
+ 	struct adsd3500 *adsd3500 = to_adsd3500(subdev);
+ 	int ret = 0;
+ 
+-	dev_dbg(adsd3500->dev, "s_stream: %d\n", enable);
++	dev_info(adsd3500->dev, "s_stream: %d\n", enable);
+ 
+ 	mutex_lock(&adsd3500->lock);
+ 	if (adsd3500->streaming == enable) {
+@@ -1531,11 +1536,19 @@ static int adsd3500_s_stream(struct v4l2_subdev *subdev, int enable)
+ 	return ret;
+ }
+ 
+-static int adsd3500_link_setup(struct media_entity *entity,
+-			   const struct media_pad *local,
+-			   const struct media_pad *remote, u32 flags)
++
++static int adsd3500_init_state(struct v4l2_subdev *sd,
++		struct v4l2_subdev_state *state)
+ {
+-	return 0;
++
++	struct v4l2_subdev_format fmt = { 0 };
++
++	fmt.which = state ? V4L2_SUBDEV_FORMAT_TRY : V4L2_SUBDEV_FORMAT_ACTIVE;
++	fmt.format.width = adsd3500_mode_info_data[0].width;
++	fmt.format.height = adsd3500_mode_info_data[0].height;
++	fmt.format.code = adsd3500_mode_info_data[0].code;
++
++	return adsd3500_set_format(sd, state, &fmt);
+ }
+ 
+ static const struct v4l2_subdev_core_ops adsd3500_core_ops = {
+@@ -1568,8 +1581,8 @@ static const struct v4l2_subdev_ops adsd3500_subdev_ops = {
+ 	.pad	= &adsd3500_subdev_pad_ops,
+ };
+ 
+-static const struct media_entity_operations adsd3500_subdev_entity_ops = {
+-	.link_setup = adsd3500_link_setup,
++static const struct v4l2_subdev_internal_ops adsd3500_internal_ops = {
++	.init_state = adsd3500_init_state,
+ };
+ 
+ static int adsd3500_init_ctrls(struct adsd3500 *priv)
+@@ -1889,6 +1902,7 @@ static int adsd3500_probe(struct i2c_client *client)
+ 	struct adsd3500 *adsd3500;
+ 	int ret;
+ 
++	dev_info(dev, "probing adsd3500 v4l2 sensor\n");
+ 	adsd3500 = devm_kzalloc(&client->dev, sizeof(struct adsd3500), GFP_KERNEL);
+ 	if (!adsd3500)
+ 		return -ENOMEM;
+@@ -1925,12 +1939,11 @@ static int adsd3500_probe(struct i2c_client *client)
+ 	}
+ 
+ 	v4l2_i2c_subdev_init(&adsd3500->sd, client, &adsd3500_subdev_ops);
++	adsd3500->sd.internal_ops = &adsd3500_internal_ops;
+ 	adsd3500->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+ 	adsd3500->pad.flags = MEDIA_PAD_FL_SOURCE;
+ 	adsd3500->sd.dev = &client->dev;
+-	adsd3500->sd.entity.ops = &adsd3500_subdev_entity_ops;
+ 	adsd3500->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
+-
+ 	ret = media_entity_pads_init(&adsd3500->sd.entity, 1, &adsd3500->pad);
+ 	if (ret < 0) {
+ 		dev_err(dev, "Could not register media entity\n");
+@@ -1947,6 +1960,7 @@ static int adsd3500_probe(struct i2c_client *client)
+ 	pm_runtime_enable(dev);
+ 	pm_runtime_idle(dev);
+ 
++	dev_info(dev, "probe ADSD3500 success\n");
+ 	return 0;
+ 
+ free_entity:
+-- 
+2.25.1
+
