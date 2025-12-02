@@ -102,9 +102,19 @@ void ADIView::_displayAbImage_CUDA() {
         memcpy(_ab_video_data, ab_video_data,
                frameHeight * frameWidth * sizeof(uint16_t));
 
+        // Get bitsInAb from metadata
+        aditof::Metadata *metadata = nullptr;
+        uint8_t bitsInAb = 13; // default
+        if (m_capturedFrame) {
+            m_capturedFrame->getData("metadata", (uint16_t **)&metadata);
+            if (metadata != nullptr) {
+                bitsInAb = metadata->bitsInAb;
+            }
+        }
+
         // Use CUDA for normalization
         normalizeABBuffer_CUDA(nullptr, _ab_video_data, frameWidth, frameHeight,
-                               getAutoScale(), getLogImage());
+                               getAutoScale(), getLogImage(), bitsInAb);
 
         if (ab_video_data_8bit == nullptr) {
             ab_video_data_8bit = new uint8_t[frameHeight * frameWidth * 3];

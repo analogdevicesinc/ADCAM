@@ -487,6 +487,12 @@ class ADIMainWindow {
     */
     std::shared_ptr<aditof::Camera> GetActiveCamera();
 
+    /**
+     * @brief Update display enable flags based on config parameters
+     * Reads bitsInAB, bitsInPhaseOrDepth, xyzEnable from current mode config
+    */
+    void UpdateDisplayEnableFlagsFromConfig();
+
     const uint32_t MAX_FRAME_RATE = 25;
     uint32_t m_max_frame_rate = MAX_FRAME_RATE;
 
@@ -681,6 +687,11 @@ class ADIMainWindow {
     int32_t m_user_frame_rate = 0;
     std::atomic<bool> m_offline_change_frame;
     std::string m_base_file_name;
+
+    // Display enable flags based on config parameters
+    bool m_enable_ab_display = true;
+    bool m_enable_depth_display = true;
+    bool m_enable_xyz_display = true;
 };
 } // namespace adiMainWindow
 #endif //ADIMAINWINDOW_H

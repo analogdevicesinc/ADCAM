@@ -85,7 +85,13 @@ void ADIView::normalizeABBuffer_NEON(uint16_t *abBuffer, uint16_t abWidth,
 
         max_value_of_AB_pixel -= min_value_of_AB_pixel;
     } else {
-        uint32_t m_maxABPixelValue = (1 << 13) - 1;
+        // Get actual AB bit depth from metadata
+        aditof::Metadata *metadata = nullptr;
+        if (m_capturedFrame) {
+            m_capturedFrame->getData("metadata", (uint16_t **)&metadata);
+        }
+        uint8_t bitsInAb = (metadata != nullptr) ? metadata->bitsInAb : 13;
+        uint32_t m_maxABPixelValue = (1 << bitsInAb) - 1;
         max_value_of_AB_pixel = m_maxABPixelValue;
         min_value_of_AB_pixel = 0;
     }
