@@ -116,6 +116,13 @@ function sw_version_info()
 	mv $SW_VERSION_FILE $PATCH_DIR
 }
 
+function copy_ubuntu_overlay()
+{
+	cp -rf $ROOTDIR/patches/ubuntu_overlay $PATCH_DIR
+
+}
+
+
 function create_package()
 {
 
@@ -131,11 +138,13 @@ function create_package()
 function main()
 {
 	
-	download_linux_kernel
+	#download_linux_kernel
 
 	apply_git_format_patches
 
 	build_kernel
+
+	copy_ubuntu_overlay
 
 	sw_version_info
 
