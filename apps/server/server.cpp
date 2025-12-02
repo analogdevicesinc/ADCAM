@@ -55,6 +55,8 @@
 #include <thread>
 #ifdef HAS_NETWORK_COMPRESSION_LZ4
     #include <lz4.h>
+// High-compression API (optional)
+#include <lz4hc.h>
 #endif //HAS_NETWORK_COMPRESSION_LZ4
 
 using namespace google::protobuf::io;
@@ -74,15 +76,15 @@ std::unique_ptr<aditof::SensorEnumeratorInterface> sensorsEnumerator;
 /* Server only works with one depth sensor */
 std::shared_ptr<aditof::DepthSensorInterface> camDepthSensor;
 std::shared_ptr<aditof::V4lBufferAccessInterface> sensorV4lBufAccess;
-int processedFrameSize;
+std::atomic<uint32_t> processedFrameSize{0};
 
 static payload::ClientRequest buff_recv;
 static payload::ServerResponse buff_send;
 
 //sending frames separately without serializing it
-uint8_t *buff_frame_to_be_captured = nullptr;
-uint8_t *buff_frame_to_send = nullptr;
-unsigned int buff_frame_length;
+std::shared_ptr<uint16_t[]> buff_frame_to_be_captured = nullptr;
+std::shared_ptr<uint16_t[]> buff_frame_to_send = nullptr;
+std::atomic<uint32_t> buff_frame_length{0};
 bool m_frame_ready = false;
 
 static std::map<std::string, api_Values> s_map_api_Values;
@@ -114,6 +116,7 @@ std::thread
     frameCaptureThread; // The thread instance for the capturing frame thread
 bool keepCaptureThreadAlive =
     false; // Flag used by frame capturing thread to know whether to continue or finish
+std::atomic<bool> bufferReallocationInProgress(false); // Flag to pause operations during buffer reallocation
 
 std::unique_ptr<zmq::socket_t> server_socket;
 uint32_t max_send_frames = 10;
@@ -130,7 +133,144 @@ static std::unique_ptr<zmq::socket_t> monitor_socket;
 bool send_async = false;
 const auto get_frame_timeout =
     std::chrono::milliseconds(1000); // time to wait for a frame to be captured
-uint8_t *buff_frame_compressed = nullptr;
+std::unique_ptr<uint8_t[]> buff_frame_compressed = nullptr;
+#ifdef HAS_NETWORK_COMPRESSION_LZ4
+// 0 = fast default compression, >0 = use LZ4 HC with level (1..LZ4HC_CLEVEL_MAX) //  LZ4HC_CLEVEL_MAX = 12
+std::atomic<int> compression_level{1};
+#endif
+#ifdef HAS_NETWORK_COMPRESSION_LZ4
+#include <deque>
+#include <mutex>
+#include <cstddef>
+#include <type_traits>
+#include <stdexcept>
+#include <limits>
+
+/*
+ RunningAverage<T>
+
+ - Maintains a running average over the last N items (sliding window).
+ - Thread-safe: all public methods lock an internal mutex.
+ - O(1) amortized add, O(1) average, O(1) min, O(1) max.
+ - Provides reset(), count(), capacity(), min(), max(), and average().
+ - Template T must be a numeric type (integral or floating).
+*/
+
+template<typename T>
+class RunningAverage {
+    static_assert(std::is_arithmetic<T>::value, "RunningAverage requires a numeric type");
+
+public:
+    explicit RunningAverage(std::size_t capacity)
+        : m_capacity(capacity),
+          m_nextIndex(0),
+          m_sum(0.0L)
+    {
+        if (capacity == 0) {
+            throw std::invalid_argument("capacity must be > 0");
+        }
+    }
+
+    // Add a new value to the sliding window
+    void add(const T& value) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        const std::size_t idx = m_nextIndex++;
+        m_values.emplace_back(idx, value);
+        m_sum += static_cast<long double>(value);
+
+        // Maintain monotonic increasing deque for min
+        while (!m_minDeque.empty() && m_minDeque.back().second > value) {
+            m_minDeque.pop_back();
+        }
+        m_minDeque.emplace_back(idx, value);
+
+        // Maintain monotonic decreasing deque for max
+        while (!m_maxDeque.empty() && m_maxDeque.back().second < value) {
+            m_maxDeque.pop_back();
+        }
+        m_maxDeque.emplace_back(idx, value);
+
+        // If over capacity, evict oldest
+        if (m_values.size() > m_capacity) {
+            auto oldest = m_values.front();
+            m_values.pop_front();
+            m_sum -= static_cast<long double>(oldest.second);
+
+            if (!m_minDeque.empty() && m_minDeque.front().first == oldest.first) {
+                m_minDeque.pop_front();
+            }
+            if (!m_maxDeque.empty() && m_maxDeque.front().first == oldest.first) {
+                m_maxDeque.pop_front();
+            }
+        }
+    }
+
+    // Return current average; throws if no values
+    long double average() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_values.empty()) {
+            throw std::runtime_error("average(): no values in window");
+        }
+        return m_sum / static_cast<long double>(m_values.size());
+    }
+
+    // Return current minimum; throws if no values
+    T min() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_values.empty()) {
+            throw std::runtime_error("min(): no values in window");
+        }
+        return m_minDeque.front().second;
+    }
+
+    // Return current maximum; throws if no values
+    T max() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_values.empty()) {
+            throw std::runtime_error("max(): no values in window");
+        }
+        return m_maxDeque.front().second;
+    }
+
+    // Number of items currently in the window
+    std::size_t count() const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return m_values.size();
+    }
+
+    // The configured window capacity (N)
+    std::size_t capacity() const noexcept {
+        return m_capacity;
+    }
+
+    // Clear the window and reset statistics
+    void reset() {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_values.clear();
+        m_minDeque.clear();
+        m_maxDeque.clear();
+        m_sum = 0.0L;
+        m_nextIndex = 0;
+    }
+
+private:
+    // store pairs of (index, value) so monotonic deques can compare indices on eviction
+    std::deque<std::pair<std::size_t, T>> m_values;
+    std::deque<std::pair<std::size_t, T>> m_minDeque;
+    std::deque<std::pair<std::size_t, T>> m_maxDeque;
+
+    const std::size_t m_capacity;
+    std::size_t m_nextIndex;
+    long double m_sum;
+
+    mutable std::mutex m_mutex;
+};
+
+// Compression statistics (declared after RunningAverage class definition)
+static RunningAverage<double> compressionTime(50);
+static RunningAverage<double> compressionPercentage(50);
+#endif // HAS_NETWORK_COMPRESSION_LZ4
 
 struct clientData {
     bool hasFragments;
@@ -139,10 +279,7 @@ struct clientData {
 
 static void close_zmq_connection() {
 
-    if (buff_frame_compressed != nullptr) {
-        delete[] buff_frame_compressed;
-        buff_frame_compressed = nullptr;
-    }
+    buff_frame_compressed.reset();
 
     // Stop the sensor if not already stopped
     if (!gotStream_off && camDepthSensor) {
@@ -193,29 +330,110 @@ void stream_zmq_frame() {
                             "frameCaptured or stop_flag";
             continue;
         }
+        
+        // Skip if buffer reallocation is in progress
+        if (bufferReallocationInProgress.load()) {
+            frameCaptured = false;
+            lock.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
 
-        // 2. Get your hands on the captured frame
-        std::swap(buff_frame_to_send, buff_frame_to_be_captured);
+        // 2. Copy the captured frame to send buffer
+        // Create local copies to keep buffers alive during operations
+        // Capture size and pointers together atomically
+        auto local_send_buffer = buff_frame_to_send;
+        auto local_capture_buffer = buff_frame_to_be_captured;
+        int local_processed_size = processedFrameSize.load();
+        unsigned int local_frame_length = local_processed_size * sizeof(uint16_t);
+        
+        if (local_send_buffer && local_capture_buffer) {
+            memcpy(local_send_buffer.get(), local_capture_buffer.get(), local_frame_length);
+        }
         frameCaptured = false;
-        lock.unlock();
 
         // 3. Trigger the other thread to capture another frame while we do stuff with current frame
-        {
-            std::lock_guard<std::mutex> lock(frameMutex);
-            goCaptureFrame = true;
-        }
+        goCaptureFrame = true;
+        lock.unlock();
         cvGetFrame.notify_one();
 
         if (!server_socket) {
             LOG(ERROR) << "ZMQ server socket is not initialized!";
             break;
         }
-        zmq::message_t message(buff_frame_length);
-        memcpy(message.data(), buff_frame_to_send, buff_frame_length);
+
+        void *buf_to_send = nullptr;
+        
+#ifdef HAS_NETWORK_COMPRESSION_LZ4
+        // Compress the frame before sending
+        {
+            auto start = std::chrono::high_resolution_clock::now();
+            int *compressedSize = nullptr;
+            
+            int maxCompressedSize = LZ4_compressBound(local_frame_length);
+            buff_frame_compressed.reset(new uint8_t[3 + sizeof(*compressedSize) + maxCompressedSize]);
+            if (buff_frame_compressed) {
+                buff_frame_compressed[0] = 'L';
+                buff_frame_compressed[1] = 'Z';
+                buff_frame_compressed[2] = '4';
+                compressedSize = (int *)(buff_frame_compressed.get() + 3);
+                // Use high-compression API when requested
+
+                if (compression_level.load() > 0) {
+                    int level = compression_level.load();
+                    if (level > LZ4HC_CLEVEL_MAX) level = LZ4HC_CLEVEL_MAX;
+                    *compressedSize = LZ4_compress_HC(
+                        (const char *)local_send_buffer.get(), (char *)(buff_frame_compressed.get() + sizeof(*compressedSize) + 3),
+                        local_frame_length, maxCompressedSize, level);
+                } else {
+                    *compressedSize = LZ4_compress_default(
+                        (const char *)local_send_buffer.get(), (char *)(buff_frame_compressed.get() + sizeof(*compressedSize) + 3),
+                        local_frame_length, maxCompressedSize);
+                }
+
+                if (*compressedSize > 0) {
+                    auto bfl = local_frame_length;
+                    local_frame_length = 3 + sizeof(*compressedSize) + *compressedSize;
+
+                    auto end = std::chrono::high_resolution_clock::now();
+                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                    
+                    compressionTime.add(duration);
+                    compressionPercentage.add(100.0 * ((double)local_frame_length / bfl));
+
+                    LOG(WARNING) << compressionTime.average() << " ms (avg), "
+                                << compressionTime.min() << " ms (min), "
+                                << compressionTime.max() << " ms (max), "
+                                << compressionPercentage.average() << " % (avg)";
+
+                    // Send compressed data directly
+                    zmq::message_t message(local_frame_length);
+                    memcpy(message.data(), buff_frame_compressed.get(), local_frame_length);
+
+                    auto send = server_socket->send(message, zmq::send_flags::none);
+                    if (!send.has_value()) {
+                        LOG(INFO) << "Client is busy , dropping the frame!";
+                    }
+
+                    buf_to_send = (void *)buff_frame_compressed.get();
+                } else {
+                    LOG(ERROR) << "LZ4 compression failed!";
+                    continue;
+                }
+            }
+        }
+#else
+        buf_to_send = (void *)local_send_buffer.get();
+#endif
+        zmq::message_t message(local_frame_length);
+        memcpy(message.data(), buf_to_send, local_frame_length);
         auto send = server_socket->send(message, zmq::send_flags::none);
         if (!send.has_value()) {
             LOG(INFO) << "Client is busy , dropping the frame!";
         }
+#ifdef HAS_NETWORK_COMPRESSION_LZ4
+        buff_frame_compressed.reset();
+#endif //HAS_NETWORK_COMPRESSION_LZ4
     }
 
     {
@@ -292,6 +510,11 @@ aditof::SensorInterruptCallback callback = [](aditof::Adsd3500Status status) {
 static void captureFrameFromHardware() {
     while (keepCaptureThreadAlive) {
 
+        if (stop_flag.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+
         // 1. Wait for the signal to start capturing a new frame
         std::unique_lock<std::mutex> lock(frameMutex);
         if (!cvGetFrame.wait_for(lock, std::chrono::milliseconds(500), [] {
@@ -307,75 +530,50 @@ static void captureFrameFromHardware() {
 
         // 2. The signal has been received, now go capture the frame
         goCaptureFrame = false;
+        
+        // Skip if buffer reallocation is in progress
+        if (bufferReallocationInProgress.load()) {
+            lock.unlock();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
 
         // Send frames to PC via ZMQ socket.
-        auto getFramefuture = std::async(std::launch::async, [&]() {
-            // Get a new frame from the sensor
-#ifdef HAS_NETWORK_COMPRESSION_LZ4 
-            camDepthSensor->getFrame((uint16_t *)buff_frame_to_be_captured);
-            auto start = std::chrono::high_resolution_clock::now();
-            int *compressedSize = nullptr;
-            buff_frame_length = processedFrameSize * sizeof(uint16_t);
-            int maxCompressedSize = LZ4_compressBound(buff_frame_length);
-            if (buff_frame_compressed != nullptr) {
-                delete[] buff_frame_compressed;
-                buff_frame_compressed = nullptr;
-            }
-            buff_frame_compressed = new uint8_t[3 + sizeof(*compressedSize) + maxCompressedSize];
-            if (buff_frame_compressed != nullptr) {
-                buff_frame_compressed[0] = 'L';
-                buff_frame_compressed[1] = 'Z';
-                buff_frame_compressed[2] = '4';
-                compressedSize = (int *)(buff_frame_compressed + 3);
-                *compressedSize = LZ4_compress_default(
-                    (const char *)buff_frame_to_be_captured, (char *)(buff_frame_compressed + sizeof(*compressedSize) + 3),
-                    buff_frame_length, maxCompressedSize);
-                if (*compressedSize > 0) {
-                    //std::swap(buff_frame_to_be_captured, buff_frame_compressed);
-                    auto bfl = buff_frame_length;
-                    buff_frame_length = 3 + sizeof(*compressedSize) + *compressedSize;
-                    if (buff_frame_length < 2 * 1024 * 1024) {
-                        LOG(INFO) << "" << bfl << " -> " << buff_frame_length;
-                    }
-                    memcpy(buff_frame_to_be_captured, buff_frame_compressed, buff_frame_length);    
-                    if (buff_frame_compressed != nullptr) {
-                        delete[] buff_frame_compressed;
-                        buff_frame_compressed = nullptr;
-                    }
-                    auto end = std::chrono::high_resolution_clock::now();
-                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-                    if (duration > 20) {
-                        LOG(WARNING) << "LZ4 compression took " << duration << " milliseconds.";
-                    }
-                    return aditof::Status::OK;
-                }
-            }
-
-            return aditof::Status::GENERIC_ERROR;
-#else
-            return camDepthSensor->getFrame(
-                (uint16_t *)buff_frame_to_be_captured);
-#endif //HAS_NETWORK_COMPRESSION_LZ4
-        });
-
-        if (getFramefuture.wait_for(get_frame_timeout) ==
-            std::future_status::timeout) {
-            LOG(ERROR) << "Timeout while waiting for frame from sensor.";
+        if (!buff_frame_to_be_captured) {
+            LOG(ERROR)
+                << "buff_frame_to_be_captured is nullptr, cannot capture frame.";
             continue;
-        } else {
-            aditof::Status status = getFramefuture.get();
-            if (status != aditof::Status::OK) {
-                LOG(ERROR) << "Failed to get frame from sensor: " << status;
-                continue;
-            }
         }
+        
+        // Create a local shared_ptr copy to keep the buffer alive during getFrame
+        auto local_capture_buffer = buff_frame_to_be_captured;
+        
+        // Unlock before the potentially long getFrame operation
+        lock.unlock();
+        
+        // Call getFrame directly - no async needed
+        // The local shared_ptr keeps the buffer alive even if the global one is reassigned
+        aditof::Status status = camDepthSensor->getFrame(local_capture_buffer.get());
+        
+        if (status != aditof::Status::OK) {
+            LOG(ERROR) << "Failed to get frame from sensor: " << status;
+            continue;
+        }
+
+        if (stop_flag.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+        
+        // Re-acquire lock before setting frameCaptured flag
+        lock.lock();
 
         // 3. Notify others that there is a new frame available
         frameCaptured = true;
         lock.unlock();
         cvGetFrame.notify_one();
     }
-
+    LOG(INFO) << "Exiting captureFrameFromHardware thread.";
     return;
 }
 
@@ -724,7 +922,7 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
             if (sameFrameEndlessRepeat) {
                 for (int i = 0; i < 2; ++i) {
                     status = camDepthSensor->getFrame(
-                        (uint16_t *)(buff_frame_to_send));
+                        (uint16_t *)(buff_frame_to_send.get()));
                     if (status != aditof::Status::OK) {
                         LOG(ERROR) << "Failed to get frame!";
                     }
@@ -819,6 +1017,14 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
         case SET_MODE_BY_INDEX: {
 
             uint8_t mode = buff_recv.func_int32_param(0);
+            
+            // Check if streaming is active - if so, mode change is not safe
+            if (send_async && running.load()) {
+                LOG(ERROR) << "Cannot change mode while streaming is active. Please stop streaming first.";
+                buff_send.set_status(static_cast<::payload::Status>(aditof::Status::BUSY));
+                buff_send.set_message("Cannot change mode while streaming. Stop first.");
+                break;
+            }
 
             aditof::Status status = camDepthSensor->setMode(mode);
             if (status == aditof::Status::OK) {
@@ -833,39 +1039,72 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
                 int width_tmp = aditofModeDetail.baseResolutionWidth;
                 int height_tmp = aditofModeDetail.baseResolutionHeight;
 
+                int new_processed_frame_size;
                 if (aditofModeDetail.isPCM) {
-                    processedFrameSize = width_tmp * height_tmp *
+                    new_processed_frame_size = width_tmp * height_tmp *
                                          aditofModeDetail.numberOfPhases;
 
                 } else {
 #ifdef DUAL
                     if (mode == 1 || mode == 0) {
-                        processedFrameSize = width_tmp * height_tmp * 2;
+                        new_processed_frame_size = width_tmp * height_tmp * 2;
                     } else {
-                        processedFrameSize = width_tmp * height_tmp * 4;
+                        new_processed_frame_size = width_tmp * height_tmp * 4;
                     }
 #else
-                    processedFrameSize = width_tmp * height_tmp * 4;
+                    new_processed_frame_size = width_tmp * height_tmp * 4;
 #endif
                 }
 
-                if (buff_frame_to_send != nullptr) {
-                    delete[] buff_frame_to_send;
-                    buff_frame_to_send = nullptr;
+                // Signal threads to pause operations
+                bufferReallocationInProgress.store(true);
+                // Wait for threads to finish any in-flight operations
+                // by waiting for reference counts to drop to 1 (only global reference)
+                int wait_iterations = 0;
+                while ((buff_frame_to_send.use_count() > 1 || buff_frame_to_be_captured.use_count() > 1) && wait_iterations < 100) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    wait_iterations++;
                 }
-
-                buff_frame_to_send =
-                    new uint8_t[processedFrameSize * sizeof(uint16_t)];
-
-                if (buff_frame_to_be_captured != nullptr) {
-                    delete[] buff_frame_to_be_captured;
-                    buff_frame_to_be_captured = nullptr;
+                
+                if (wait_iterations >= 100) {
+                    LOG(ERROR) << "Timeout waiting for thread references to clear! Force proceeding...";
                 }
+                
+                // Additional safety: acquire and release lock to ensure no thread is in critical section
+                {
+                    std::lock_guard<std::mutex> temp_lock(frameMutex);
+                    frameCaptured = false;
+                    goCaptureFrame = false;
+                }
+                
+                LOG(INFO) << "All thread references cleared, proceeding with reallocation";
+                
+                // Lock frameMutex to ensure threads aren't using the buffers
+                // Also reset the frame capture state to avoid race conditions
+                {
+                    std::lock_guard<std::mutex> lock(frameMutex);
+                    
+                    // Reset frame state flags
+                    frameCaptured = false;
+                    goCaptureFrame = false;
+                    
+                    // First, reset old buffers to nullptr to release references
+                    buff_frame_to_send.reset();
+                    buff_frame_to_be_captured.reset();
+                    
+                    // Create new buffers
+                    buff_frame_to_send = std::shared_ptr<uint16_t[]>(new uint16_t[new_processed_frame_size], std::default_delete<uint16_t[]>());
+                    
+                    buff_frame_to_be_captured = std::shared_ptr<uint16_t[]>(new uint16_t[new_processed_frame_size], std::default_delete<uint16_t[]>());
+                    
+                    // Update size AFTER buffers are assigned (atomically)
+                    processedFrameSize.store(new_processed_frame_size);
 
-                buff_frame_to_be_captured =
-                    new uint8_t[processedFrameSize * sizeof(uint16_t)];
-
-                buff_frame_length = processedFrameSize * sizeof(uint16_t);
+                    buff_frame_length = new_processed_frame_size * sizeof(uint16_t);
+                }
+                
+                // Clear the reallocation flag to allow threads to resume
+                bufferReallocationInProgress.store(false);
             }
 
             buff_send.set_status(static_cast<::payload::Status>(status));
@@ -908,96 +1147,29 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
                     processedFrameSize = width_tmp * height_tmp * 4;
                 }
 
-                if (buff_frame_to_send != nullptr) {
-                    delete[] buff_frame_to_send;
-                    buff_frame_to_send = nullptr;
+                // Lock frameMutex to ensure threads aren't using the buffers
+                // Also reset the frame capture state to avoid race conditions
+                {
+                    std::lock_guard<std::mutex> lock(frameMutex);
+                    
+                    // Reset frame state flags
+                    frameCaptured = false;
+                    goCaptureFrame = false;
+                    
+                    // Create new buffers before releasing old ones
+                    auto new_buff_frame_to_send = std::shared_ptr<uint16_t[]>(new uint16_t[processedFrameSize], std::default_delete<uint16_t[]>());
+                    auto new_buff_frame_to_be_captured = std::shared_ptr<uint16_t[]>(new uint16_t[processedFrameSize], std::default_delete<uint16_t[]>());
+                    
+                    // Now assign them (old buffers will be freed only when all references are gone)
+                    buff_frame_to_send = new_buff_frame_to_send;
+                    buff_frame_to_be_captured = new_buff_frame_to_be_captured;
+
+                    buff_frame_length = processedFrameSize * 2;
                 }
-
-                buff_frame_to_send =
-                    new uint8_t[processedFrameSize * sizeof(uint16_t)];
-
-                if (buff_frame_to_be_captured != nullptr) {
-                    delete[] buff_frame_to_be_captured;
-                    buff_frame_to_be_captured = nullptr;
-                }
-
-                buff_frame_to_be_captured =
-                    new uint8_t[processedFrameSize * sizeof(uint16_t)];
-
-                buff_frame_length = processedFrameSize * 2;
             }
 
             buff_send.set_status(static_cast<::payload::Status>(status));
             break;
-        }
-
-        case GET_FRAME: {
-            if (sameFrameEndlessRepeat) {
-                m_frame_ready = true;
-                zmq::message_t message(buff_frame_length);
-                memcpy(message.data(), buff_frame_to_send, buff_frame_length);
-                server_socket->send(message, zmq::send_flags::none);
-                buff_send.set_status(
-                    static_cast<::payload::Status>(aditof::Status::OK));
-                break;
-            } else {
-                // 1. Wait for frame to be captured on the other thread
-                std::unique_lock<std::mutex> lock(frameMutex);
-                cvGetFrame.wait(lock, []() { return frameCaptured; });
-
-                // 2. Get your hands on the captured frame
-                std::swap(buff_frame_to_send, buff_frame_to_be_captured);
-                frameCaptured = false;
-                lock.unlock();
-
-                // 3. Trigger the other thread to capture another frame while we do stuff with current frame
-                {
-                    std::lock_guard<std::mutex> lock(frameMutex);
-                    goCaptureFrame = true;
-                }
-                cvGetFrame.notify_one();
-
-                // 3. Do compression if enabled
-#ifdef HAS_NETWORK_COMPRESSION_LZ4 
-                LOG(INFO) << "Compressing frame using LZ4: A";
-                int *compressedSize = nullptr;
-                int maxCompressedSize = LZ4_compressBound(buff_frame_length);
-                buff_frame_compressed = new uint8_t[maxCompressedSize];
-                if (buff_frame_compressed != nullptr) {
-                    LOG(INFO) << "Compressing frame using LZ4: B";
-                    delete[] buff_frame_compressed;
-                    buff_frame_compressed = nullptr;
-                }
-                buff_frame_compressed = new uint8_t[3 + sizeof(*compressedSize) + maxCompressedSize];
-                if (buff_frame_compressed != nullptr) {
-                    LOG(INFO) << "Compressing frame using LZ4: C";
-                    buff_frame_compressed[0] = 'L';
-                    buff_frame_compressed[1] = 'Z';
-                    buff_frame_compressed[2] = '4';
-                    compressedSize = (int *)(buff_frame_compressed + 3);
-                    *compressedSize = LZ4_compress_default(
-                        (const char *)buff_frame_to_send, (char *)(buff_frame_compressed + sizeof(*compressedSize) + 3),
-                        buff_frame_length, maxCompressedSize);
-                    if (*compressedSize > 0) {
-                        LOG(INFO) << "Compressing frame using LZ4: D";
-                        buff_frame_length = *compressedSize;
-                        std::swap(buff_frame_to_send, buff_frame_compressed);
-                        delete[] buff_frame_to_be_captured;
-                    }
-                }
-#endif
-
-                // 4. Send current frame over network
-
-                zmq::message_t message(buff_frame_length);
-                memcpy(message.data(), buff_frame_to_send, buff_frame_length);
-                server_socket->send(message, zmq::send_flags::none);
-
-                m_frame_ready = true;
-
-                buff_send.set_status(payload::Status::OK);
-                break;
-            }
         }
 
         case GET_AVAILABLE_CONTROLS: {
@@ -1301,7 +1473,7 @@ void Initialize() {
     s_map_api_Values["GetModeDetails"] = GET_MODE_DETAILS;
     s_map_api_Values["SetModeByIndex"] = SET_MODE_BY_INDEX;
     s_map_api_Values["SetMode"] = SET_MODE;
-    s_map_api_Values["GetFrame"] = GET_FRAME;
+    //s_map_api_Values["GetFrame"] = GET_FRAME;
     s_map_api_Values["GetAvailableControls"] = GET_AVAILABLE_CONTROLS;
     s_map_api_Values["SetControl"] = SET_CONTROL;
     s_map_api_Values["GetControl"] = GET_CONTROL;
