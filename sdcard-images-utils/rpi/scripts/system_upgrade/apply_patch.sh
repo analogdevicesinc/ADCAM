@@ -1,6 +1,19 @@
 #!/bin/bash
 
-set -ex
+set -x
+
+ROOTDIR=`pwd`
+
+function apply_ubuntu_overlay()
+{
+
+	echo "Copy all the service files"
+	sudo cp $ROOTDIR/ubuntu_overlay/etc/systemd/system/*.service 	/etc/systemd/system/
+
+	echo "Copy all the shell scripts"
+	sudo cp $ROOTDIR/ubuntu_overlay/usr/share/systemd/*.sh		/usr/share/systemd/
+
+}
 
 function update_kernel(){
 	
@@ -17,12 +30,26 @@ function update_kernel(){
 
 }
 
+function start_services()
+{
+	sudo systemctl enable adi-tof
+	sudo systemctl start adi-tof
+
+}
+
 function main() {
+
+	echo "******* Apply Ubuntu Overlay *******"
+	apply_ubuntu_overlay
 
 	echo "******* Update Kernel *******"
 	update_kernel
 
+	echo "******* Start background services *******"
+	start_services
+
 	echo "******* Reboot the system *******"
 	sudo reboot
 }
+
 main
