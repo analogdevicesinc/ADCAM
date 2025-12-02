@@ -76,7 +76,8 @@
 using namespace adiviewer;
 using namespace adicontroller;
 
-ADIView::ADIView(std::shared_ptr<ADIController> ctrl, const std::string &name)
+ADIView::ADIView(std::shared_ptr<ADIController> ctrl, const std::string &name,
+                 bool enableAB, bool enableDepth, bool enableXYZ)
     : m_ctrl(ctrl), m_viewName(name), m_distanceVal(0), m_smallSignal(false),
       m_crtSmallSignalState(false) {
 
@@ -90,46 +91,69 @@ ADIView::ADIView(std::shared_ptr<ADIController> ctrl, const std::string &name)
     depth_video_data_8bit = nullptr;
     normalized_vertices = nullptr;
 
+    // Conditionally create depth thread based on config
+    if (enableDepth) {
 #if defined(USE_CUDA) && defined(DEPTH_SIMD)
-    m_depthImageWorker =
-        std::thread(std::bind(&ADIView::_displayDepthImage_CUDA, this));
+        m_depthImageWorker =
+            std::thread(std::bind(&ADIView::_displayDepthImage_CUDA, this));
 #elif defined(USE_NEON) && defined(DEPTH_SIMD)
-    m_depthImageWorker =
-        std::thread(std::bind(&ADIView::_displayDepthImage_NEON, this));
+        m_depthImageWorker =
+            std::thread(std::bind(&ADIView::_displayDepthImage_NEON, this));
 #elif defined(DEPTH_SIMD)
-    m_depthImageWorker =
-        std::thread(std::bind(&ADIView::_displayDepthImage_SIMD, this));
+        m_depthImageWorker =
+            std::thread(std::bind(&ADIView::_displayDepthImage_SIMD, this));
 #else
-    m_depthImageWorker =
-        std::thread(std::bind(&ADIView::_displayDepthImage, this));
+        m_depthImageWorker =
+            std::thread(std::bind(&ADIView::_displayDepthImage, this));
 #endif
+        m_depthThreadCreated = true;
+        LOG(INFO) << "Depth processing thread created";
+    } else {
+        LOG(INFO)
+            << "Depth processing disabled by config (bitsInPhaseOrDepth=0)";
+    }
 
+    // Conditionally create AB thread based on config
+    if (enableAB) {
 #if defined(USE_CUDA) && defined(AB_SIMD)
-    m_abImageWorker =
-        std::thread(std::bind(&ADIView::_displayAbImage_CUDA, this));
+        m_abImageWorker =
+            std::thread(std::bind(&ADIView::_displayAbImage_CUDA, this));
 #elif defined(USE_NEON) && defined(AB_SIMD)
-    m_abImageWorker =
-        std::thread(std::bind(&ADIView::_displayAbImage_NEON, this));
+        m_abImageWorker =
+            std::thread(std::bind(&ADIView::_displayAbImage_NEON, this));
 #elif defined(AB_SIMD)
-    m_abImageWorker =
-        std::thread(std::bind(&ADIView::_displayAbImage_SIMD, this));
+        m_abImageWorker =
+            std::thread(std::bind(&ADIView::_displayAbImage_SIMD, this));
 #else
-    m_abImageWorker = std::thread(std::bind(&ADIView::_displayAbImage, this));
+        m_abImageWorker =
+            std::thread(std::bind(&ADIView::_displayAbImage, this));
 #endif
+        m_abThreadCreated = true;
+        LOG(INFO) << "AB processing thread created";
+    } else {
+        LOG(INFO) << "AB processing disabled by config (bitsInAB=0)";
+    }
 
+    // Conditionally create point cloud thread based on config
+    if (enableXYZ) {
 #if defined(USE_CUDA) && defined(PC_SIMD)
-    m_pointCloudImageWorker =
-        std::thread(std::bind(&ADIView::_displayPointCloudImage_CUDA, this));
+        m_pointCloudImageWorker = std::thread(
+            std::bind(&ADIView::_displayPointCloudImage_CUDA, this));
 #elif defined(USE_NEON) && defined(PC_SIMD)
-    m_pointCloudImageWorker =
-        std::thread(std::bind(&ADIView::_displayPointCloudImage_NEON, this));
+        m_pointCloudImageWorker = std::thread(
+            std::bind(&ADIView::_displayPointCloudImage_NEON, this));
 #elif defined(PC_SIMD)
-    m_pointCloudImageWorker =
-        std::thread(std::bind(&ADIView::_displayPointCloudImage_SIMD, this));
+        m_pointCloudImageWorker = std::thread(
+            std::bind(&ADIView::_displayPointCloudImage_SIMD, this));
 #else
-    m_pointCloudImageWorker =
-        std::thread(std::bind(&ADIView::_displayPointCloudImage, this));
+        m_pointCloudImageWorker =
+            std::thread(std::bind(&ADIView::_displayPointCloudImage, this));
 #endif
+        m_xyzThreadCreated = true;
+        LOG(INFO) << "Point cloud processing thread created";
+    } else {
+        LOG(INFO) << "Point cloud processing disabled by config (xyzEnable=0)";
+    }
 }
 
 ADIView::~ADIView() {
@@ -142,9 +166,16 @@ ADIView::~ADIView() {
     lock.unlock();
     m_frameCapturedCv.notify_all();
 
-    m_depthImageWorker.join();
-    m_abImageWorker.join();
-    m_pointCloudImageWorker.join();
+    // Only join threads that were actually created
+    if (m_depthThreadCreated && m_depthImageWorker.joinable()) {
+        m_depthImageWorker.join();
+    }
+    if (m_abThreadCreated && m_abImageWorker.joinable()) {
+        m_abImageWorker.join();
+    }
+    if (m_xyzThreadCreated && m_pointCloudImageWorker.joinable()) {
+        m_pointCloudImageWorker.join();
+    }
 
     vertexArraySize = 0;
     m_capturedFrame = nullptr;
@@ -223,7 +254,13 @@ void ADIView::normalizeABBuffer_SIMD(uint16_t *abBuffer, uint16_t abWidth,
         }
         max_value_of_AB_pixel -= min_value_of_AB_pixel;
     } else {
-        uint32_t m_maxABPixelValue = (1 << 13) - 1;
+        // Get actual AB bit depth from metadata
+        aditof::Metadata *metadata = nullptr;
+        if (m_capturedFrame) {
+            m_capturedFrame->getData("metadata", (uint16_t **)&metadata);
+        }
+        uint8_t bitsInAb = (metadata != nullptr) ? metadata->bitsInAb : 13;
+        uint32_t m_maxABPixelValue = (1 << bitsInAb) - 1;
         max_value_of_AB_pixel = m_maxABPixelValue;
         min_value_of_AB_pixel = 0;
     }
@@ -519,10 +556,13 @@ void ADIView::normalizeABBuffer(uint16_t *abBuffer, uint16_t abWidth,
         }
         max_value_of_AB_pixel -= min_value_of_AB_pixel;
     } else {
-
-        //TODO: This is hard code, but should reflect the number of AB bits
-        //      See https://github.com/analogdevicesinc/ToF/blob/7d63e2d7e0e2bb795f5a55139740b4d5870ad3d6/examples/tof-viewer/src/ADIView.cpp#L254
-        uint32_t m_maxABPixelValue = (1 << 13) - 1;
+        // Get actual AB bit depth from metadata
+        aditof::Metadata *metadata = nullptr;
+        if (m_capturedFrame) {
+            m_capturedFrame->getData("metadata", (uint16_t **)&metadata);
+        }
+        uint8_t bitsInAb = (metadata != nullptr) ? metadata->bitsInAb : 13;
+        uint32_t m_maxABPixelValue = (1 << bitsInAb) - 1;
         max_value_of_AB_pixel = m_maxABPixelValue;
         min_value_of_AB_pixel = 0;
     }
