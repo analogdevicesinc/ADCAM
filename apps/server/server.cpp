@@ -314,6 +314,10 @@ void stream_zmq_frame() {
 
     running = true;
 
+#ifdef HAS_NETWORK_COMPRESSION_LZ4
+    buff_frame_compressed.reset();
+#endif //HAS_NETWORK_COMPRESSION_LZ4
+
     while (true) {
 
         if (stop_flag.load()) {
@@ -371,7 +375,10 @@ void stream_zmq_frame() {
             int *compressedSize = nullptr;
             
             int maxCompressedSize = LZ4_compressBound(local_frame_length);
-            buff_frame_compressed.reset(new uint8_t[3 + sizeof(*compressedSize) + maxCompressedSize]);
+            if (buff_frame_compressed == nullptr) {
+                LOG(INFO) << "Allocating compression buffer of size: " << 3 + sizeof(*compressedSize) + maxCompressedSize << " bytes";
+                buff_frame_compressed.reset(new uint8_t[3 + sizeof(*compressedSize) + maxCompressedSize]);
+            }
             if (buff_frame_compressed) {
                 buff_frame_compressed[0] = 'L';
                 buff_frame_compressed[1] = 'Z';
@@ -431,9 +438,6 @@ void stream_zmq_frame() {
         if (!send.has_value()) {
             LOG(INFO) << "Client is busy , dropping the frame!";
         }
-#ifdef HAS_NETWORK_COMPRESSION_LZ4
-        buff_frame_compressed.reset();
-#endif //HAS_NETWORK_COMPRESSION_LZ4
     }
 
     {
@@ -442,6 +446,10 @@ void stream_zmq_frame() {
     }
 
     cv.notify_all();
+
+#ifdef HAS_NETWORK_COMPRESSION_LZ4
+        buff_frame_compressed.reset();
+#endif //HAS_NETWORK_COMPRESSION_LZ4
 
     LOG(INFO) << "stream_zmq_frame thread stopped successfully.";
 }
