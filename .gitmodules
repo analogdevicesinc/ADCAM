@@ -1,12 +1,11 @@
 [submodule "libaditof"]
 	path = libaditof
 	url = https://github.com/analogdevicesinc/libaditof.git
-	branch = dev-6.2.0
-[submodule "bindings/python/pybind11"]
-	path = bindings/python/pybind11
-	url = https://github.com/pybind/pybind11
-	branch = v2.11
+	branch = main
 [submodule "ToF-drivers"]
 	path = ToF-drivers
 	url = https://github.com/analogdevicesinc/ToF-drivers.git
 	branch = dev-6.2.0
+[submodule "dependencies/third-party/imgui2/imgui"]
+	path = dependencies/third-party/imgui/imgui
+	url = https://github.com/ocornut/imgui.git

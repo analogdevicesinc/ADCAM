@@ -11,7 +11,7 @@ endif()
 
 ############################### Version #######################################
 set(ADCAM_VERSION_MAJOR 0)
-set(ADCAM_VERSION_MINOR 1)
+set(ADCAM_VERSION_MINOR 2)
 set(ADCAM_VERSION_PATCH 0)
 
 set(VERSION "${ADCAM_VERSION_MAJOR}.${ADCAM_VERSION_MINOR}.${ADCAM_VERSION_PATCH}")
@@ -20,19 +20,27 @@ set(VERSION "${ADCAM_VERSION_MAJOR}.${ADCAM_VERSION_MINOR}.${ADCAM_VERSION_PATCH
 option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
+option(WITH_NETWORK "Build network interface?" OFF)
 
 ################################# FIXED #######################################
+
+### Note: Turn the following off when building on the host
 option(NVIDIA "Set to ON when building on NVIDIA" ON)
-option(WITH_OFFLINE "Build offline interface?" OFF)
-option(WITH_SUBMODULES "Use submodules to build the library" OFF)
-option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" OFF)
-option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" OFF)
-option(WITH_NETWORK "Build network interface?" OFF)
+
+if (WITH_NETWORK)
+        option(WITH_SUBMODULES "Use submodules to build the library" ON)
+        option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" ON)
+        option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" ON)
+else()
+        option(WITH_SUBMODULES "Use submodules to build the library" OFF)
+        option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" OFF)
+        option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" OFF)
+endif()
+option(WITH_OFFLINE "Build offline interface?" ON)
 option(WITH_COMMAND_LINE_TOOLS "Build with command line tools?" ON)
 option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" OFF)
 option(CI_BUILD "Build for CI" OFF)
 set(SOM_TYPE "Dual" CACHE STRING "Which SoM SDK is building for?")
-
 ################################## Git ########################################
 include(FindGit OPTIONAL)
 if (GIT_FOUND)
@@ -129,34 +137,6 @@ make_directory(${RESOURCES_DIR})
 
 if (WITH_OFFLINE)
         add_definitions(-DHAS_OFFLINE)
-
-        set(RESOURCES_OFFLINE_DIR "${RESOURCES_DIR}/offline")
-        make_directory(${RESOURCES_OFFLINE_DIR})
-        
-        set(MODE_FILE "lr-native.bin" "sr-native.bin" "lr-qnative.bin" "sr-qnative.bin" "lr-mixed.bin" "sr-mixed.bin")
-        message("Downloading raw frames into ${RESOURCES_OFFLINE_DIR}")
-        foreach(MODE IN LISTS MODE_FILE)
-                set(MODE_URL "swdownloads.analog.com/cse/aditof/resources/itof/frames/${MODE}")
-                set(MODE_PATH "${RESOURCES_OFFLINE_DIR}/${MODE}")
-
-                if (NOT EXISTS ${MODE_PATH})
-                        file(DOWNLOAD "${MODE_URL}" "${MODE_PATH}")
-                endif()
-        endforeach()
-
-        if (ON_TARGET)
-                make_directory("${RESOURCES_OFFLINE_DIR}/adsd3500_raw")
-
-                message("Downloading raw frames into ${RESOURCES_OFFLINE_DIR}/adsd3500_raw")
-                foreach(MODE IN LISTS MODE_FILE)
-                set(MODE_URL "swdownloads.analog.com/cse/aditof/resources/itof/offline/adsd3500_raw/${MODE}")
-                set(MODE_PATH "${RESOURCES_OFFLINE_DIR}/adsd3500_raw/${MODE}")
-
-                if (NOT EXISTS ${MODE_PATH})
-                        file(DOWNLOAD "${MODE_URL}" "${MODE_PATH}")
-                endif()
-        endforeach()
-        endif()
 endif()
 
 if(WITH_GLOG_DEPENDENCY)
@@ -186,6 +166,7 @@ set(CONFIG_DIR_NAME "config")
 add_definitions(-DCONFIG_DIR_NAME="${CONFIG_DIR_NAME}")
 add_definitions(-DRESOURCES="${RESOURCES_DIR}")
 
+add_subdirectory(dependencies)
 add_subdirectory(libaditof)
 add_subdirectory(apps)
 add_subdirectory(tests)
@@ -198,7 +179,7 @@ if (WITH_DOC)
         add_subdirectory(doc)
 endif()
 if (WITH_PYTHON)
-        add_subdirectory(bindings/python)
+        add_subdirectory(examples/bindings/python)
 endif()
 if (WITH_COMMAND_LINE_TOOLS)
         add_subdirectory(tools)

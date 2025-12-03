@@ -2,9 +2,7 @@
 
 ## Latest Release
 
-* [Empty](https://github.com/analogdevicesinc/ADCAM/releases)
-* Release notes: [Empty](doc/releasenotes.md)
-* Documentation: [Empty](doc/user-guide/ADTF3175D-EvalKit-610.md) 
+* [ADCAM Release 0.1.0-a.1](https://github.com/analogdevicesinc/ADCAM/releases/tag/v0.1.0-a.1)
 
 ## Overview
 
@@ -91,15 +89,36 @@ Note, prior to committing to the repo it is important to format the source code,
 ```console
 sudo apt update
 sudo apt install cmake g++ \
-     libopencv-contrib-dev libopencv-dev \
+     libopencv-dev \
      libgl1-mesa-dev libglfw3-dev \
-     doxygen graphviz
+     doxygen graphviz \
+     libxinerama-dev \
+     libxcursor-dev \
+     libxi-dev \
+     libxrandr-dev
 ```
 
 For Linux builds install the necessary version of Python dev libraries. For example for Ubuntu 22.04 with Python 3.10 as the default Python:
 ```console
 sudo apt install python3.10-dev
 ```
+
+In addition the depth compute libraries are required. 
+
+You can get the two library from the ADCAM release software, but please note in which case it is under an evaluation license.
+
+For a non-eval license please contact us at *tof@analog.com*.
+
+These libraries must be in a folder called **libs** that in one level below the cloned ADCAM repo folder. For example:
+```
+(aditofpython_env) analog@analog-desktop:~/dev/ADCAM$ pwd
+/home/analog/dev/ADCAM
+(aditofpython_env) analog@analog-desktop:~/dev/ADCAM$ tree ../libs
+../libs
+├── libtofi_compute.so
+└── libtofi_config.so
+```
+
 ### Building the SDK
 ```
 git clone https://github.com/analogdevicesinc/ADCAM.git

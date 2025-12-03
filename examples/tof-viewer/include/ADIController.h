@@ -1,9 +1,34 @@
-/********************************************************************************/
-/*                                                                              */
-/* Copyright (c) 2020 Analog Devices, Inc. All Rights Reserved.                 */
-/* This software is proprietary to Analog Devices, Inc. and its licensors.      */
-/*                                                                              */
-/********************************************************************************/
+/*
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Analog Devices, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #ifndef ADICONTROLLER_H
 #define ADICONTROLLER_H
 
@@ -16,8 +41,8 @@
 #include <aditof/depth_sensor_interface.h>
 #include <aditof/frame.h>
 #include <aditof/system.h>
+#include <chrono>
 
-#include "ADIToFRecorder.h"
 #include "safequeue.h"
 
 namespace adicontroller {
@@ -37,12 +62,14 @@ class ADIController {
     /**
 		* @brief	Start capture thread
 		*/
-    void StartCapture();
+    void StartCapture(const uint32_t frameRate);
 
     /**
 		* @brief	Stops capture thread
 		*/
     void StopCapture();
+
+    aditof::Status requestFrameOffline(uint32_t index);
 
     /**
 		* @brief			  Set the camera index for active camera
@@ -71,12 +98,12 @@ class ADIController {
     /**
 		* @brief			Start recording video.
 		* @param fileName	User sets a file name, along with its file extension
-		* @param height	Height in pixels, gathered from current camera mode
-		* @param width	Width in pixels, gathered from curren camera mode
-		* @param fps		Frames to be recorded (No parameter time at this moment)
+		* @param height	    Height in pixels, gathered from current camera mode
+		* @param width	    Width in pixels, gathered from curren camera mode
+		* @param seconds	Number of seconds to record
 		*/
     void startRecording(const std::string &fileName, unsigned int height,
-                        unsigned int width, unsigned int fps);
+                        unsigned int width, unsigned int seconds);
 
     /**
 		* @brief	Stops current recording
@@ -86,9 +113,8 @@ class ADIController {
     /**
 		* @brief				Opens a currently saved recording and plays it back
 		* @param	fileName	Chosen recording file name
-		* @param	fps			Number of frames from file
 		*/
-    int startPlayback(const std::string &fileName, int &fps);
+    int setPlaybackFile(const std::string &fileName);
 
     /**
 		* @brief	Stops current playback recording
@@ -127,7 +153,7 @@ class ADIController {
     /**
 		* @brief Requesting the SDK for a frame.
 		*/
-    void requestFrame();
+    bool requestFrame();
 
     /**
 		* @brief Flag indicating the existance of any
@@ -157,20 +183,32 @@ class ADIController {
     */
     int getCameraInUse() const;
 
+    bool OutputDeltaTime(uint32_t frameNumber);
+
+    aditof::Status getFrameRate(uint32_t &fps);
+    aditof::Status getFramesReceived(uint32_t &framesRecevied);
+    aditof::Status setPreviewRate(uint32_t frameRate, uint32_t previewRate = 1);
+    aditof::Status getFramesLost(uint32_t &framesLost);
+
     std::vector<std::shared_ptr<aditof::Camera>> m_cameras;
-    std::unique_ptr<ADIToFRecorder> m_recorder;
-    bool m_saveBinaryFormat;
     bool panicStop = false;
     size_t panicCount = 0;
+    int m_cameraInUse;
 
   private:
     /**
 		* @brief Sets a thread while capturing camera frames.
 		*/
     void captureFrames();
+    void calculateFrameLoss(const uint32_t frameNumber,
+                            uint32_t &prevFrameNumber,
+                            uint32_t &currentFrameNumber);
+    bool shouldDropFrame(uint32_t frameNum);
+    std::unordered_map<
+        uint32_t, std::chrono::time_point<std::chrono::high_resolution_clock>>
+        m_rxTimeLookUp;
 
   private:
-    int m_cameraInUse;
     std::thread m_workerThread;
     std::atomic<bool> m_stopFlag;
     SafeQueue<std::shared_ptr<aditof::Frame>> m_queue;
@@ -179,6 +217,14 @@ class ADIController {
     std::condition_variable m_requestCv;
     bool m_frameRequested;
     std::shared_ptr<aditof::Frame> m_framePtr;
+    float m_framerate = 0;
+    uint32_t m_frame_counter;
+    std::chrono::time_point<std::chrono::system_clock> m_fps_startTime;
+    uint32_t m_preview_rate;
+    uint32_t m_frame_rate;
+    uint32_t m_frames_lost = 0;
+    uint32_t m_prev_frame_number = -1;
+    uint32_t m_current_frame_number = 0;
 };
 } // namespace adicontroller
 #endif

@@ -1,23 +1,71 @@
-/********************************************************************************/
-/*                                                                              */
-/* Copyright (c) Microsoft Corporation. All rights reserved.					*/
-/*  Portions Copyright (c) 2020 Analog Devices Inc.								*/
-/* Licensed under the MIT License.												*/
-/*																				*/
-/********************************************************************************/
-
+/*
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Analog Devices, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #ifndef ADIVIEW_H
 #define ADIVIEW_H
 
 #include <fstream>
 #include <stdio.h>
 
+#include <chrono>
+#include <deque>
+#include <iostream>
+#include <numeric>
+
 #include "ADIController.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
 #include <ADIShader.h>
 #include <aditof/frame.h>
+
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
+
+#define AB_SIMD    /* ARM NEON optimized */
+#define DEPTH_SIMD /* ARM NEON optimized */
+#define PC_SIMD    /* ARM NEON optimized */
+
+#else
+
+#define AB_SIMD    /* Much faster, so leave this active */
+#define DEPTH_SIMD /* Much faster, so leave this active */
+//#define PC_SIMD
+
+#endif // ARM NEON
+
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+//#define AB_TIME
+//#define DEPTH_TIME
+//#define PC_TIME
+#endif //defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
 namespace adiviewer {
 struct ImageDimensions {
@@ -43,36 +91,12 @@ class ADIView {
 		*/
     ~ADIView();
 
+    void cleanUp();
+
     /**
 		* @brief Not implemented. Code under development
 		*/
-    void render();
     bool startImGUI(bool *success);
-
-    /**
-		* @brief Not implemented
-		*/
-    void showWindows();
-
-    /**
-		* @brief Not implemented
-		*/
-    void initVideo();
-
-    /**
-		* @brief Not implemented
-		*/
-    void captureVideo();
-
-    /**
-		* @brief Not implemented
-		*/
-    void initShaders();
-
-    /**
-		* @brief Will Try to render the image pixel by pixel
-		*/
-    uint8_t *imageRender(uint16_t *image);
 
     void setLogImage(bool value) { m_logImage = value; }
     bool getLogImage() { return m_logImage; }
@@ -99,20 +123,23 @@ class ADIView {
     void setUserABMinState(bool value) { m_minABPixelValueSet = value; }
     bool getUserABMinState() { return m_minABPixelValueSet; }
 
+    void setPointCloudColour(uint32_t colour) { m_pccolour = colour; }
+
     std::shared_ptr<adicontroller::ADIController> m_ctrl;
     std::shared_ptr<aditof::Frame> m_capturedFrame = nullptr;
     std::condition_variable m_barrierCv;
     std::mutex m_imshowMutex;
-    int frameHeight = 0;
-    int frameWidth = 0;
-    int m_waitKeyBarrier;
-    int numOfThreads = 2;
+    uint32_t frameHeight = 0;
+    uint32_t frameWidth = 0;
+    int32_t m_waitKeyBarrier;
+    int32_t numOfThreads = 3;
     std::mutex m_frameCapturedMutex;
-    bool m_depthFrameAvailable;
     bool m_abFrameAvailable;
-    bool m_pointCloudFrameAvailable;
+    bool m_depthFrameAvailable;
+    bool m_pcFrameAvailable;
     bool m_stopWorkersFlag = false;
     bool m_saveBinaryFormat = false;
+    uint32_t m_pccolour = 0;
 
     std::thread m_depthImageWorker;
     std::thread m_abImageWorker;
@@ -120,17 +147,17 @@ class ADIView {
     std::condition_variable m_frameCapturedCv;
     uint16_t *ab_video_data;
     uint16_t *depth_video_data;
-    uint16_t *pointCloud_video_data;
+    int16_t *pointCloud_video_data;
     uint8_t *ab_video_data_8bit;
     uint8_t *depth_video_data_8bit;
     float *normalized_vertices = nullptr;
     size_t pointcloudTableSize = 0;
 
-    unsigned short temperature_c;
-    unsigned short time_stamp;
+    uint16_t temperature_c;
+    uint16_t time_stamp;
     double m_blendValue = 0.5;
-    int maxRange = 5000;
-    int minRange = 0;
+    int32_t maxRange = 5000;
+    int32_t minRange = 0;
     /**************/
     //OpenCV  here
     /**
@@ -139,38 +166,71 @@ class ADIView {
     void startCamera();
 
     //Point Cloud
-    unsigned int viewIndex;
-    unsigned int modelIndex;
-    unsigned int projectionIndex;
-    unsigned int vertexArrayObject;
-    unsigned int vertexBufferObject; //Image Buffer
+    GLint viewIndex;
+    GLint modelIndex;
+    GLint projectionIndex;
+    GLint m_pointSizeIndex;
+    GLuint vertexArrayObject;
+    GLuint vertexBufferObject; //Image Buffer
     adiviewer::Program pcShader;
-    size_t vertexArraySize = 0;
+    uint32_t vertexArraySize = 0;
     float Max_Z = 6000.0;
     float Min_Z = 0.0;
     float Max_Y = 6000.0;
     float Max_X = 6000.0;
 
   private:
+    void prepareImages();
     /**
 		* @brief Creates Depth buffer data
 		*/
     void _displayDepthImage();
+#ifdef DEPTH_SIMD
+    void _displayDepthImage_SIMD();
+#endif
+#if defined(__aarch64__) || defined(__ARM_NEON)
+    void _displayDepthImage_NEON();
+#endif
+#ifdef USE_CUDA
+    void _displayDepthImage_CUDA();
+#endif
 
     /**
 		* @brief Creates AB buffer data
 		*/
     void _displayAbImage();
-
-    /**
-		* @brief Creates a blended AB and Depth buffer data
-		*/
-    void _displayBlendedImage();
+    void normalizeABBuffer(uint16_t *abBuffer, uint16_t abWidth,
+                           uint16_t abHeight, bool advanceScaling,
+                           bool useLogScaling);
+#ifdef AB_SIMD
+    void _displayAbImage_SIMD();
+    void normalizeABBuffer_SIMD(uint16_t *abBuffer, uint16_t abWidth,
+                                uint16_t abHeight, bool advanceScaling,
+                                bool useLogScaling);
+#endif
+#if defined(__aarch64__) || defined(__ARM_NEON)
+    void _displayAbImage_NEON();
+    void normalizeABBuffer_NEON(uint16_t *abBuffer, uint16_t abWidth,
+                                uint16_t abHeight, bool advanceScaling,
+                                bool useLogScaling);
+#endif
+#ifdef USE_CUDA
+    void _displayAbImage_CUDA();
+#endif
 
     /**
 		* @brief Creates a Point Cloud buffer data
 		*/
     void _displayPointCloudImage();
+#ifdef PC_SIMD
+    void _displayPointCloudImage_SIMD();
+#endif
+#if defined(__aarch64__) || defined(__ARM_NEON)
+    void _displayPointCloudImage_NEON();
+#endif
+#ifdef USE_CUDA
+    void _displayPointCloudImage_CUDA();
+#endif
 
     /**
 		* @brief Returns RGB components in
@@ -179,8 +239,11 @@ class ADIView {
     void hsvColorMap(uint16_t video_data, int max, int min, float &fRed,
                      float &fGreen, float &fBlue);
 
+    void ColorConvertHSVtoRGB(float h, float s, float v, float &out_r,
+                              float &out_g, float &out_b);
+
     std::string m_viewName;
-    bool m_center;
+    bool m_center = true;
     int m_distanceVal;
     bool m_smallSignal;
     bool m_crtSmallSignalState;
@@ -194,8 +257,6 @@ class ADIView {
     bool beginDisplayPointCloudImage = false;
 
     uint16_t *video_data;
-    unsigned int video_texture = 0;
-    bool needsInit = true;
     const char *vertexShaderSource;
     const char *fragmentShaderSource;
     int shaderProgram;
@@ -206,6 +267,34 @@ class ADIView {
     bool m_logImage = true;
     bool m_capABWidth = false;
     bool m_autoScale = true;
+
+    std::mutex ab_data_ready_mtx;
+    std::condition_variable ab_data_ready_cv;
+    bool ab_data_ready = false;
+
+    const size_t N = 50;
+
+    // Call this before your function
+    auto startTimer() { return std::chrono::high_resolution_clock::now(); }
+
+    // Call this after your function; updates 'times' and returns running average in ms
+    double endTimerAndUpdate(
+        std::chrono::time_point<std::chrono::high_resolution_clock> timerStart,
+        std::deque<long long> *times) {
+        auto end = std::chrono::high_resolution_clock::now();
+        long long duration;
+
+        duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                       end - timerStart)
+                       .count();
+
+        times->push_back(duration);
+        if (times->size() > N)
+            times->pop_front();
+
+        double sum = std::accumulate(times->begin(), times->end(), 0.0);
+        return sum / times->size() / 1e6; // Average in milliseconds
+    }
 };
 } //namespace adiviewer
 

@@ -112,6 +112,16 @@ function add_boot_label()
         echo "      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
         echo " " >> ${extlinux_conf_file}
 
+        echo "Add the ADSD3500-DUAL+ADSD3100+AR0234 label"
+        echo "LABEL ADSD3500-DUAL+ADSD3100+AR0234" >> ${extlinux_conf_file}
+        echo "      MENU LABEL ADSD3500-DUAL: <CSI ToF Camera ADSD3100>" >> ${extlinux_conf_file}
+        echo "      LINUX /boot/adi/Image" >> ${extlinux_conf_file}
+        echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
+        echo "      OVERLAYS /boot/adi/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dtbo" >> ${extlinux_conf_file}
+        echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
+        echo "      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
+        echo " " >> ${extlinux_conf_file}
+
 	exit
 EOF
 }

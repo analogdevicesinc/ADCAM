@@ -52,21 +52,18 @@ static const char kUsagePublic[] =
     R"(Data Collect.
     Usage:
       data_collect 
-      data_collect [--f <folder>] [--n <ncapture>] [--m <mode>] [--wt <warmup>] [--ccb FILE] [--ip <ip>] [--fw <firmware>] [-s | --split] [-t | --netlinktest] [--ic <imager-configuration>] [-scf <save-configuration-file>] [-lcf <load-configuration-file>]
+      data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--m <mode>] [--ccb FILE] [--ip <ip>] [--fw <firmware>] [--ic <imager-configuration>] [-scf <save-configuration-file>] [-lcf <load-configuration-file>]
       data_collect (-h | --help)
 
     Options:
       -h --help          Show this screen.
       --f <folder>       Output folder (max name 512) [default: ./]
+      --fps <frame rate>   Frame rate in frames per second [default: 10]
       --n <ncapture>     Capture frame num. [default: 1]
       --m <mode>         Mode to capture data in. [default: 0]
-      --wt <warmup>      Warmup Time (sec) [default: 0]
       --ccb <FILE>       The path to store CCB content
       --ip <ip>          Camera IP
       --fw <firmware>    Adsd3500 fw file
-      --split            Save each frame into a separate file (Debug)
-      --netlinktest      Puts server on target in test mode (Debug)
-      --singlethread     Store the frame to file using same tread
       --ic <imager-configuration>   Select imager configuration: standard, standard-raw,
                          custom, custom-raw. By default is standard.
       --scf <save-configuration-file>    Save current configuration to json file
@@ -88,15 +85,12 @@ int main(int argc, char *argv[]) {
     std::map<std::string, struct Argument> command_map = {
         {"-h", {"--help", false, "", "", false}},
         {"-f", {"--f", false, "", ".", true}},
-        {"-n", {"--n", false, "", "0", true}},
+        {"-fps", {"--fps", false, "", "10", true}},
+        {"-n", {"--n", false, "", "1", true}},
         {"-m", {"--m", false, "", "0", true}},
-        {"-wt", {"--wt", false, "", "0", true}},
         {"-ip", {"--ip", false, "", "", true}},
         {"-fw", {"--fw", false, "", "", true}},
         {"-ccb", {"--ccb", false, "", "", true}},
-        {"-s", {"--split", false, "", "", false}},
-        {"-t", {"--netlinktest", false, "", "", false}},
-        {"-st", {"--singlethread", false, "", "", false}},
         {"-ic", {"--ic", false, "", "", true}},
         {"-scf", {"--scf", false, "", "", true}},
         {"-lcf", {"--lcf", false, "", "", true}}};
@@ -108,7 +102,7 @@ int main(int argc, char *argv[]) {
 
     if (argc == 1) {
         std::cout << kUsagePublic << std::endl;
-        return 0;
+        return -1;
     }
 
     int result = command.checkArgumentExist(command_map, arg_error);
@@ -121,7 +115,7 @@ int main(int argc, char *argv[]) {
     result = command.helpMenu();
     if (result == 1) {
         std::cout << kUsagePublic << std::endl;
-        return 0;
+        return -1;
     } else if (result == -1) {
         LOG(ERROR) << "Usage of argument -h/--help"
                    << " is incorrect! Help argument should be used alone!";
@@ -152,14 +146,11 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    char folder_path[MAX_FILE_PATH_SIZE]; // Path to store the depth frames
-    char json_file_path
-        [MAX_FILE_PATH_SIZE]; // Get the .json file from command line
+    std::string folder_path; // Path to store the depth frames
+    std::string json_file_path; // Get the .json file from command line
 
-    uint16_t err = 0;
     uint32_t n_frames = 0;
     uint8_t mode = 0;
-    uint32_t warmup_time = 0;
     std::string ip;
     std::string firmware;
     std::string configuration = "standard";
@@ -175,44 +166,18 @@ int main(int argc, char *argv[]) {
 
     Status status = Status::OK;
     // Parsing the arguments from command line
-    err = snprintf(json_file_path, sizeof(json_file_path), "%s",
-                   command_map["-lcf"].value.c_str());
-    if (err < 0) {
-        LOG(ERROR) << "Error copying the json file path!";
-        return 0;
-    }
+    json_file_path = std::string(command_map["-lcf"].value.c_str());
 
     // Parsing output folder
-    err = snprintf(folder_path, sizeof(folder_path), "%s",
-                   command_map["-f"].value.c_str());
+    folder_path = std::string(command_map["-f"].value.c_str());
 
-    if (err < 0) {
-        LOG(ERROR) << "Error copying the output folder path!";
-        return 0;
+    // Parsing frame rate
+    uint16_t fps = std::stoi(command_map["-fps"].value);
+    if (fps == 0 || fps > 60) {
+        LOG(ERROR) << "Invalid frame rate: " << fps
+                   << ". Valid range is 1 to 30 fps.";
+        return -1;
     }
-#ifdef _WIN32
-    // Create folder if not created already
-    char dir_path[MAX_PATH];
-    if (GetFullPathName(folder_path, MAX_PATH, &dir_path[0], NULL) == 0) {
-        LOG(ERROR) << "Error Unable to get directory. Error:" << GetLastError();
-        return 0;
-    }
-
-    if (!(CreateDirectory(dir_path, NULL))) {
-        if (ERROR_ALREADY_EXISTS != GetLastError()) {
-            LOG(ERROR) << "Error creating directory. Error:", GetLastError();
-            return 0;
-        }
-    }
-
-#else
-    err = mkdir(folder_path, 0777);
-
-    if (err < 0) {
-        LOG(ERROR) << "Unable to create directory";
-        return 0;
-    }
-#endif
 
     // Parsing number of frames
     n_frames = std::stoi(command_map["-n"].value);
@@ -231,38 +196,15 @@ int main(int argc, char *argv[]) {
         firmware = command_map["-fw"].value;
     }
 
-    //Parsing Warm up time
-    if (!command_map["-wt"].value.empty()) {
-        warmup_time = std::stoi(command_map["-wt"].value);
-        if (warmup_time < 0) {
-            LOG(ERROR) << "Invalid warm up time input!";
-        }
-    }
-
     //Parsing CCB path
     std::string ccbFilePath;
     if (!command_map["-ccb"].value.empty()) {
         ccbFilePath = command_map["-ccb"].value;
     }
 
-    //Parsing split option
-    bool saveToSingleFile = true;
-    if (!command_map["-s"].value.empty()) {
-        saveToSingleFile = false;
-    }
-
-    //Parsing single thread option
-    bool samethread = 0;
-    if (!command_map["-st"].value.empty()) {
-        samethread = true;
-    }
-
-    //Parsing netLinkTest option
-    bool useNetLinkTest = !command_map["-t"].value.empty();
-
     // Parsing configuration option
     std::vector<std::string> configurationlist = {"standard", "standard-raw",
-                                                  "coustom", "custom-raw"};
+                                                  "custom", "custom-raw"};
 
     std::string configurationValue = command_map["-ic"].value;
     if (!configurationValue.empty()) {
@@ -282,14 +224,13 @@ int main(int argc, char *argv[]) {
             saveconfigurationFileValue += ".json";
         }
         saveconfigurationFile = true;
-        strcpy(json_file_path, "");
+        json_file_path = "";
     }
 
     LOG(INFO) << "Output folder: " << folder_path;
     LOG(INFO) << "Mode: " << command_map["-m"].value;
     LOG(INFO) << "Number of frames: " << n_frames;
     LOG(INFO) << "Json file: " << json_file_path;
-    LOG(INFO) << "Warm Up Time is: " << warmup_time << " seconds";
     LOG(INFO) << "Configuration is: " << configuration;
 
     if (!ip.empty()) {
@@ -297,7 +238,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (!firmware.empty()) {
-        LOG(INFO) << "Firmware file is is: " << firmware;
+        LOG(INFO) << "Firmware file is: " << firmware;
     }
 
     if (!ccbFilePath.empty()) {
@@ -309,9 +250,6 @@ int main(int argc, char *argv[]) {
 
     if (!ip.empty()) {
         ip = "ip:" + ip;
-        if (useNetLinkTest) {
-            ip += ":netlinktest";
-        }
         system.getCameraList(cameras, ip);
     } else {
         system.getCameraList(cameras);
@@ -319,7 +257,7 @@ int main(int argc, char *argv[]) {
 
     if (cameras.empty()) {
         LOG(WARNING) << "No cameras found";
-        return 0;
+        return -1;
     }
 
     auto camera = cameras.front();
@@ -327,7 +265,7 @@ int main(int argc, char *argv[]) {
     status = camera->initialize(json_file_path);
     if (status != Status::OK) {
         LOG(ERROR) << "Could not initialize camera!";
-        return 0;
+        return -1;
     }
 
     status = camera->setSensorConfiguration(configuration);
@@ -351,36 +289,32 @@ int main(int argc, char *argv[]) {
     aditof::CameraDetails cameraDetails;
     camera->getDetails(cameraDetails);
 
-#ifdef NXP
-    LOG(INFO) << "SD card image version: " << cameraDetails.sdCardImageVersion;
-    LOG(INFO) << "Kernel version: " << cameraDetails.kernelVersion;
-    LOG(INFO) << "U-Boot version: " << cameraDetails.uBootVersion;
-#endif
-
     if (!firmware.empty()) {
         std::ifstream file(firmware);
         if (!(file.good() &&
               file.peek() != std::ifstream::traits_type::eof())) {
             LOG(ERROR) << firmware << " not found or is an empty file";
-            return 0;
+            return -1;
         }
 
         status = camera->adsd3500UpdateFirmware(firmware);
         if (status != Status::OK) {
             LOG(ERROR) << "Could not update the adsd3500 firmware";
-            return 0;
+            return -1;
         } else {
             LOG(INFO) << "Please reboot the board!";
-            return 0;
+            return -1;
         }
     }
+
+    camera->adsd3500GetFrameRate(fps);
 
     // Get modes
     std::vector<uint8_t> availableModes;
     status = camera->getAvailableModes(availableModes);
     if (status != Status::OK || availableModes.empty()) {
         LOG(ERROR) << "Could not aquire modes";
-        return 0;
+        return -1;
     }
 
     std::shared_ptr<DepthSensorInterface> depthSensor = camera->getSensor();
@@ -390,26 +324,14 @@ int main(int argc, char *argv[]) {
     status = camera->setMode(mode);
     if (status != Status::OK) {
         LOG(ERROR) << "Could not set camera mode!";
-        return 0;
+        return -1;
     }
 
-    char time_buffer[128];
-    time_t rawtime;
-    time(&rawtime);
-    struct tm timeinfo;
-#ifdef _WIN32
-    localtime_s(&timeinfo, &rawtime);
-#else
-    localtime_r(&rawtime, &timeinfo);
-#endif
-    strftime(time_buffer, sizeof(time_buffer), "%Y%m%d%H%M%S", &timeinfo);
-#if 0
-    camera->setControl("setFPS", std::to_string(setfps));
+    status = camera->adsd3500SetFrameRate(fps);
     if (status != Status::OK) {
-        LOG(ERROR) << "Error setting camera FPS to " << setfps;
-        return 0;
+        LOG(ERROR) << "Error setting camera FPS to " << fps;
+        return -1;
     }
-#endif
 
     // Store CCB to file
     if (!ccbFilePath.empty()) {
@@ -428,73 +350,78 @@ int main(int argc, char *argv[]) {
     status = camera->start();
     if (status != Status::OK) {
         LOG(ERROR) << "Could not start camera!";
-        return 0;
+        return -1;
     }
 
     aditof::Frame frame;
     FrameDetails fDetails;
-    uint64_t elapsed_time;
-
-    auto warmup_start = std::chrono::steady_clock::now();
-
-    // Wait until the warmup time is finished
-    if (warmup_time > 0) {
-        do {
-            status = camera->requestFrame(&frame);
-            if (status != Status::OK) {
-                LOG(ERROR) << "Could not request frame!";
-                return 0;
-            }
-
-            auto warmup_end = std::chrono::steady_clock::now();
-            elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(
-                               warmup_end - warmup_start)
-                               .count();
-        } while (warmup_time >= elapsed_time);
-    }
-
-    FrameHandler frameSaver;
-    frameSaver.storeFramesToSingleFile(saveToSingleFile);
-    frameSaver.setOutputFilePath(folder_path);
 
     //drop first frame
     status = camera->requestFrame(&frame);
     if (status != Status::OK) {
         LOG(ERROR) << "Could not request frame!";
-        return 0;
+        return -1;
     }
 
-    LOG(INFO) << "Requesting " << n_frames << " frames!";
     auto start_time = std::chrono::high_resolution_clock::now();
-    // Request the frames for the respective mode
-    for (uint32_t loopcount = 0; loopcount < n_frames; loopcount++) {
 
+    long long runtime_in_ms = (((long long)n_frames * 1000) / (long long)fps);
+    long long max_runtime_in_ms = 600000; // 10 minutes
+
+    LOG(INFO) << "Starting capture of " << n_frames << " frames.";
+    LOG(INFO) << "Expected capture time (ms): " << runtime_in_ms;
+    LOG(INFO) << "Maximum allowed capture time (ms): " << max_runtime_in_ms;
+    LOG(INFO) << "FPS: " << fps;
+
+    if (runtime_in_ms > max_runtime_in_ms) {
+        runtime_in_ms = max_runtime_in_ms;
+
+        LOG(WARNING) << "The requested number of frames will take more than 10 "
+                        "minutes to capture. Limiting the capture time to 10 "
+                        "minutes.";
+    }
+
+    long long milliseconds = 0;
+    uint32_t frames_captured = 0;
+
+    status = camera->startRecording(folder_path);
+    if (status != Status::OK) {
+        LOG(ERROR) << "Unable to start recording!";
+        return -1;
+    }
+
+    while(frames_captured < n_frames) {
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto total_time_ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        milliseconds = total_time_ms_duration.count();
+        if (milliseconds >= runtime_in_ms) {
+            LOG(WARNING) << "Maximum capture time reached. Stopping capture.";
+            break;
+        }
         status = camera->requestFrame(&frame);
         if (status != Status::OK) {
-            LOG(ERROR) << "Could not request frame!";
-            return 0;
+            LOG(ERROR) << "Unable to request frame!";
+            break;
         }
-        if (useNetLinkTest) {
-            continue;
-        }
+        frames_captured++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5)); // Sleep for 5ms
+    }
 
-        if (!samethread) {
-            frameSaver.saveFrameToFileMultithread(frame);
-        } else {
-            frameSaver.saveFrameToFile(frame);
-        }
-    } // End of for Loop
+    LOG(INFO) << "Capture complete. Frames captured: " << frames_captured;
+    status = camera->stopRecording();
+    if (status != Status::OK) {
+        LOG(WARNING) << "Unable to stop recording!";
+    }
 
-    auto end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> total_time = end_time - start_time;
-    if (total_time.count() > 0.0) {
-        double measured_fps = (double)n_frames / total_time.count();
+    if (milliseconds > 0.0 && frames_captured > 0) {
+        double measured_fps = (double)frames_captured / ((double)milliseconds / 1000.0);
         LOG(INFO) << "Measured FPS: " << measured_fps;
     }
 
     status = camera->stop();
     if (status != Status::OK) {
-        LOG(INFO) << "Error stopping camera!";
+        LOG(ERROR) << "Error stopping camera!";
+        return -1;
     }
     return 0;
 }
