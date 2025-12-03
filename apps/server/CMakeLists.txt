@@ -6,10 +6,13 @@ add_executable(${PROJECT_NAME} server.cpp ${PROTO_HDRS} ${PROTO_SRCS})
 target_include_directories(${PROJECT_NAME} PRIVATE ${GENERATED_PROTO_FILES_DIR})
 
 # Glog
-if(NOT WITH_SUBMODULES AND NOT EXISTS "${LIBADITOF_SUBMODULE_PATH}/glog/.git")
-    find_package(glog 0.3.5 REQUIRED)
-else()
-    target_link_libraries(${PROJECT_NAME} PUBLIC glog)
+if(WITH_GLOG_DEPENDENCY)
+    if(NOT WITH_SUBMODULES OR NOT EXISTS "${LIBADITOF_SUBMODULE_PATH}/glog/.git")
+        find_package(glog 0.3.5 REQUIRED)
+        target_link_libraries(${PROJECT_NAME} PUBLIC glog::glog)
+    else()
+        target_link_libraries(${PROJECT_NAME} PUBLIC glog)
+    endif()
 endif()
 
 # Protobuf
