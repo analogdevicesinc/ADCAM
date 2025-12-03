@@ -35,7 +35,11 @@ set(NET_PROTO_HRDS "${CMAKE_BINARY_DIR}/buffer.pb.h")
 target_link_libraries(${PROJECT_NAME} PRIVATE aditof)
 
 if (WITH_NETWORK_COMPRESSION)
-    target_link_libraries(${PROJECT_NAME} PRIVATE lz4)
+    if (WITH_NETWORK_COMPRESSION_LZ4)
+        target_link_libraries(${PROJECT_NAME} PRIVATE lz4)
+    else()
+        target_link_libraries(${PROJECT_NAME} PRIVATE rvl)
+    endif()
 endif()
 
 # ZMQ

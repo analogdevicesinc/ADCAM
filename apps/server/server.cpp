@@ -53,11 +53,13 @@
 #include <string>
 #include <sys/time.h>
 #include <thread>
-#ifdef HAS_NETWORK_COMPRESSION_LZ4
+#ifdef WITH_NETWORK_COMPRESSION_LZ4
     #include <lz4.h>
-// High-compression API (optional)
-#include <lz4hc.h>
-#endif //HAS_NETWORK_COMPRESSION_LZ4
+    // High-compression API (optional)
+    #include <lz4hc.h>
+#else
+    #include <RVL.h>
+#endif //WITH_NETWORK_COMPRESSION_LZ4
 
 using namespace google::protobuf::io;
 
@@ -130,15 +132,15 @@ std::thread stream_thread;
 static std::unique_ptr<zmq::context_t> context;
 static std::unique_ptr<zmq::socket_t> server_cmd;
 static std::unique_ptr<zmq::socket_t> monitor_socket;
-bool send_async = false;
 const auto get_frame_timeout =
     std::chrono::milliseconds(1000); // time to wait for a frame to be captured
 std::unique_ptr<uint8_t[]> buff_frame_compressed = nullptr;
-#ifdef HAS_NETWORK_COMPRESSION_LZ4
+
+#ifdef WITH_NETWORK_COMPRESSION
+
 // 0 = fast default compression, >0 = use LZ4 HC with level (1..LZ4HC_CLEVEL_MAX) //  LZ4HC_CLEVEL_MAX = 12
-std::atomic<int> compression_level{1};
-#endif
-#ifdef HAS_NETWORK_COMPRESSION_LZ4
+std::atomic<int> compression_level{0};
+
 #include <deque>
 #include <mutex>
 #include <cstddef>
@@ -270,7 +272,7 @@ private:
 // Compression statistics (declared after RunningAverage class definition)
 static RunningAverage<double> compressionTime(50);
 static RunningAverage<double> compressionPercentage(50);
-#endif // HAS_NETWORK_COMPRESSION_LZ4
+#endif // WITH_NETWORK_COMPRESSION
 
 struct clientData {
     bool hasFragments;
@@ -314,9 +316,9 @@ void stream_zmq_frame() {
 
     running = true;
 
-#ifdef HAS_NETWORK_COMPRESSION_LZ4
+#ifdef WITH_NETWORK_COMPRESSION
     buff_frame_compressed.reset();
-#endif //HAS_NETWORK_COMPRESSION_LZ4
+#endif //WITH_NETWORK_COMPRESSION
 
     while (true) {
 
@@ -348,11 +350,11 @@ void stream_zmq_frame() {
         // Capture size and pointers together atomically
         auto local_send_buffer = buff_frame_to_send;
         auto local_capture_buffer = buff_frame_to_be_captured;
-        int local_processed_size = processedFrameSize.load();
-        unsigned int local_frame_length = local_processed_size * sizeof(uint16_t);
+        uint32_t local_frame_length_shorts = processedFrameSize.load();
+        uint32_t local_frame_length_bytes = local_frame_length_shorts * sizeof(uint16_t);
         
         if (local_send_buffer && local_capture_buffer) {
-            memcpy(local_send_buffer.get(), local_capture_buffer.get(), local_frame_length);
+            memcpy(local_send_buffer.get(), local_capture_buffer.get(), local_frame_length_bytes);
         }
         frameCaptured = false;
 
@@ -367,60 +369,42 @@ void stream_zmq_frame() {
         }
 
         void *buf_to_send = nullptr;
-        
-#ifdef HAS_NETWORK_COMPRESSION_LZ4
-        // Compress the frame before sending
+
+#ifdef WITH_NETWORK_COMPRESSION
+
+        auto start = std::chrono::high_resolution_clock::now();
+        uint32_t bfl = 1;
+
+#ifdef WITH_NETWORK_COMPRESSION_LZ4
+        // Do LZ4 compression here
         {
-            auto start = std::chrono::high_resolution_clock::now();
-            int *compressedSize = nullptr;
-            
-            int maxCompressedSize = LZ4_compressBound(local_frame_length);
+            uint32_t *compressedSize = nullptr;
+            uint32_t maxCompressedSize = LZ4_compressBound(local_frame_length_bytes);
             if (buff_frame_compressed == nullptr) {
-                LOG(INFO) << "Allocating compression buffer of size: " << 3 + sizeof(*compressedSize) + maxCompressedSize << " bytes";
+                LOG(INFO) << "Allocating compression buffer of size (LZ4): " << 3 + sizeof(*compressedSize) + maxCompressedSize << " bytes";
                 buff_frame_compressed.reset(new uint8_t[3 + sizeof(*compressedSize) + maxCompressedSize]);
             }
             if (buff_frame_compressed) {
                 buff_frame_compressed[0] = 'L';
                 buff_frame_compressed[1] = 'Z';
                 buff_frame_compressed[2] = '4';
-                compressedSize = (int *)(buff_frame_compressed.get() + 3);
-                // Use high-compression API when requested
+                compressedSize = (uint32_t *)(buff_frame_compressed.get() + 3);
 
                 if (compression_level.load() > 0) {
                     int level = compression_level.load();
                     if (level > LZ4HC_CLEVEL_MAX) level = LZ4HC_CLEVEL_MAX;
                     *compressedSize = LZ4_compress_HC(
                         (const char *)local_send_buffer.get(), (char *)(buff_frame_compressed.get() + sizeof(*compressedSize) + 3),
-                        local_frame_length, maxCompressedSize, level);
+                        local_frame_length_bytes, maxCompressedSize, level);
                 } else {
                     *compressedSize = LZ4_compress_default(
                         (const char *)local_send_buffer.get(), (char *)(buff_frame_compressed.get() + sizeof(*compressedSize) + 3),
-                        local_frame_length, maxCompressedSize);
+                        local_frame_length_bytes, maxCompressedSize);
                 }
 
                 if (*compressedSize > 0) {
-                    auto bfl = local_frame_length;
-                    local_frame_length = 3 + sizeof(*compressedSize) + *compressedSize;
-
-                    auto end = std::chrono::high_resolution_clock::now();
-                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-                    
-                    compressionTime.add(duration);
-                    compressionPercentage.add(100.0 * ((double)local_frame_length / bfl));
-
-                    LOG(WARNING) << compressionTime.average() << " ms (avg), "
-                                << compressionTime.min() << " ms (min), "
-                                << compressionTime.max() << " ms (max), "
-                                << compressionPercentage.average() << " % (avg)";
-
-                    // Send compressed data directly
-                    zmq::message_t message(local_frame_length);
-                    memcpy(message.data(), buff_frame_compressed.get(), local_frame_length);
-
-                    auto send = server_socket->send(message, zmq::send_flags::none);
-                    if (!send.has_value()) {
-                        LOG(INFO) << "Client is busy , dropping the frame!";
-                    }
+                    bfl = local_frame_length_bytes;
+                    local_frame_length_bytes = 3 + sizeof(*compressedSize) + *compressedSize;
 
                     buf_to_send = (void *)buff_frame_compressed.get();
                 } else {
@@ -429,11 +413,56 @@ void stream_zmq_frame() {
                 }
             }
         }
+#else 
+        // Do RVL and JPEG-Turbo compression here
+        {
+            // Compress depth data with RVL
+            uint32_t *compressedSize = nullptr;
+            uint32_t maxCompressedSize = local_frame_length_bytes;
+            if (buff_frame_compressed == nullptr) {
+                LOG(INFO) << "Allocating compression buffer of size (RVL): " << 3 + sizeof(*compressedSize) + maxCompressedSize << " bytes";
+                buff_frame_compressed.reset(new uint8_t[3 + sizeof(*compressedSize) + maxCompressedSize]);
+            }
+            if (buff_frame_compressed) {
+                buff_frame_compressed[0] = 'R';
+                buff_frame_compressed[1] = 'V';
+                buff_frame_compressed[2] = 'L';
+                compressedSize = (uint32_t *)(buff_frame_compressed.get() + 3);
+
+                *compressedSize = RVL::CompressRVL(
+                    (short *)local_send_buffer.get(), (char *)(buff_frame_compressed.get() + sizeof(*compressedSize) + 3),
+                    local_frame_length_shorts);
+
+                if (*compressedSize > 0) {
+                    bfl = local_frame_length_bytes;
+                    local_frame_length_bytes = 3 + sizeof(*compressedSize) + *compressedSize;
+
+                    buf_to_send = (void *)buff_frame_compressed.get();
+                } else {
+                    LOG(ERROR) << "LZ4 compression failed!";
+                    continue;
+                }
+            }
+        }
+#endif // WITH_NETWORK_COMPRESSION_LZ4
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        
+        compressionTime.add(duration);
+        compressionPercentage.add(100.0 * ((double)local_frame_length_bytes / bfl));
+
+        LOG(WARNING) << compressionTime.average() << " ms (avg), "
+                    << compressionTime.min() << " ms (min), "
+                    << compressionTime.max() << " ms (max), "
+                    << compressionPercentage.average() << " % (avg)";
+
 #else
         buf_to_send = (void *)local_send_buffer.get();
-#endif
-        zmq::message_t message(local_frame_length);
-        memcpy(message.data(), buf_to_send, local_frame_length);
+#endif // WITH_NETWORK_COMPRESSION
+
+        zmq::message_t message(local_frame_length_bytes);
+        memcpy(message.data(), buf_to_send, local_frame_length_bytes);
         auto send = server_socket->send(message, zmq::send_flags::none);
         if (!send.has_value()) {
             LOG(INFO) << "Client is busy , dropping the frame!";
@@ -447,9 +476,9 @@ void stream_zmq_frame() {
 
     cv.notify_all();
 
-#ifdef HAS_NETWORK_COMPRESSION_LZ4
+#ifdef WITH_NETWORK_COMPRESSION
         buff_frame_compressed.reset();
-#endif //HAS_NETWORK_COMPRESSION_LZ4
+#endif //WITH_NETWORK_COMPRESSION
 
     LOG(INFO) << "stream_zmq_frame thread stopped successfully.";
 }
@@ -808,9 +837,7 @@ int main(int argc, char *argv[]) {
     }
     clientEngagedWithSensors = false;
 
-    if (send_async == true) {
-        stop_stream_thread();
-    }
+    stop_stream_thread();
 
     close_zmq_connection();
 
@@ -943,22 +970,11 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
                 cvGetFrame.notify_one();
             }
 
-            if (send_async == true) {
-                if (isConnectionClosed == false) {
-                    close_zmq_connection();
-                }
-                isConnectionClosed = false;
-                start_stream_thread(); // Start the stream_frame thread .
-            } else {
-                static zmq::context_t zmq_context(1);
-                server_socket = std::make_unique<zmq::socket_t>(
-                    zmq_context, zmq::socket_type::push);
-                server_socket->setsockopt(ZMQ_SNDHWM, (int *)&max_send_frames,
-                                          sizeof(max_send_frames));
-                server_socket->setsockopt(ZMQ_SNDTIMEO, FRAME_TIMEOUT);
-                server_socket->bind("tcp://*:5555");
-                LOG(INFO) << "ZMQ server socket connection established.";
+            if (isConnectionClosed == false) {
+                close_zmq_connection();
             }
+            isConnectionClosed = false;
+            start_stream_thread(); // Start the stream_frame thread .
 
             buff_send.set_status(static_cast<::payload::Status>(status));
             break;
@@ -967,9 +983,7 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
         case STOP: {
             if (gotStream_off ==
                 false) { // this operation will prevent to unecessary calling of stream-off
-                if (send_async == true) {
-                    stop_stream_thread();
-                }
+                stop_stream_thread();
                 aditof::Status status = camDepthSensor->stop();
                 if (status != aditof::Status::OK) {
                     gotStream_off = false;
@@ -1027,7 +1041,7 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
             uint8_t mode = buff_recv.func_int32_param(0);
             
             // Check if streaming is active - if so, mode change is not safe
-            if (send_async && running.load()) {
+            if (running.load()) {
                 LOG(ERROR) << "Cannot change mode while streaming is active. Please stop streaming first.";
                 buff_send.set_status(static_cast<::payload::Status>(aditof::Status::BUSY));
                 buff_send.set_message("Cannot change mode while streaming. Stop first.");
@@ -1437,13 +1451,6 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
             break;
         }
 
-        case RECV_ASYNC: {
-            send_async = true;
-            buff_send.set_message("send_async");
-
-            break;
-        }
-
         default: {
             std::string msgErr = "Function not found";
             std::cout << msgErr << "\n";
@@ -1500,5 +1507,4 @@ void Initialize() {
     s_map_api_Values["SetDepthComputeParam"] = SET_DEPTH_COMPUTE_PARAM;
     s_map_api_Values["GetIniArray"] = GET_INI_ARRAY;
     s_map_api_Values["ServerConnect"] = SERVER_CONNECT;
-    s_map_api_Values["RecvAsync"] = RECV_ASYNC;
 }

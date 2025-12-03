@@ -47,7 +47,6 @@ enum api_Values {
     GET_MODE_DETAILS,
     SET_MODE,
     SET_MODE_BY_INDEX,
-    GET_FRAME,
     GET_AVAILABLE_CONTROLS,
     SET_CONTROL,
     GET_CONTROL,
@@ -66,7 +65,7 @@ enum api_Values {
     SET_SENSOR_CONFIGURATION,
     GET_INI_ARRAY,
     SERVER_CONNECT,
-    RECV_ASYNC
+
 };
 
 enum protocols { PROTOCOL_EXAMPLE, PROTOCOL_COUNT };

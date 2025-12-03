@@ -25,6 +25,12 @@ if (WITH_NETWORK)
 	option(WITH_NETWORK_COMPRESSION "Build network interface to compress data?" ON)
 endif()
 
+if (WITH_NETWORK_COMPRESSION)
+        # ON for LZ4
+        # OFF for RVL + JPEGTURBO
+	option(WITH_NETWORK_COMPRESSION_LZ4 "Build network interface to compress data?" OFF)
+endif()
+
 ################################# FIXED #######################################
 
 ### Note: Turn the following off when building on the host
@@ -123,7 +129,13 @@ if (WITH_NETWORK)
 endif()
 
 if (WITH_NETWORK_COMPRESSION)
-        add_definitions(-DHAS_NETWORK_COMPRESSION_LZ4)
+        if (WITH_NETWORK_COMPRESSION_LZ4)
+                add_definitions(-DWITH_NETWORK_COMPRESSION_LZ4)
+                add_definitions(-DWITH_NETWORK_COMPRESSION)
+        else()
+                add_definitions(-DWITH_NETWORK_COMPRESSION_RVL_JPEGTURBO)
+                add_definitions(-DWITH_NETWORK_COMPRESSION)
+        endif()
 endif()
 
 if(SOM_TYPE STREQUAL "Dual")
