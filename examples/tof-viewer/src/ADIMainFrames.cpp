@@ -130,10 +130,12 @@ void ADIMainWindow::GetHoveredImagePix(ImVec2 &hoveredImagePixel,
         return;
     }
 
-    hoveredUIPixel.x = (std::max)(
-        (std::min)(hoveredUIPixel.x, _displayDepthDimensions.x), 0.0f);
-    hoveredUIPixel.y = (std::max)(
-        (std::min)(hoveredUIPixel.y, _displayDepthDimensions.y), 0.0f);
+    hoveredUIPixel.x =
+        (std::max)((std::min)(hoveredUIPixel.x, _displayDepthDimensions.x),
+                   0.0f);
+    hoveredUIPixel.y =
+        (std::max)((std::min)(hoveredUIPixel.y, _displayDepthDimensions.y),
+                   0.0f);
 
     // Scale the hovered pixel to the image pixel co-ordinate system
     const float uiCoordinateToImageCoordinateRatio =
@@ -200,10 +202,32 @@ int32_t ADIMainWindow::synchronizeVideo(std::shared_ptr<aditof::Frame> &frame) {
     std::unique_lock<std::mutex> lock(m_view_instance->m_frameCapturedMutex);
 
     if (tmpFrame != nullptr || m_off_line) {
-        m_view_instance->m_pcFrameAvailable = true;
-        m_view_instance->m_abFrameAvailable = true;
-        m_view_instance->m_depthFrameAvailable = true;
-        m_view_instance->numOfThreads = 3;
+        // Set frame availability and count active threads based on what was actually created
+        // AND what data is actually available in the frame
+        int32_t activeThreads = 0;
+
+        // Check if depth data is available in the frame
+        if (m_view_instance->m_depthThreadCreated &&
+            m_view_instance->m_capturedFrame->haveDataType("depth")) {
+            m_view_instance->m_depthFrameAvailable = true;
+            activeThreads++;
+        }
+
+        // Check if AB data is available in the frame
+        if (m_view_instance->m_abThreadCreated &&
+            m_view_instance->m_capturedFrame->haveDataType("ab")) {
+            m_view_instance->m_abFrameAvailable = true;
+            activeThreads++;
+        }
+
+        // Check if XYZ data is available in the frame
+        if (m_view_instance->m_xyzThreadCreated &&
+            m_view_instance->m_capturedFrame->haveDataType("xyz")) {
+            m_view_instance->m_pcFrameAvailable = true;
+            activeThreads++;
+        }
+
+        m_view_instance->numOfThreads = activeThreads;
 
         m_view_instance->frameHeight = frameDetails.height;
         m_view_instance->frameWidth = frameDetails.width;
