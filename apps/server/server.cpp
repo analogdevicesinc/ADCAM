@@ -53,6 +53,7 @@
 #include <string>
 #include <sys/time.h>
 #include <thread>
+#ifdef WITH_NETWORK_COMPRESSION
 #ifdef WITH_NETWORK_COMPRESSION_LZ4
     #include <lz4.h>
     // High-compression API (optional)
@@ -60,6 +61,7 @@
 #else
     #include <RVL.h>
 #endif //WITH_NETWORK_COMPRESSION_LZ4
+#endif
 
 using namespace google::protobuf::io;
 
