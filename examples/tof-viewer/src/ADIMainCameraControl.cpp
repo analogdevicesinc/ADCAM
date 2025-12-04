@@ -73,6 +73,14 @@ void ADIMainWindow::InitCamera(std::string filePath) {
     std::string version = aditof::getApiVersion();
     LOG(INFO) << "Preparing camera. Please wait...\n";
 
+    // For live mode, set enable flags to true initially
+    // (will be properly set after mode is configured)
+    if (!m_off_line) {
+        m_enable_ab_display = true;
+        m_enable_depth_display = true;
+        m_enable_xyz_display = true;
+    }
+
     // Initially create with all displays enabled (will be updated after mode is set)
     m_view_instance = std::make_shared<adiviewer::ADIView>(
         std::make_shared<adicontroller::ADIController>(m_cameras_list),
