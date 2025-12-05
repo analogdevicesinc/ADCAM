@@ -186,7 +186,6 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
                         ImGui::Text("N/A");
                     } else {
                         ImGui::Text("%i", frame_received);
-                        ;
                     }
 
                     ImGui::TableNextRow();
@@ -197,7 +196,6 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
                         ImGui::Text("N/A");
                     } else {
                         ImGui::Text("%i", frames_lost);
-                        ;
                     }
 
                     ImGui::TableNextRow();
