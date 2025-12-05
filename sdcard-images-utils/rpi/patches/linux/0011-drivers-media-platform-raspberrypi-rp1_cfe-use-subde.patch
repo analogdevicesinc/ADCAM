@@ -1,0 +1,67 @@
+From 45bf9f917930749d3a1d590cd25d111170475cbf Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Fri, 5 Dec 2025 13:14:07 +0530
+Subject: [PATCH 2/2] drivers: media: platform: raspberrypi: rp1_cfe: use
+ subdev API for enumerating frame sizes
+
+Refactor cfe_enum_framesizes() to use the v4l2_subdev API instead
+of hardcoded stepwise frame sizes. Reports discrete frame sizes
+from the connected sensor sub-device for accurate frame enumeration.
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ .../media/platform/raspberrypi/rp1_cfe/cfe.c  | 28 +++++++++++--------
+ 1 file changed, 16 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c b/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c
+index 82801ac918a2..7be6951d6230 100644
+--- a/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c
++++ b/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c
+@@ -1504,28 +1504,32 @@ static int cfe_enum_framesizes(struct file *file, void *priv,
+ 	struct cfe_node *node = video_drvdata(file);
+ 	struct cfe_device *cfe = node->cfe;
+ 	const struct cfe_fmt *fmt;
++	struct v4l2_subdev_frame_size_enum fse = {
++		.index = fsize->index,
++		.pad = 0,
++		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
++	};
++	int ret;
+ 
+ 	cfe_dbg("%s [%s]\n", __func__, node_desc[node->id].name);
+ 
+-	if (fsize->index > 0)
+-		return -EINVAL;
+-
+ 	/* check for valid format */
+ 	fmt = find_format_by_pix(fsize->pixel_format);
+ 	if (!fmt) {
+ 		cfe_dbg("Invalid pixel code: %x\n", fsize->pixel_format);
+ 		return -EINVAL;
+ 	}
++	fse.code = fmt->code;
+ 
+-	/* TODO: Do we have limits on the step_width? */
+-
+-	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
+-	fsize->stepwise.min_width = MIN_WIDTH;
+-	fsize->stepwise.max_width = MAX_WIDTH;
+-	fsize->stepwise.step_width = 2;
+-	fsize->stepwise.min_height = MIN_HEIGHT;
+-	fsize->stepwise.max_height = MAX_HEIGHT;
+-	fsize->stepwise.step_height = 1;
++	ret = v4l2_subdev_call(cfe->sensor, pad, enum_frame_size, NULL, &fse);
++	if(ret){
++		return ret;
++	}
++	else {
++		fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
++		fsize->discrete.width = fse.max_width;
++		fsize->discrete.height = fse.max_height;
++	}
+ 
+ 	return 0;
+ }
+-- 
+2.25.1
+
