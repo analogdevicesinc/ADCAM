@@ -160,7 +160,8 @@ void ADIMainWindow::UpdateOfflineFrameTypeAvailability() {
                 aditof::Status::OK &&
             metadata != nullptr) {
             // Check config to determine which displays should be enabled
-            m_enable_depth_display = (metadata->bitsInDepth != 0);
+            // For depth, check if data exists (bitsInDepth may be 0 for ISP-computed modes)
+            m_enable_depth_display = frame.haveDataType("depth");
             m_enable_ab_display = (metadata->bitsInAb != 0);
             // XYZ availability is based on xyzEnabled flag in metadata
             m_enable_xyz_display = (metadata->xyzEnabled != 0);
@@ -319,20 +320,29 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
                 //LOG(INFO) << "Diverging: " << diverging;
             }
 
-            // For offline mode, use the pre-determined availability flags
-            // For live mode, check frame data type availability per-frame
+            // Check what frame types are available based on metadata config
             bool haveAB, haveDepth, haveXYZ;
             if (m_off_line) {
-                // Use cached availability from UpdateOfflineFrameTypeAvailability()
+                // Offline: use cached availability from UpdateOfflineFrameTypeAvailability()
                 haveAB = m_enable_ab_display && frame->haveDataType("ab");
                 haveDepth =
                     m_enable_depth_display && frame->haveDataType("depth");
                 haveXYZ = m_enable_xyz_display && frame->haveDataType("xyz");
             } else {
-                // Live mode: check per-frame
-                haveAB = frame->haveDataType("ab");
-                haveDepth = frame->haveDataType("depth");
-                haveXYZ = frame->haveDataType("xyz");
+                // Live mode: For AB and XYZ, check config. For depth, always show if data exists
+                // (bitsInDepth may be 0 for ISP-computed depth modes)
+                if (metadata != nullptr) {
+                    haveDepth = frame->haveDataType("depth");
+                    haveAB =
+                        (metadata->bitsInAb != 0) && frame->haveDataType("ab");
+                    haveXYZ = (metadata->xyzEnabled != 0) &&
+                              frame->haveDataType("xyz");
+                } else {
+                    // Fallback if metadata not available
+                    haveAB = frame->haveDataType("ab");
+                    haveDepth = frame->haveDataType("depth");
+                    haveXYZ = frame->haveDataType("xyz");
+                }
             }
 
             uint32_t numberAvailableDataTypes = 0;
