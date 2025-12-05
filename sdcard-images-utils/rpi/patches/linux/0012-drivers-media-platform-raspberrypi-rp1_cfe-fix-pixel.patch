@@ -1,0 +1,44 @@
+From 868064a1231f2b79b4babd74b330d58c4ffd1136 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Fri, 5 Dec 2025 15:30:03 +0530
+Subject: [PATCH] drivers/media/platform: raspberrypi: rp1_cfe: fix pixel
+ format fourcc codes
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Correct the fourcc codes for 12-bit Bayer and YUV formats in
+cfe_fmts.h. Change V4L2_PIX_FMT_SRGGB12P → V4L2_PIX_FMT_SRGGB12
+and V4L2_PIX_FMT_Y12P → V4L2_PIX_FMT_Y12 to match the actual
+data layout used by the hardware
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h b/drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h
+index e192f211abde..84c3e44f8e2d 100644
+--- a/drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h
++++ b/drivers/media/platform/raspberrypi/rp1_cfe/cfe_fmts.h
+@@ -159,7 +159,7 @@ static const struct cfe_fmt formats[] = {
+ 		.remap = { V4L2_PIX_FMT_SGRBG16, V4L2_PIX_FMT_PISP_COMP1_GRBG },
+ 	},
+ 	{
+-		.fourcc = V4L2_PIX_FMT_SRGGB12P,
++		.fourcc = V4L2_PIX_FMT_SRGGB12,
+ 		.code = MEDIA_BUS_FMT_SRGGB12_1X12,
+ 		.depth = 12,
+ 		.csi_dt = MIPI_CSI2_DT_RAW12,
+@@ -266,7 +266,7 @@ static const struct cfe_fmt formats[] = {
+ 		.remap = { V4L2_PIX_FMT_Y16, V4L2_PIX_FMT_PISP_COMP1_MONO },
+ 	},
+ 	{
+-		.fourcc = V4L2_PIX_FMT_Y12P,
++		.fourcc = V4L2_PIX_FMT_Y12,
+ 		.code = MEDIA_BUS_FMT_Y12_1X12,
+ 		.depth = 12,
+ 		.csi_dt = MIPI_CSI2_DT_RAW12,
+-- 
+2.25.1
+
