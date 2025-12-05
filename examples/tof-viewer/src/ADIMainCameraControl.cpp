@@ -73,13 +73,12 @@ void ADIMainWindow::InitCamera(std::string filePath) {
     std::string version = aditof::getApiVersion();
     LOG(INFO) << "Preparing camera. Please wait...\n";
 
-    // For live mode, set enable flags to true initially
-    // (will be properly set after mode is configured)
-    if (!m_off_line) {
-        m_enable_ab_display = true;
-        m_enable_depth_display = true;
-        m_enable_xyz_display = true;
-    }
+    // For offline mode, always enable all display types
+    // The viewer threads will check metadata/config per-frame to decide processing
+    // For live mode, set enable flags to true initially (will be properly set after mode is configured)
+    m_enable_ab_display = false;
+    m_enable_depth_display = true;
+    m_enable_xyz_display = false;
 
     // Initially create with all displays enabled (will be updated after mode is set)
     m_view_instance = std::make_shared<adiviewer::ADIView>(
@@ -190,6 +189,8 @@ void ADIMainWindow::PrepareCamera(uint8_t mode) {
     status = GetActiveCamera()->getDetails(camDetails);
     //int32_t totalCaptures = camDetails.frameType.totalCaptures;
 
+    // For offline mode, recreate viewer with all frame types enabled
+    // The threads will check metadata per-frame to decide if processing is needed
     status = GetActiveCamera()->adsd3500GetFrameRate(m_fps_expected);
 
     if (m_enable_preview) {
