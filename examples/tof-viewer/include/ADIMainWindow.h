@@ -450,6 +450,11 @@ class ADIMainWindow {
     void PrepareCamera(uint8_t mode);
 
     /**
+		* @brief Check what frame types are available in offline mode
+		*/
+    void UpdateOfflineFrameTypeAvailability();
+
+    /**
 		* @brief Displays the Information Window
 		*/
     void DisplayInfoWindow(ImGuiWindowFlags overlayFlags, bool diverging);
