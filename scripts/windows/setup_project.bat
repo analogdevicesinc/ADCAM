@@ -18,6 +18,7 @@ set config_type=""
 set generator=""
 set /a set_config=0
 set /a set_generator=0
+set /a do_not_build=0
 
 ::interpret the arguments
 :interpret_arg
@@ -73,6 +74,11 @@ if "%1" neq "" (
    if /I "%1" EQU "-j" (
    set threads=%2
    shift
+   shift
+   goto :interpret_arg
+   )
+   if /I "%1" EQU "-n" (
+   set /a do_not_build=1
    shift
    goto :interpret_arg
    )
@@ -134,9 +140,12 @@ if %opt%==0 (
 )
 echo Setup will continue with the generator: %generator%
 
-
-echo The sdk will be built in: %build_dire%
-
+if %do_not_build%==0 (
+	echo The SDK will be built in: %build_dire%
+	)
+if %do_not_build%==1 (
+	echo Running cmake configuration for the SDK in: %build_dire%
+	)
 
 ::ask for permission to continue the setup
 if %answer_yes%==0 (
@@ -148,15 +157,17 @@ if not exist %build_dire% md %build_dire%
 
 
 ::init and update of libaditof submodule
-echo "Cloning sub modules"
+::echo "Cloning sub modules"
 ::pushd %tof_dire%
 ::git submodule update --init --recursive
-popd
+::popd
 
 ::build the project with the selected options
 pushd %build_dire%
-cmake -G %generator% -DNVIDIA=OFF -DNXP=OFF -DWITH_NETWORK=ON -DWITH_SUBMODULES=ON -DWITH_PROTOBUF_DEPENDENCY=ON -DWITH_GLOG_DEPEDENCY=ON -DRECV_ASYNC=on %source_dir% -DCMAKE_BUILD_TYPE=%config_type%
-cmake --build . --config %config_type% -j %threads% 
+cmake -G %generator% -DNVIDIA=OFF -DNXP=OFF -DWITH_NETWORK=ON -DWITH_SUBMODULES=ON -DWITH_PROTOBUF_DEPENDENCY=ON -DWITH_GLOG_DEPENDENCY=ON -DRECV_ASYNC=on %source_dir% -DCMAKE_BUILD_TYPE=%config_type%
+if %do_not_build%==0 (
+	cmake --build . --config %config_type% -j %threads%
+	)
 popd
 EXIT /B %ERRORLEVEL%
 
@@ -176,6 +187,8 @@ ECHO        Release = Configuration for Release build.
 ECHO        Debug   = Configuration for Debug build.
 ECHO -j
 ECHO        Set the number of threads used for building, by default is set to 4.
+ECHO
+ECHO -n     Run CMake only, do not build.
 EXIT /B 0
 
 :yes_or_exit
