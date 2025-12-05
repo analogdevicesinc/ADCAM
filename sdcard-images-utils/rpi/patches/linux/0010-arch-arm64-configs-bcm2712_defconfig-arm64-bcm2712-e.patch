@@ -1,0 +1,31 @@
+From a75abfd5feb9e8740f698b2154cff34d2cf0cc58 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Fri, 5 Dec 2025 13:12:21 +0530
+Subject: [PATCH 1/2] arch: arm64: configs: bcm2712_defconfig: arm64: bcm2712:
+ enable dynamic debug support
+
+Add CONFIG_DYNAMIC_DEBUG to the bcm2712_defconfig to allow
+fine-grained runtime debugging of kernel messages. This
+facilitates debugging and diagnostics without requiring
+recompilation for debug prints.
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ arch/arm64/configs/bcm2712_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/bcm2712_defconfig b/arch/arm64/configs/bcm2712_defconfig
+index 4f191fa2754e..74cfe5c33b05 100644
+--- a/arch/arm64/configs/bcm2712_defconfig
++++ b/arch/arm64/configs/bcm2712_defconfig
+@@ -1760,6 +1760,7 @@ CONFIG_LIBCRC32C=y
+ CONFIG_DMA_CMA=y
+ CONFIG_CMA_SIZE_MBYTES=5
+ CONFIG_PRINTK_TIME=y
++CONFIG_DYNAMIC_DEBUG=y
+ CONFIG_BOOT_PRINTK_DELAY=y
+ CONFIG_MAGIC_SYSRQ_DEFAULT_ENABLE=0x1f6
+ CONFIG_KGDB=y
+-- 
+2.25.1
+
