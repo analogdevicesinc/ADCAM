@@ -34,6 +34,14 @@ set(NET_PROTO_HRDS "${CMAKE_BINARY_DIR}/buffer.pb.h")
     )
 target_link_libraries(${PROJECT_NAME} PRIVATE aditof)
 
+# Copy governor_control.sh to build directory
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_CURRENT_SOURCE_DIR}/governor_control.sh
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>/governor_control.sh
+    COMMENT "Copying governor_control.sh to build directory"
+)
+
 if (WITH_NETWORK_COMPRESSION)
     if (WITH_NETWORK_COMPRESSION_LZ4)
         target_link_libraries(${PROJECT_NAME} PRIVATE lz4)
