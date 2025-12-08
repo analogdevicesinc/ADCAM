@@ -136,48 +136,90 @@ if __name__ == "__main__":
         vis = o3d.visualization.Visualizer()
         vis.create_window("PointCloud", 1200, 1200)
         first_time_render_pc = 1
+        first_time_render_ab = 1
+        first_time_render_depth = 1
         point_cloud = o3d.geometry.PointCloud()
+        ab_image = o3d.geometry.Image()
+        depth_image = o3d.geometry.Image()
 
         while True:
             # Capture frame-by-frame
             status = cameras[0].requestFrame(frame)
             if not status:
                 print("cameras[0].requestFrame() failed with status: ", status)
-                
-            depth_map = np.array(frame.getData("depth"), dtype="uint16", copy=False)
-            ab_map = np.array(frame.getData("ab"), dtype="uint16", copy=False)
-            xyz_map = np.array(frame.getData("xyz"), dtype="int16", copy=False)
+            
+            # Get frame details to check which data types are available
+            frameDetails_check = tof.FrameDetails()
+            status = frame.getDetails(frameDetails_check)
+            available_types = [detail.type for detail in frameDetails_check.dataDetails]
+            
+            # Get frame data - check availability first to handle different bit combinations
+            depth_map = None
+            ab_map = None
+            xyz_map = None
+            
+            if "depth" in available_types:
+                depth_map = np.array(frame.getData("depth"), dtype="uint16", copy=False)
+            else:
+                print("Warning: Depth frame not available")
+                continue
+            
+            if "ab" in available_types:
+                ab_map = np.array(frame.getData("ab"), dtype="uint16", copy=False)
+            else:
+                print("Warning: AB frame not available (bitsInAB=0)")
+            
+            if "xyz" in available_types:
+                xyz_map = np.array(frame.getData("xyz"), dtype="int16", copy=False)
+            else:
+                print("Warning: XYZ frame not available (xyzEnable=0)")
 
-            # Create the AB image
-            ab_map = ab_map[0: int(ab_map.shape[0]), :]
-            ab_map = distance_scale_ab * ab_map
-            ab_map = np.uint8(ab_map)
-            ab_map = cv.cvtColor(ab_map, cv.COLOR_GRAY2RGB)
+            # Create the AB image if available
+            if ab_map is not None:
+                ab_map = ab_map[0: int(ab_map.shape[0]), :]
+                ab_map = distance_scale_ab * ab_map
+                ab_map = np.uint8(ab_map)
+                ab_map = cv.cvtColor(ab_map, cv.COLOR_GRAY2RGB)
 
-            # Show AB image
-            vis_ab.add_geometry(transform_image(ab_map))
-            vis_ab.poll_events()
+                # Show AB image
+                ab_image = transform_image(ab_map)
+                if first_time_render_ab:
+                    vis_ab.add_geometry(ab_image)
+                    first_time_render_ab = 0
+                else:
+                    vis_ab.update_geometry(ab_image)
+                vis_ab.poll_events()
+                vis_ab.update_renderer()
 
             # Create the Depth image
-            xyz_points = np.resize(xyz_map, (int(depth_map.shape[0]) * depth_map.shape[1], 3))
+            if xyz_map is not None:
+                xyz_points = np.resize(xyz_map, (int(depth_map.shape[0]) * depth_map.shape[1], 3))
+            
             depth_map = depth_map[0: int(depth_map.shape[0]), :]
             depth_map = distance_scale * depth_map
             depth_map = np.uint8(depth_map)
             depth_map = cv.applyColorMap(depth_map, cv.COLORMAP_WINTER)
 
             # Show depth image
-            vis_depth.add_geometry(transform_image(depth_map))
+            depth_image = transform_image(depth_map)
+            if first_time_render_depth:
+                vis_depth.add_geometry(depth_image)
+                first_time_render_depth = 0
+            else:
+                vis_depth.update_geometry(depth_image)
             vis_depth.poll_events()
+            vis_depth.update_renderer()
 
-            # Show the point cloud
-            point_cloud.points = o3d.utility.Vector3dVector(xyz_points)
-            point_cloud.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
-            if first_time_render_pc:
-                vis.add_geometry(point_cloud)
-                first_time_render_pc = 0
-            vis.update_geometry(point_cloud)
-            vis.poll_events()
-            vis.update_renderer()
+            # Show the point cloud if XYZ is available
+            if xyz_map is not None:
+                point_cloud.points = o3d.utility.Vector3dVector(xyz_points)
+                point_cloud.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+                if first_time_render_pc:
+                    vis.add_geometry(point_cloud)
+                    first_time_render_pc = 0
+                vis.update_geometry(point_cloud)
+                vis.poll_events()
+                vis.update_renderer()
 
             if cv.waitKey(1) >= 0:
                 break
@@ -213,44 +255,86 @@ if __name__ == "__main__":
         vis = o3d.visualization.Visualizer()
         vis.create_window("PointCloud", 1200, 1200)
         first_time_render_pc = 1
+        first_time_render_ab = 1
+        first_time_render_depth = 1
         point_cloud = o3d.geometry.PointCloud()
+        ab_image = o3d.geometry.Image()
+        depth_image = o3d.geometry.Image()
 
         while True:
 
-            depth_map = np.array(frame.getData("depth"), dtype="uint16", copy=False)
-            ab_map = np.array(frame.getData("ab"), dtype="uint16", copy=False)
-            xyz_map = np.array(frame.getData("xyz"), dtype="int16", copy=False)
+            # Get frame details to check which data types are available
+            frameDetails_check = tof.FrameDetails()
+            status = frame.getDetails(frameDetails_check)
+            available_types = [detail.type for detail in frameDetails_check.dataDetails]
+            
+            # Get frame data - check availability first to handle different bit combinations
+            depth_map = None
+            ab_map = None
+            xyz_map = None
+            
+            if "depth" in available_types:
+                depth_map = np.array(frame.getData("depth"), dtype="uint16", copy=False)
+            else:
+                print("Warning: Depth frame not available")
+                break
+            
+            if "ab" in available_types:
+                ab_map = np.array(frame.getData("ab"), dtype="uint16", copy=False)
+            else:
+                print("Warning: AB frame not available (bitsInAB=0)")
+            
+            if "xyz" in available_types:
+                xyz_map = np.array(frame.getData("xyz"), dtype="int16", copy=False)
+            else:
+                print("Warning: XYZ frame not available (xyzEnable=0)")
 
-            # Create the AB image
-            ab_map = ab_map[0: int(ab_map.shape[0]), :]
-            ab_map = distance_scale_ab * ab_map
-            ab_map = np.uint8(ab_map)
-            ab_map = cv.cvtColor(ab_map, cv.COLOR_GRAY2RGB)
+            # Create the AB image if available
+            if ab_map is not None:
+                ab_map = ab_map[0: int(ab_map.shape[0]), :]
+                ab_map = distance_scale_ab * ab_map
+                ab_map = np.uint8(ab_map)
+                ab_map = cv.cvtColor(ab_map, cv.COLOR_GRAY2RGB)
 
-            # Show AB image
-            vis_ab.add_geometry(transform_image(ab_map))
-            vis_ab.poll_events()
+                # Show AB image
+                ab_image = transform_image(ab_map)
+                if first_time_render_ab:
+                    vis_ab.add_geometry(ab_image)
+                    first_time_render_ab = 0
+                else:
+                    vis_ab.update_geometry(ab_image)
+                vis_ab.poll_events()
+                vis_ab.update_renderer()
 
             # Create the Depth image
-            xyz_points = np.resize(xyz_map, (int(depth_map.shape[0]) * depth_map.shape[1], 3))
+            if xyz_map is not None:
+                xyz_points = np.resize(xyz_map, (int(depth_map.shape[0]) * depth_map.shape[1], 3))
+            
             depth_map = depth_map[0: int(depth_map.shape[0]), :]
             depth_map = distance_scale * depth_map
             depth_map = np.uint8(depth_map)
             depth_map = cv.applyColorMap(depth_map, cv.COLORMAP_WINTER)
 
             # Show depth image
-            vis_depth.add_geometry(transform_image(depth_map))
+            depth_image = transform_image(depth_map)
+            if first_time_render_depth:
+                vis_depth.add_geometry(depth_image)
+                first_time_render_depth = 0
+            else:
+                vis_depth.update_geometry(depth_image)
             vis_depth.poll_events()
+            vis_depth.update_renderer()
 
-            # Show the point cloud
-            point_cloud.points = o3d.utility.Vector3dVector(xyz_points)
-            point_cloud.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
-            if first_time_render_pc:
-                vis.add_geometry(point_cloud)
-                first_time_render_pc = 0
-            vis.update_geometry(point_cloud)
-            vis.poll_events()
-            vis.update_renderer()
+            # Show the point cloud if XYZ is available
+            if xyz_map is not None:
+                point_cloud.points = o3d.utility.Vector3dVector(xyz_points)
+                point_cloud.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+                if first_time_render_pc:
+                    vis.add_geometry(point_cloud)
+                    first_time_render_pc = 0
+                vis.update_geometry(point_cloud)
+                vis.poll_events()
+                vis.update_renderer()
 
             if cv.waitKey(1) >= 0:
                 break
