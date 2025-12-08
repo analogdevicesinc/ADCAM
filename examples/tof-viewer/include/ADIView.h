@@ -55,17 +55,13 @@
 
 #else
 
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #define AB_SIMD    /* Much faster, so leave this active */
 #define DEPTH_SIMD /* Much faster, so leave this active */
 //#define PC_SIMD
+#endif
 
 #endif // ARM NEON
-
-#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
-//#define AB_TIME
-//#define DEPTH_TIME
-//#define PC_TIME
-#endif //defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
 namespace adiviewer {
 struct ImageDimensions {
