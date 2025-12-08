@@ -125,7 +125,7 @@ if(CI_BUILD)
 endif()
 
 if (WITH_NETWORK)
-        add_definitions(-DHAS_NETWORK)
+	add_definitions(-DWITH_NETWORK)
 endif()
 
 if (WITH_NETWORK_COMPRESSION)
