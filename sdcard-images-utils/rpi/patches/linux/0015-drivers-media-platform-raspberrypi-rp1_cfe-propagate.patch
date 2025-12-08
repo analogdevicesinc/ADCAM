@@ -1,0 +1,68 @@
+From 4c9e7ddb446b9043d802377132986bb20e829382 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Mon, 8 Dec 2025 15:59:13 +0530
+Subject: [PATCH] drivers: media: platform: raspberrypi: rp1_cfe: propagate
+ VIDIOC_S_FMT to sensor subdevice
+
+When VIDIOC_S_FMT is called on the RP1 CFE capture node, update the
+connected sensor subdevice with the selected format and size. This
+ensures
+the sensor configuration matches the capture node and prevents
+mismatched resolutions or pixel formats.
+
+Additionally, remove the IMMUTABLE flag from the sensor-to-CSI2 pad
+link to allow format changes at runtime.
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ .../media/platform/raspberrypi/rp1_cfe/cfe.c  | 20 ++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c b/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c
+index e6c2ddfff9f6..8194083aed71 100644
+--- a/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c
++++ b/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c
+@@ -1361,6 +1361,11 @@ static int cfe_s_fmt_vid_cap(struct file *file, void *priv,
+ 	struct cfe_node *node = video_drvdata(file);
+ 	struct cfe_device *cfe = node->cfe;
+ 	struct vb2_queue *q = &node->buffer_queue;
++	const struct cfe_fmt *fmt;
++	struct v4l2_subdev_format fmt_src = {
++		.pad = 0,
++		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
++	};
+ 	int ret;
+ 
+ 	cfe_dbg("%s: [%s]\n", __func__, node_desc[node->id].name);
+@@ -1378,6 +1383,20 @@ static int cfe_s_fmt_vid_cap(struct file *file, void *priv,
+ 		node->vid_fmt.fmt.pix.width, node->vid_fmt.fmt.pix.height,
+ 		V4L2_FOURCC_CONV_ARGS(node->vid_fmt.fmt.pix.pixelformat));
+ 
++	fmt = find_format_by_pix(node->vid_fmt.fmt.pix.pixelformat);
++	if (!fmt)
++		fmt = find_format_by_code(MEDIA_BUS_FMT_SRGGB8_1X8);
++
++	fmt_src.format.width  = node->vid_fmt.fmt.pix.width;
++	fmt_src.format.height = node->vid_fmt.fmt.pix.height;
++	fmt_src.format.code   = fmt->code;
++	ret = v4l2_subdev_call(cfe->sensor, pad, set_fmt, NULL, &fmt_src);
++	if (ret){
++		cfe_err("%s v4l2_subdev_call ret = %d\n", __func__, ret);
++		return ret;
++	}
++
++
+ 	return 0;
+ }
+ 
+@@ -2106,7 +2125,6 @@ static int cfe_link_node_pads(struct cfe_device *cfe)
+ 			/* Sensor -> CSI2 */
+ 			ret = media_create_pad_link(&cfe->sensor->entity, source_pad,
+ 						    &cfe->csi2.sd.entity, i,
+-						    MEDIA_LNK_FL_IMMUTABLE |
+ 						    MEDIA_LNK_FL_ENABLED);
+ 			if (ret)
+ 				return ret;
+-- 
+2.25.1
+
