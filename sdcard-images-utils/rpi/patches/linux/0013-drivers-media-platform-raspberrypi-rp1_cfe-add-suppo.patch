@@ -1,0 +1,89 @@
+From 44df748335b34cd389c99baee63fb5165b8038d8 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Mon, 8 Dec 2025 12:09:57 +0530
+Subject: [PATCH 1/2] drivers: media: platform: raspberrypi: rp1_cfe: add
+ support for g_parm and s_parm frame interval ioctls
+
+Add VIDIOC_G_PARM and VIDIOC_S_PARM handlers to allow applications to
+query and set the sensor frame interval. The implementation forwards
+frame-interval operations to the sensor subdevice and reports
+V4L2_CAP_TIMEPERFRAME to userspace.
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ .../media/platform/raspberrypi/rp1_cfe/cfe.c  | 52 +++++++++++++++++++
+ 1 file changed, 52 insertions(+)
+
+diff --git a/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c b/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c
+index 7be6951d6230..e6c2ddfff9f6 100644
+--- a/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c
++++ b/drivers/media/platform/raspberrypi/rp1_cfe/cfe.c
+@@ -1534,6 +1534,55 @@ static int cfe_enum_framesizes(struct file *file, void *priv,
+ 	return 0;
+ }
+ 
++static int cfe_g_parm(struct file *file, void *fh,
++		struct v4l2_streamparm *a)
++{
++	struct cfe_node *node = video_drvdata(file);
++	struct cfe_device *cfe = node->cfe;
++	struct v4l2_subdev_frame_interval fi = {
++		.pad = 0,
++		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
++	};
++	int ret;
++
++	cfe_dbg("%s [%s]\n", __func__, node_desc[node->id].name);
++
++	ret = v4l2_subdev_call(cfe->sensor, pad, get_frame_interval, NULL, &fi);
++	if (ret < 0){
++		return ret;
++	}
++
++	a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
++	a->parm.capture.timeperframe = fi.interval;
++
++	return 0;
++}
++
++static int cfe_s_parm(struct file *file, void *fh,
++		struct v4l2_streamparm *a)
++{
++	struct cfe_node *node = video_drvdata(file);
++	struct cfe_device *cfe = node->cfe;
++	struct v4l2_subdev_frame_interval fi = {
++		.pad = 0,
++		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
++		.interval = a->parm.capture.timeperframe,
++	};
++	int ret;
++
++	cfe_dbg("%s [%s]\n", __func__, node_desc[node->id].name);
++
++	ret = v4l2_subdev_call(cfe->sensor, pad, set_frame_interval, NULL, &fi);
++	if (ret < 0){
++		return ret;
++	}
++
++	a->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
++	a->parm.capture.timeperframe = fi.interval;
++
++	return 0;
++}
++
+ static int cfe_vb2_ioctl_reqbufs(struct file *file, void *priv,
+ 				 struct v4l2_requestbuffers *p)
+ {
+@@ -1621,6 +1670,9 @@ static const struct v4l2_ioctl_ops cfe_ioctl_ops = {
+ 
+ 	.vidioc_enum_framesizes = cfe_enum_framesizes,
+ 
++	.vidioc_g_parm		= cfe_g_parm,
++	.vidioc_s_parm		= cfe_s_parm,
++
+ 	.vidioc_reqbufs = cfe_vb2_ioctl_reqbufs,
+ 	.vidioc_create_bufs = cfe_vb2_ioctl_create_bufs,
+ 	.vidioc_prepare_buf = vb2_ioctl_prepare_buf,
+-- 
+2.25.1
+
