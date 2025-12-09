@@ -74,6 +74,13 @@ static const char Help_Menu[] =
 
 )";
 
+/**
+ * @brief Save a frame's data to a binary file
+ * @param[in] frame The frame object containing the data to save
+ * @param[in] frameType The type of frame data to save (e.g., "depth", "ab", "xyz")
+ * @param[in] mode_num The mode number to include in the output filename
+ * @return Status indicating success or failure of the operation
+ */
 Status save_frame(aditof::Frame &frame, std::string frameType,
                   const int &mode_num) {
 

@@ -69,6 +69,11 @@ class ADIController {
 		*/
     void StopCapture();
 
+    /**
+     * @brief Request a specific frame from offline playback
+     * @param[in] index Frame index to retrieve from recorded file
+     * @return Status indicating success or failure
+     */
     aditof::Status requestFrameOffline(uint32_t index);
 
     /**
@@ -147,17 +152,20 @@ class ADIController {
 
     /**
 		* @brief Gets the first or next frame.
+     * @return Shared pointer to the frame object, or nullptr if unavailable
 		*/
     std::shared_ptr<aditof::Frame> getFrame();
 
     /**
 		* @brief Requesting the SDK for a frame.
+     * @return True if frame request was successful, false otherwise
 		*/
     bool requestFrame();
 
     /**
 		* @brief Flag indicating the existance of any
 		*        camera in the system
+     * @return True if camera is available, false otherwise
 		*/
     bool hasCamera() const;
 
@@ -165,29 +173,62 @@ class ADIController {
 
     /**
 		* @brief Get the maximum camera range.
+     * @return Maximum range value in millimeters
 		*/
     int getRangeMax() const;
 
     /**
 		* @brief Get the minimum camera range.
+     * @return Minimum range value in millimeters
 		*/
     int getRangeMin() const;
 
     /**
 		* @brief Gets camera bit counts.
+     * @return Number of bits per pixel
 		*/
     int getbitCount() const;
 
     /**
     * @brief Gets camera in use.
+    * @return Index of currently active camera
     */
     int getCameraInUse() const;
 
+    /**
+     * @brief Output delta time information for frame timing analysis
+     * @param[in] frameNumber Frame number to analyze
+     * @return True if delta time was output successfully, false otherwise
+     */
     bool OutputDeltaTime(uint32_t frameNumber);
 
+    /**
+     * @brief Get current frame rate
+     * @param[out] fps Reference to store frames per second value
+     * @return Status indicating success or failure
+     */
     aditof::Status getFrameRate(uint32_t &fps);
+    
+    /**
+     * @brief Get total number of frames received
+     * @param[out] framesRecevied Reference to store frame count
+     * @return Status indicating success or failure
+     */
     aditof::Status getFramesReceived(uint32_t &framesRecevied);
+    
+    /**
+     * @brief Set frame rate and preview rate for capture
+     * @param[in] frameRate Target capture frame rate in FPS
+     * @param[in] previewRate Preview update rate (1 = every frame) [default: 1]
+     * @return Status indicating success or failure
+     */
     aditof::Status setPreviewRate(uint32_t frameRate, uint32_t previewRate = 1);
+    
+    /**
+     * @brief Get number of frames lost during capture
+     * @param[out] framesLost Reference to store lost frame count
+     * @return Status indicating success or failure
+     */
     aditof::Status getFramesLost(uint32_t &framesLost);
 
     std::vector<std::shared_ptr<aditof::Camera>> m_cameras;
@@ -200,9 +241,22 @@ class ADIController {
 		* @brief Sets a thread while capturing camera frames.
 		*/
     void captureFrames();
+    
+    /**
+     * @brief Calculate frame loss between current and previous frame
+     * @param[in] frameNumber Current frame number from metadata
+     * @param[in,out] prevFrameNumber Previous frame number reference
+     * @param[in,out] currentFrameNumber Current frame number reference
+     */
     void calculateFrameLoss(const uint32_t frameNumber,
                             uint32_t &prevFrameNumber,
                             uint32_t &currentFrameNumber);
+    
+    /**
+     * @brief Determine if frame should be dropped based on preview rate
+     * @param[in] frameNum Frame number to evaluate
+     * @return True if frame should be dropped, false if it should be kept
+     */
     bool shouldDropFrame(uint32_t frameNum);
     std::unordered_map<
         uint32_t, std::chrono::time_point<std::chrono::high_resolution_clock>>

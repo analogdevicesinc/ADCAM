@@ -141,8 +141,8 @@ if __name__ == "__main__":
         if not status:
             print("camera1.requestFrame() failed with status: ", status)
 
-        depth_map = np.array(frame.getData("depth"), dtype="uint16", copy=False)
-        ab_map = np.array(frame.getData("ab"), dtype="uint16", copy=False)
+        depth_map = np.asarray(frame.getData("depth"), dtype="uint16")
+        ab_map = np.asarray(frame.getData("ab"), dtype="uint16")
 
         # Creation of the AB image
         ab_map = ab_map[0: int(ab_map.shape[0] / 2), :]

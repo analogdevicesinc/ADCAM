@@ -159,18 +159,18 @@ if __name__ == "__main__":
             xyz_map = None
             
             if "depth" in available_types:
-                depth_map = np.array(frame.getData("depth"), dtype="uint16", copy=False)
+                depth_map = np.asarray(frame.getData("depth"), dtype="uint16")
             else:
                 print("Warning: Depth frame not available")
                 continue
             
             if "ab" in available_types:
-                ab_map = np.array(frame.getData("ab"), dtype="uint16", copy=False)
+                ab_map = np.asarray(frame.getData("ab"), dtype="uint16")
             else:
                 print("Warning: AB frame not available (bitsInAB=0)")
             
             if "xyz" in available_types:
-                xyz_map = np.array(frame.getData("xyz"), dtype="int16", copy=False)
+                xyz_map = np.asarray(frame.getData("xyz"), dtype="int16")
             else:
                 print("Warning: XYZ frame not available (xyzEnable=0)")
 
@@ -274,18 +274,18 @@ if __name__ == "__main__":
             xyz_map = None
             
             if "depth" in available_types:
-                depth_map = np.array(frame.getData("depth"), dtype="uint16", copy=False)
+                depth_map = np.asarray(frame.getData("depth"), dtype="uint16")
             else:
                 print("Warning: Depth frame not available")
                 break
             
             if "ab" in available_types:
-                ab_map = np.array(frame.getData("ab"), dtype="uint16", copy=False)
+                ab_map = np.asarray(frame.getData("ab"), dtype="uint16")
             else:
                 print("Warning: AB frame not available (bitsInAB=0)")
             
             if "xyz" in available_types:
-                xyz_map = np.array(frame.getData("xyz"), dtype="int16", copy=False)
+                xyz_map = np.asarray(frame.getData("xyz"), dtype="int16")
             else:
                 print("Warning: XYZ frame not available (xyzEnable=0)")
 

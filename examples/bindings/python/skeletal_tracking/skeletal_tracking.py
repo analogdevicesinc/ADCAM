@@ -117,7 +117,7 @@ if __name__ == "__main__":
         if not status:
             print("camera1.requestFrame() failed with status: ", status)
 
-        ab_map = np.array(frame.getData("ab"), dtype="uint16", copy=False)
+        ab_map = np.asarray(frame.getData("ab"), dtype="uint16")
 
         # Creation of the IR image
         ab_map = distance_scale_ir * ab_map

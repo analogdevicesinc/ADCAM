@@ -5,13 +5,22 @@
 /*                                                                              */
 /********************************************************************************/
 
+/**
+ * @file main.cpp
+ * @brief Data collection application for ADCAM Time-of-Flight camera system
+ * 
+ * This application captures a specified number of frames from the ToF camera
+ * and saves them to disk in binary or other formats. Supports multiple camera
+ * modes, frame rate control, and configuration file management.
+ */
+
 #include <aditof/camera.h>
 #include <aditof/depth_sensor_interface.h>
 #include <aditof/frame.h>
 #include <aditof/frame_handler.h>
 #include <aditof/system.h>
-#include <aditof/version.h>
 #include <aditof/version-kit.h>
+#include <aditof/version.h>
 #include <chrono>
 #include <command_parser.h>
 #include <ctime>
@@ -45,6 +54,12 @@ enum : uint16_t {
 using namespace aditof;
 
 #ifdef _WIN32
+/**
+ * @brief Main entry point for data collection application
+ * @param[in] argc Number of command line arguments
+ * @param[in] argv Array of command line argument strings
+ * @return 0 on success, non-zero on failure
+ */
 int main(int argc, char *argv[]);
 #endif
 
@@ -146,7 +161,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    std::string folder_path; // Path to store the depth frames
+    std::string folder_path;    // Path to store the depth frames
     std::string json_file_path; // Get the .json file from command line
 
     uint32_t n_frames = 0;
@@ -158,9 +173,8 @@ int main(int argc, char *argv[]) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_alsologtostderr = 1;
 
-
     LOG(INFO) << "ADCAM version: " << aditof::getKitVersion()
-	      << " | SDK version: " << aditof::getApiVersion()
+              << " | SDK version: " << aditof::getApiVersion()
               << " | branch: " << aditof::getBranchVersion()
               << " | commit: " << aditof::getCommitVersion();
 
@@ -390,9 +404,11 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    while(frames_captured < n_frames) {
+    while (frames_captured < n_frames) {
         auto end_time = std::chrono::high_resolution_clock::now();
-        auto total_time_ms_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        auto total_time_ms_duration =
+            std::chrono::duration_cast<std::chrono::milliseconds>(end_time -
+                                                                  start_time);
         milliseconds = total_time_ms_duration.count();
         if (milliseconds >= runtime_in_ms) {
             LOG(WARNING) << "Maximum capture time reached. Stopping capture.";
@@ -404,7 +420,8 @@ int main(int argc, char *argv[]) {
             break;
         }
         frames_captured++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(5)); // Sleep for 5ms
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(5)); // Sleep for 5ms
     }
 
     LOG(INFO) << "Capture complete. Frames captured: " << frames_captured;
@@ -414,7 +431,8 @@ int main(int argc, char *argv[]) {
     }
 
     if (milliseconds > 0.0 && frames_captured > 0) {
-        double measured_fps = (double)frames_captured / ((double)milliseconds / 1000.0);
+        double measured_fps =
+            (double)frames_captured / ((double)milliseconds / 1000.0);
         LOG(INFO) << "Measured FPS: " << measured_fps;
     }
 

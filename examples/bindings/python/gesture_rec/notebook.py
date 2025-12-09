@@ -216,7 +216,7 @@ class GestureDemo(Frame):
             height = metadata.height
 
 #camera_range = np.power(2, 16)
-            depth_map = np.array(frame.getData("depth"), copy=False)
+            depth_map = np.asarray(frame.getData("depth"))
             depth_map[depth_map > DEPTH_THD] = DEPTH_THD
             camera_range = DEPTH_THD
             distance_scale = 255.0 / camera_range
@@ -231,7 +231,7 @@ class GestureDemo(Frame):
                         status)
 
 #Creation of the Depth image
-                depth_map = np.array(frame.getData("depth"), copy=False)
+                depth_map = np.asarray(frame.getData("depth"))
                 depth_map = depth_map[0: height, 0:width]
                 depth_map[depth_map > DEPTH_THD] = DEPTH_THD
                 depth_map = cv.flip(depth_map, 1)

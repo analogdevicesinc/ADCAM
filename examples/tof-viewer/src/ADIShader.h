@@ -48,6 +48,13 @@
 
 namespace adiviewer {
 
+/**
+ * @class ADIShader
+ * @brief OpenGL shader management class for vertex and fragment shaders
+ * 
+ * Handles compilation, linking, and management of OpenGL shaders.
+ * Supports both vertex and fragment shaders with error checking.
+ */
 class ADIShader {
   public:
     /**
@@ -104,6 +111,13 @@ class ADIShader {
     GLuint ID = 0;
 };
 
+/**
+ * @class Program
+ * @brief OpenGL shader program management class
+ * 
+ * Links vertex and fragment shaders into a complete shader program.
+ * Provides methods for activation and uniform variable access.
+ */
 class Program {
   public:
     Program() {}
