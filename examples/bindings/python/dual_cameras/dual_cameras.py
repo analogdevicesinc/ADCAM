@@ -136,8 +136,8 @@ print("camera1.stop()", status)
 status = camera2.stop()
 print("camera1.stop()", status)
 
-image1 = np.array(frame1.getData("depth"), copy=False)
-image2 = np.array(frame2.getData("depth"), copy=False)
+image1 = np.asarray(frame1.getData("depth"))
+image2 = np.asarray(frame2.getData("depth"))
 
 plt.figure(10)
 plt.imshow(image1, cmap = 'jet')
