@@ -1,0 +1,148 @@
+From 64880b60b5644d2bbb06377a4352c05b064a1906 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 9 Dec 2025 12:00:14 +0530
+Subject: [PATCH] drivers: media: i2c: adsd3500.c: simplify set_fmt and remove
+ unused crop/mode handling
+
+Rework the set_fmt implementation by removing the crop rectangle and
+mode-selection logic, validating formats directly against the mode
+table, and updating the active pad format accordingly. Also drop the previous
+init_state setup and initialize the default format during probe.
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/adsd3500.c | 86 +++++++++++++++---------------------
+ 1 file changed, 36 insertions(+), 50 deletions(-)
+
+diff --git a/drivers/media/i2c/adsd3500.c b/drivers/media/i2c/adsd3500.c
+index 007a447e0f98..e35528e56ff9 100755
+--- a/drivers/media/i2c/adsd3500.c
++++ b/drivers/media/i2c/adsd3500.c
+@@ -1336,66 +1336,52 @@ adsd3500_get_pad_crop(struct adsd3500 *adsd3500,
+ }
+ 
+ static int adsd3500_set_format(struct v4l2_subdev *sd,
+-			       struct v4l2_subdev_state *state,
+-			       struct v4l2_subdev_format *format)
++		struct v4l2_subdev_state *state,
++		struct v4l2_subdev_format *format)
+ {
+ 	struct adsd3500 *adsd3500 = to_adsd3500(sd);
+ 	struct v4l2_mbus_framefmt *framefmt;
+-	struct v4l2_rect *crop;
+-	const struct adsd3500_mode_info *new_mode;
+-	int ret;
++	int i;
+ 
+-	dev_info(adsd3500->dev, "set_fmt: %x %dx%d %d\n",
+-		format->format.code, format->format.width,
+-		format->format.height, format->which);
++	dev_dbg(adsd3500->dev, "set_fmt: code=0x%x width=%d height=%d\n",
++			format->format.code, format->format.width,
++			format->format.height);
+ 
+ 	mutex_lock(&adsd3500->lock);
+ 
+-	if (format->pad != 0)
++	if (format->pad != 0) {
++		mutex_unlock(&adsd3500->lock);
+ 		return -EINVAL;
+-
+-	crop = adsd3500_get_pad_crop(adsd3500, state, format->pad,
+-				     format->which);
+-	if (IS_ERR(crop))
+-		return PTR_ERR(crop);
+-
+-	new_mode = v4l2_find_nearest_size(adsd3500_mode_info_data,
+-					  ARRAY_SIZE(adsd3500_mode_info_data),
+-					  width, height, format->format.width,
+-					  format->format.height);
+-	crop->width = new_mode->width;
+-	crop->height = new_mode->height;
+-
+-	if (format->which == V4L2_SUBDEV_FORMAT_ACTIVE) {
+-		ret = v4l2_ctrl_s_ctrl_int64(adsd3500->pixel_rate,
+-					     new_mode->pixel_rate);
+-		if (ret < 0)
+-			return ret;
+-
+-		ret = v4l2_ctrl_s_ctrl(adsd3500->link_freq,
+-				       new_mode->link_freq_idx);
+-		if (ret < 0)
+-			return ret;
+-
+-		adsd3500->current_mode = new_mode;
+ 	}
+ 
+ 	framefmt = adsd3500_get_pad_format(adsd3500, state, format);
+-	if (IS_ERR(framefmt))
++	if (IS_ERR(framefmt)){
++		mutex_unlock(&adsd3500->lock);
+ 		return PTR_ERR(framefmt);
++	}
++
++	for (i = 0; i < ARRAY_SIZE(adsd3500_mode_info_data); i++)
++	{
++		if(adsd3500_mode_info_data[i].width == format->format.width &&
++			adsd3500_mode_info_data[i].height == format->format.height &&
++			adsd3500_mode_info_data[i].code == format->format.code){
++			framefmt->width      = format->format.width;
++			framefmt->height     = format->format.height;
++			framefmt->code       = format->format.code;
++			framefmt->field      = V4L2_FIELD_NONE;
++			framefmt->colorspace = V4L2_COLORSPACE_RAW;
++			break;
++		}
++	}
+ 
+-	framefmt->width = crop->width;
+-	framefmt->height = crop->height;
+-	framefmt->code = format->format.code;
+-	framefmt->field = V4L2_FIELD_NONE;
+-	framefmt->colorspace = V4L2_COLORSPACE_RAW;
++	if( i == ARRAY_SIZE(adsd3500_mode_info_data))
++		dev_err(adsd3500->dev,"invalid resolution supplied to set mode w=%d h=%d\n code=0x%x\n",
++		format->format.width, format->format.height, format->format.code);
+ 
+ 	format->format = *framefmt;
+-	adsd3500->fmt = *framefmt;
+ 
+ 	mutex_unlock(&adsd3500->lock);
+ 
+-	dev_info(adsd3500->dev, "%s: Exit\n", __func__);
+ 	return 0;
+ }
+ 
+@@ -1540,14 +1526,7 @@ static int adsd3500_init_state(struct v4l2_subdev *sd,
+ 		struct v4l2_subdev_state *state)
+ {
+ 
+-	struct v4l2_subdev_format fmt = { 0 };
+-
+-	fmt.which = state ? V4L2_SUBDEV_FORMAT_TRY : V4L2_SUBDEV_FORMAT_ACTIVE;
+-	fmt.format.width = adsd3500_mode_info_data[0].width;
+-	fmt.format.height = adsd3500_mode_info_data[0].height;
+-	fmt.format.code = adsd3500_mode_info_data[0].code;
+-
+-	return adsd3500_set_format(sd, state, &fmt);
++	return 0;
+ }
+ 
+ static const struct v4l2_subdev_core_ops adsd3500_core_ops = {
+@@ -1937,6 +1916,13 @@ static int adsd3500_probe(struct i2c_client *client)
+ 			dev_err(&client->dev, "Failed to initalize interrupt\n");
+ 	}
+ 
++	memset(&adsd3500->fmt, 0, sizeof(adsd3500->fmt));
++	adsd3500->fmt.width  = adsd3500_mode_info_data[0].width;
++	adsd3500->fmt.height = adsd3500_mode_info_data[0].height;
++	adsd3500->fmt.code   = adsd3500_mode_info_data[0].code;
++	adsd3500->fmt.field  = V4L2_FIELD_NONE;
++	adsd3500->fmt.colorspace = V4L2_COLORSPACE_RAW;
++
+ 	v4l2_i2c_subdev_init(&adsd3500->sd, client, &adsd3500_subdev_ops);
+ 	adsd3500->sd.internal_ops = &adsd3500_internal_ops;
+ 	adsd3500->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+-- 
+2.25.1
+
