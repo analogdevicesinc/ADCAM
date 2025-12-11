@@ -1,0 +1,15 @@
+#!/bin/bash
+
+nr_frames=${1:-1}
+
+v4l2-ctl --set-ctrl=operating_mode=6 -d /dev/v4l-subdev2
+v4l2-ctl --set-ctrl=phase_depth_bits=6 -d /dev/v4l-subdev2
+v4l2-ctl --set-ctrl=ab_bits=6 -d /dev/v4l-subdev2
+v4l2-ctl --set-ctrl=confidence_bits=2 -d /dev/v4l-subdev2
+v4l2-ctl --set-ctrl=ab_averaging=1 -d /dev/v4l-subdev2
+v4l2-ctl --set-ctrl=depth_enable=1 -d /dev/v4l-subdev2
+v4l2-ctl --device /dev/video0 --set-fmt-video=width=2560,height=512,pixelformat=RGGB 
+
+./fix_rp1_cfe_format_mismatch.sh -f 8bit -r 2560x512 > /dev/null 2>&1
+
+v4l2-ctl --device /dev/video0 --stream-mmap --stream-to=mode6.bin --stream-count=$nr_frames
