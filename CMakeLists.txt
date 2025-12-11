@@ -21,15 +21,6 @@ option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
 option(WITH_NETWORK "Build network interface?" ON)
-if (WITH_NETWORK)
-	option(WITH_NETWORK_COMPRESSION "Build network interface to compress data?" ON)
-endif()
-
-if (WITH_NETWORK_COMPRESSION)
-        # ON for LZ4
-        # OFF for RVL + JPEGTURBO
-	option(WITH_NETWORK_COMPRESSION_LZ4 "Build network interface to compress data?" OFF)
-endif()
 
 ################################# FIXED #######################################
 
@@ -37,10 +28,18 @@ endif()
 option(NVIDIA "Set to ON when building on NVIDIA" ON)
 
 if (WITH_NETWORK)
+        option(WITH_NETWORK_COMPRESSION "Build network interface to compress data?" ON)
+        if (WITH_NETWORK_COMPRESSION)
+                # ON for LZ4
+                # OFF for RVL + JPEGTURBO
+                option(WITH_NETWORK_COMPRESSION_LZ4 "Build network interface to compress data?" OFF)
+        endif()
+
         option(WITH_SUBMODULES "Use submodules to build the library" ON)
         option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" ON)
         option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" ON)
 else()
+        option(WITH_NETWORK_COMPRESSION "Build network interface to compress data?" OFF)
         option(WITH_SUBMODULES "Use submodules to build the library" OFF)
         option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" OFF)
         option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" OFF)
@@ -155,7 +154,7 @@ set(RESOURCES_DIR "${CMAKE_BINARY_DIR}/resources")
 make_directory(${RESOURCES_DIR})
 
 if (WITH_OFFLINE)
-        add_definitions(-DHAS_OFFLINE)
+        add_definitions(-DWITH_OFFLINE)
 endif()
 
 if(WITH_GLOG_DEPENDENCY)
