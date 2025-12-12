@@ -71,6 +71,7 @@ static const char Help_Menu[] =
         4: pcm-native
         5: long-range mixed
         6: short-range mixed
+
 )";
 
 Status save_frame(aditof::Frame &frame, std::string frameType,
@@ -79,7 +80,6 @@ Status save_frame(aditof::Frame &frame, std::string frameType,
     uint16_t *data1;
     FrameDataDetails fDetails;
     Status status = Status::OK;
-
     status = frame.getData(frameType, &data1);
     if (status != Status::OK) {
         LOG(ERROR) << "Could not get frame data " + frameType + "!";

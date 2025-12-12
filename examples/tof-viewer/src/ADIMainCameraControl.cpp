@@ -72,9 +72,19 @@ void ADIMainWindow::InitCamera(std::string filePath) {
 
     std::string version = aditof::getApiVersion();
     LOG(INFO) << "Preparing camera. Please wait...\n";
+
+    // For offline mode, always enable all display types
+    // The viewer threads will check metadata/config per-frame to decide processing
+    // For live mode, set enable flags to true initially (will be properly set after mode is configured)
+    m_enable_ab_display = true;
+    m_enable_depth_display = true;
+    m_enable_xyz_display = true;
+
+    // Initially create with all displays enabled (will be updated after mode is set)
     m_view_instance = std::make_shared<adiviewer::ADIView>(
         std::make_shared<adicontroller::ADIController>(m_cameras_list),
-        "ToFViewer " + version);
+        "ToFViewer " + version, m_enable_ab_display, m_enable_depth_display,
+        m_enable_xyz_display);
 
     if (!m_off_line) {
         m_cameras_list.clear();
@@ -136,6 +146,37 @@ void ADIMainWindow::InitCamera(std::string filePath) {
     m_is_open_device = true;
 }
 
+void ADIMainWindow::UpdateOfflineFrameTypeAvailability() {
+    // For offline mode, check what frame types are actually available
+    // by requesting a frame and checking its metadata
+    if (!m_off_line || !GetActiveCamera()) {
+        return;
+    }
+
+    aditof::Frame frame;
+    if (GetActiveCamera()->requestFrame(&frame) == aditof::Status::OK) {
+        aditof::Metadata *metadata;
+        if (frame.getData("metadata", (uint16_t **)&metadata) ==
+                aditof::Status::OK &&
+            metadata != nullptr) {
+            // Check config to determine which displays should be enabled
+            // For depth, check if data exists (bitsInDepth may be 0 for ISP-computed modes)
+            m_enable_depth_display = frame.haveDataType("depth");
+            m_enable_ab_display = (metadata->bitsInAb != 0);
+            // XYZ availability is based on xyzEnabled flag in metadata
+            m_enable_xyz_display = (metadata->xyzEnabled != 0);
+
+            LOG(INFO) << "Offline frame types available: depth="
+                      << m_enable_depth_display << " ab=" << m_enable_ab_display
+                      << " xyz=" << m_enable_xyz_display
+                      << " (from metadata: bitsInDepth="
+                      << (int)metadata->bitsInDepth
+                      << " bitsInAb=" << (int)metadata->bitsInAb
+                      << " xyzEnabled=" << (int)metadata->xyzEnabled << ")";
+        }
+    }
+}
+
 void ADIMainWindow::PrepareCamera(uint8_t mode) {
     aditof::Status status = aditof::Status::OK;
     std::vector<aditof::FrameDetails> frameTypes;
@@ -179,6 +220,8 @@ void ADIMainWindow::PrepareCamera(uint8_t mode) {
     status = GetActiveCamera()->getDetails(camDetails);
     //int32_t totalCaptures = camDetails.frameType.totalCaptures;
 
+    // For offline mode, recreate viewer with all frame types enabled
+    // The threads will check metadata per-frame to decide if processing is needed
     status = GetActiveCamera()->adsd3500GetFrameRate(m_fps_expected);
 
     if (m_enable_preview) {
@@ -199,6 +242,11 @@ void ADIMainWindow::PrepareCamera(uint8_t mode) {
     if (status != aditof::Status::OK) {
         LOG(ERROR) << "Could not start camera!";
         return;
+    }
+
+    // For offline mode, check what frame types are actually available
+    if (m_off_line) {
+        UpdateOfflineFrameTypeAvailability();
     }
 
     LOG(INFO) << "Camera ready.";
@@ -272,9 +320,30 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
                 //LOG(INFO) << "Diverging: " << diverging;
             }
 
-            bool haveAB = frame->haveDataType("ab");
-            bool haveDepth = frame->haveDataType("depth");
-            bool haveXYZ = frame->haveDataType("xyz");
+            // Check what frame types are available based on metadata config
+            bool haveAB, haveDepth, haveXYZ;
+            if (m_off_line) {
+                // Offline: use cached availability from UpdateOfflineFrameTypeAvailability()
+                haveAB = m_enable_ab_display && frame->haveDataType("ab");
+                haveDepth =
+                    m_enable_depth_display && frame->haveDataType("depth");
+                haveXYZ = m_enable_xyz_display && frame->haveDataType("xyz");
+            } else {
+                // Live mode: For AB and XYZ, check config. For depth, always show if data exists
+                // (bitsInDepth may be 0 for ISP-computed depth modes)
+                if (metadata != nullptr) {
+                    haveDepth = frame->haveDataType("depth");
+                    haveAB =
+                        (metadata->bitsInAb != 0) && frame->haveDataType("ab");
+                    haveXYZ = (metadata->xyzEnabled != 0) &&
+                              frame->haveDataType("xyz");
+                } else {
+                    // Fallback if metadata not available
+                    haveAB = frame->haveDataType("ab");
+                    haveDepth = frame->haveDataType("depth");
+                    haveXYZ = frame->haveDataType("xyz");
+                }
+            }
 
             uint32_t numberAvailableDataTypes = 0;
 
