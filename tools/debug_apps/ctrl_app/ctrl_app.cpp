@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <array>
 
 #include <cstring>
 #include <errno.h>
@@ -30,8 +31,69 @@ using namespace std;
 #define MEDIA_DEVICE "/dev/media0"
 
 #define VER_MAJ 1
-#define VER_MIN 1
+#define VER_MIN 2
 #define VER_PATCH 0
+
+std::string find_media_device_with_entity(const std::string &entity_name)
+{
+    for (int i = 0; i <= 3; i++)
+    {
+        std::string media_dev = "/dev/media" + std::to_string(i);
+        std::string cmd = "media-ctl -d " + media_dev + " --print-dot 2>/dev/null";
+
+        std::array<char, 256> buffer{};
+        std::string dot_output;
+
+        FILE *pipe = popen(cmd.c_str(), "r");
+        if (!pipe)
+            continue;
+
+        while (fgets(buffer.data(), buffer.size(), pipe))
+            dot_output += buffer.data();
+
+        pclose(pipe);
+
+        if (dot_output.empty())
+            continue;
+
+        if (dot_output.find(entity_name) != std::string::npos)
+            return media_dev;
+    }
+
+    return "";
+}
+
+std::string find_subdev_in_media(const std::string &media_dev,
+                                 const std::string &entity_name)
+{
+    std::string cmd = "media-ctl -d " + media_dev + " --print-dot 2>/dev/null";
+
+    std::array<char, 256> buffer{};
+    std::string dot;
+
+    FILE *pipe = popen(cmd.c_str(), "r");
+    if (!pipe)
+        return "";
+
+    while (fgets(buffer.data(), buffer.size(), pipe))
+        dot += buffer.data();
+
+    pclose(pipe);
+
+    if (dot.empty())
+        return "";
+
+    size_t pos = dot.find(entity_name);
+    if (pos == std::string::npos)
+        return "";
+
+    size_t dev_pos = dot.find("/dev/v4l-subdev", pos);
+    if (dev_pos == std::string::npos)
+        return "";
+
+    size_t end = dot.find_first_of(" \"\n", dev_pos);
+    return dot.substr(dev_pos, end - dev_pos);
+}
 
 bool findDevicePathsAtVideo(const std::string &video, std::string &subdev_path,
                             std::string &device_name) {
@@ -123,6 +185,7 @@ int main(int argc, char **argv) {
     uint8_t data[CTRL_SIZE] = {0};
     int status;
 
+#ifdef NVIDIA
     std::string video = "/dev/media0";
     std::string deviceName = "adsd3500";
     std::string subdevPath;
@@ -132,6 +195,24 @@ int main(int argc, char **argv) {
         std::cout << "failed to find device paths at video: " << video;
         return status;
     }
+#endif
+
+#ifdef RPI
+    const std::string target = "adsd3500";
+    std::string media_dev = find_media_device_with_entity(target);
+
+    if (media_dev.empty()) {
+	    std::cout << "ADSD3500 not found in /dev/media0..media3" << std::endl;
+	    return 1;
+    }
+
+    std::string subdevPath = find_subdev_in_media(media_dev, target);
+
+    if (subdevPath.empty()) {
+	    std::cout << "Could not find ADSD3500 v4l-subdev node" << std::endl;
+	    return 1;
+    }
+#endif
 
     int fd = open(subdevPath.c_str(), O_RDWR | O_NONBLOCK);
     if (fd == -1) {
