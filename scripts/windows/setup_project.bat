@@ -156,7 +156,7 @@ popd
 ::build the project with the selected options
 pushd %build_dire%
 cmake -G %generator% -DNVIDIA=OFF -DNXP=OFF -DWITH_NETWORK=ON -DWITH_SUBMODULES=ON -DWITH_PROTOBUF_DEPENDENCY=ON -DWITH_GLOG_DEPEDENCY=ON -DRECV_ASYNC=on %source_dir% -DCMAKE_BUILD_TYPE=%config_type%
-cmake --build . --config %config_type% -j %threads%
+cmake --build . --config %config_type% -j %threads% 
 popd
 EXIT /B %ERRORLEVEL%
 
