@@ -1,30 +1,107 @@
-/********************************************************************************/
-/*                                                                              */
-/* Copyright (c) 2020 Analog Devices, Inc. All Rights Reserved.                 */
-/* This software is proprietary to Analog Devices, Inc. and its licensors.      */
-/*                                                                              */
-/********************************************************************************/
+/*
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Analog Devices, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #include <ADIController.h>
 #ifdef USE_GLOG
 #include <glog/logging.h>
 #else
 #include <aditof/log.h>
 #endif
+#include <chrono>
+#include <cmath>
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 
 using namespace adicontroller;
+
+#include <cstddef>
+#include <deque>
+class TrendWindow {
+  public:
+    TrendWindow(size_t windowSize = 20) : maxSize(windowSize) {}
+
+    void add(double value) {
+        if (window.size() == maxSize) {
+            window.pop_front();
+        }
+        window.push_back(value);
+    }
+
+    // Computes the slope of best-fit line (linear regression)
+    // Returns 0 if not enough points
+    double calculate_slope() const {
+        if (window.size() < maxSize)
+            return 0.0;
+
+        size_t n = window.size();
+        double sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumXX = 0.0;
+        for (size_t i = 0; i < n; ++i) {
+            sumX += i;
+            sumY += window[i];
+            sumXY += i * window[i];
+            sumXX += i * i;
+        }
+        double denom = n * sumXX - sumX * sumX;
+        if (denom == 0.0)
+            return 0.0; // Avoid division by zero
+
+        double m = (n * sumXY - sumX * sumY) / denom;
+        return m;
+    }
+
+    // Helper to check if the trend is increasing
+    bool isIncreasing(double threshold, double &slope) const {
+        slope = calculate_slope();
+        return slope > threshold;
+    }
+
+    void clear() { window.clear(); }
+
+  private:
+    size_t maxSize;
+    std::deque<double> window;
+};
+
+static TrendWindow iw(100);
 
 ADIController::ADIController(
     std::vector<std::shared_ptr<aditof::Camera>> camerasList)
     : m_cameraInUse(-1), m_frameRequested(false) {
 
-    m_recorder = std::make_unique<ADIToFRecorder>();
     m_cameras = camerasList;
     if (m_cameras.size()) {
         // Use the first camera that is found
         m_cameraInUse = 0;
-        //auto camera = m_cameras[static_cast<unsigned int>(m_cameraInUse)];
+        auto camera = m_cameras[static_cast<unsigned int>(m_cameraInUse)];
         m_framePtr = std::make_shared<aditof::Frame>();
     } else {
         LOG(WARNING) << "No cameras found!";
@@ -39,14 +116,21 @@ ADIController::~ADIController() {
     m_cameras[static_cast<unsigned int>(m_cameraInUse)]->stop();
 }
 
-void ADIController::StartCapture() {
+void ADIController::StartCapture(const uint32_t frameRate) {
     if (m_cameraInUse == -1) {
         return;
     }
 
+    m_rxTimeLookUp.clear();
+    iw.clear();
+
+    m_fps_startTime = std::chrono::system_clock::now();
+    m_frame_counter = 0;
     m_stopFlag = false;
-    m_workerThread =
-        std::thread(std::bind(&ADIController::captureFrames, this));
+    m_frames_lost = 0;
+    m_prev_frame_number = -1;
+    m_current_frame_number = 0;
+    m_workerThread = std::thread([this]() { captureFrames(); });
 }
 
 void ADIController::StopCapture() {
@@ -66,11 +150,6 @@ void ADIController::StopCapture() {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
 
-std::string ADIController::getMode() const {
-    // TODO: implement get mode
-    return "";
-}
-
 void ADIController::setMode(const uint8_t &mode) {
     if (m_cameraInUse == -1) {
         return;
@@ -79,80 +158,47 @@ void ADIController::setMode(const uint8_t &mode) {
     camera->setMode(mode);
 }
 
-std::pair<float, float> ADIController::getTemperature() {
-    auto returnValue = std::make_pair<float, float>(0.0, 0.0);
-
-    if (m_cameraInUse == -1) {
-        return returnValue;
-    }
-
-    auto camera = m_cameras[static_cast<unsigned int>(m_cameraInUse)];
-
-    // TODO: Implement
-    //std::shared_ptr<aditof::DepthSensorInterface> device = camera->getSensor();
-    //device->readLaserTemp(returnValue.second);
-    return returnValue;
-}
-
-void ADIController::startRecording(const std::string &fileName,
-                                   unsigned int height, unsigned int width,
-                                   unsigned int fps) {
-
-    if (m_recorder != nullptr) {
-        m_recorder = std::make_unique<ADIToFRecorder>();
-    }
-    m_recorder->setSaveBinaryFormat(this->m_saveBinaryFormat);
-    m_recorder->startRecording(fileName, height, width, fps);
-}
-
-void ADIController::stopRecording() { m_recorder->stopRecording(); }
-
-int ADIController::startPlayback(const std::string &fileName, int &fps) {
-    return m_recorder->startPlayback(fileName, fps);
-}
-
-void ADIController::stopPlayback() { m_recorder->stopPlayback(); }
-
-bool ADIController::playbackFinished() const {
-    return m_recorder->isPlaybackFinished();
-}
-
-bool ADIController::recordingFinished() const {
-    return m_recorder->isRecordingFinished();
-}
-
-bool ADIController::playbackPaused() const {
-    return m_recorder->getPlaybackPaused();
-}
-
-void ADIController::pausePlayback(bool paused) const {
-    m_recorder->setPlaybackPaused(paused);
-}
-
 std::shared_ptr<aditof::Frame> ADIController::getFrame() {
-    if (m_recorder->isPlaybackEnabled()) {
-        return m_recorder->readNewFrame();
-    }
-    return m_queue.dequeue();
+    return m_queue.empty() ? nullptr : m_queue.dequeue();
 }
 
-void ADIController::requestFrame() {
-    if (m_recorder->isPlaybackEnabled()) {
-        m_recorder->requestFrame();
-    } else {
-        std::unique_lock<std::mutex> lock(m_requestMutex);
-        m_frameRequested = true;
-        lock.unlock();
-        m_requestCv.notify_one();
+bool ADIController::requestFrame() {
+    std::unique_lock<std::mutex> lock(m_requestMutex, std::try_to_lock);
+
+    if (!lock.owns_lock()) {
+        return false;
     }
+
+    m_frameRequested = true;
+    lock.unlock();
+    m_requestCv.notify_one();
+    return true;
 }
 
 bool ADIController::hasCamera() const { return !m_cameras.empty(); }
 
+void ADIController::calculateFrameLoss(const uint32_t frameNumber,
+                                       uint32_t &prevFrameNumber,
+                                       uint32_t &currentFrameNumber) {
+
+    // Do frame loss calculation.
+    prevFrameNumber = currentFrameNumber;
+    currentFrameNumber = frameNumber;
+
+    if (currentFrameNumber - prevFrameNumber > 1) {
+        m_frames_lost += (currentFrameNumber - prevFrameNumber - 1);
+    }
+}
+
 void ADIController::captureFrames() {
     while (!m_stopFlag.load()) {
-        std::unique_lock<std::mutex> lock(m_requestMutex);
-        m_requestCv.wait(lock, [&] { return m_frameRequested || m_stopFlag; });
+
+        if (m_preview_rate ==
+            1) { // Allow the viewer to request frames as needed
+            std::unique_lock<std::mutex> lock(m_requestMutex);
+            m_requestCv.wait(lock,
+                             [&] { return m_frameRequested || m_stopFlag; });
+        }
 
         if (m_stopFlag) {
             panicCount = 0;
@@ -161,7 +207,8 @@ void ADIController::captureFrames() {
 
         auto camera = m_cameras[static_cast<unsigned int>(m_cameraInUse)];
         auto frame = std::make_shared<aditof::Frame>();
-        aditof::Status status = camera->requestFrame(frame.get());
+        auto fg = frame.get();
+        aditof::Status status = camera->requestFrame(fg);
         if (status != aditof::Status::OK) {
             if (panicCount >= 7) {
                 panicStop = true;
@@ -174,42 +221,128 @@ void ADIController::captureFrames() {
             continue;
         }
 
-        if (m_recorder->isRecordingEnabled()) {
-            m_recorder->recordNewFrame(frame);
+        m_frame_counter++;
+        static uint32_t local_frame_counter;
+
+        if (m_frame_counter == 0) {
+            local_frame_counter = 0;
         }
 
-        m_queue.enqueue(frame);
+        local_frame_counter++;
+        auto currentTime = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed = currentTime - m_fps_startTime;
+        if (elapsed.count() >= 5) {
+            m_framerate = static_cast<float>(local_frame_counter) /
+                          static_cast<float>(elapsed.count());
+            local_frame_counter = 0;
+            m_fps_startTime = currentTime;
+        }
+
+        aditof::Metadata *metadata;
+        status = frame->getData("metadata", (uint16_t **)&metadata);
+        if (status == aditof::Status::OK && metadata != nullptr) {
+            m_rxTimeLookUp[metadata->frameNumber] =
+                std::chrono::high_resolution_clock::now();
+            calculateFrameLoss(metadata->frameNumber, m_prev_frame_number,
+                               m_current_frame_number);
+        }
+
+        if (!shouldDropFrame(m_frame_counter)) {
+            m_queue.enqueue(frame);
+        }
+
         m_frameRequested = false;
     }
 }
 
-//int ADIController::getRange() const
-//{
-//	aditof::CameraDetails cameraDetails;
-//	m_cameras[static_cast<unsigned int>(m_cameraInUse)]->getDetails(
-//		cameraDetails);
-//	return cameraDetails.range;
-//}
+bool ADIController::OutputDeltaTime(uint32_t frameNumber) {
+    auto it = m_rxTimeLookUp.find(frameNumber);
+    if (it != m_rxTimeLookUp.end()) {
+        long long duration;
 
-int ADIController::getRangeMax() const {
-    aditof::CameraDetails cameraDetails;
-    m_cameras[static_cast<unsigned int>(m_cameraInUse)]->getDetails(
-        cameraDetails);
-    return cameraDetails.maxDepth;
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                       std::chrono::high_resolution_clock::now() -
+                       m_rxTimeLookUp[frameNumber])
+                       .count();
+        m_rxTimeLookUp.erase(frameNumber);
+        iw.add(duration);
+
+        double slope;
+
+        bool ret = iw.isIncreasing(0.1, slope);
+
+        return ret;
+    }
+    return false;
 }
 
-int ADIController::getRangeMin() const {
-    aditof::CameraDetails cameraDetails;
-    m_cameras[static_cast<unsigned int>(m_cameraInUse)]->getDetails(
-        cameraDetails);
-    return cameraDetails.minDepth;
+bool ADIController::shouldDropFrame(uint32_t frameNum) {
+    if (m_frame_rate == 0) {
+        m_frame_rate = 10; // Prevent error, fake frame rate.
+        LOG(ERROR) << "m_frame_rate == 0 -> Using a default frame rate of "
+                   << m_frame_rate;
+    }
+    uint32_t out_idx_this = (frameNum * m_preview_rate) / m_frame_rate;
+    uint32_t out_idx_next = ((frameNum + 1) * m_preview_rate) / m_frame_rate;
+    return (out_idx_this == out_idx_next);
 }
 
-int ADIController::getbitCount() const {
-    aditof::CameraDetails cameraDetails;
-    m_cameras[static_cast<unsigned int>(m_cameraInUse)]->getDetails(
-        cameraDetails);
-    return cameraDetails.bitCount;
+aditof::Status ADIController::getFramesLost(uint32_t &framesLost) {
+    framesLost = m_frames_lost;
+
+    return aditof::Status::OK;
+}
+
+aditof::Status ADIController::getFrameRate(uint32_t &fps) {
+    fps = static_cast<uint32_t>(std::round(m_framerate));
+
+    return aditof::Status::OK;
+}
+
+aditof::Status ADIController::getFramesReceived(uint32_t &framesRecevied) {
+    framesRecevied = static_cast<uint32_t>(m_frame_counter);
+
+    return aditof::Status::OK;
+}
+
+aditof::Status ADIController::setPreviewRate(uint32_t frameRate,
+                                             uint32_t previewRate) {
+
+    m_preview_rate = previewRate;
+    m_frame_rate = frameRate;
+
+    return aditof::Status::OK;
+}
+
+aditof::Status ADIController::requestFrameOffline(uint32_t index) {
+
+    if (m_stopFlag.load()) {
+        //PRB25
+        //LOG(ERROR) << "Camera is stopped, cannot request frame.";
+        //return aditof::Status::GENERIC_ERROR;
+    }
+
+    std::unique_lock<std::mutex> lock(m_requestMutex);
+    m_requestCv.wait(lock, [&] { return m_frameRequested || m_stopFlag; });
+
+    auto camera = m_cameras[static_cast<unsigned int>(m_cameraInUse)];
+    auto frame = std::make_shared<aditof::Frame>();
+    auto fg = frame.get();
+    aditof::Status status = camera->requestFrame(fg, index);
+
+    m_frame_counter++;
+
+    aditof::Metadata *metadata;
+    status = frame->getData("metadata", (uint16_t **)&metadata);
+    if (status == aditof::Status::OK && metadata != nullptr) {
+        calculateFrameLoss(metadata->frameNumber, m_prev_frame_number,
+                           m_current_frame_number);
+    }
+
+    m_queue.enqueue(frame);
+    m_frameRequested = false;
+
+    return aditof::Status::OK;
 }
 
 int ADIController::getCameraInUse() const { return m_cameraInUse; }

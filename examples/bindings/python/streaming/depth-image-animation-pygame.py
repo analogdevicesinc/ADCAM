@@ -121,7 +121,7 @@ def animate():
     status = camera1.requestFrame(frame)
     frameDataDetails = tof.FrameDataDetails()
     status = frame.getDataDetails("depth", frameDataDetails)
-    image = np.array(frame.getData("depth"), copy=False)
+    image = np.asarray(frame.getData("depth"))
     image = np.rot90(image)
     return pygame.surfarray.make_surface(normalize(image, frameDataDetails.width, frameDataDetails.height))
     

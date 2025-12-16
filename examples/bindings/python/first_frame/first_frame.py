@@ -32,6 +32,7 @@
 import aditofpython as tof
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import sys
 import os
 import struct
@@ -131,16 +132,40 @@ print("depth frame details:", "width:", frameDataDetails.width, "height:", frame
 status = camera1.stop()
 print("camera1.stop()", status)
 
-# Get the depth frame
-image_depth = np.array(frame.getData("depth"), copy=False)
-# Get the AB frame
-image_ab = np.array(frame.getData("ab"), copy=False)
-# Get the confidence frame
-image_conf = np.array(frame.getData("conf"), copy=False)
+# Get frame details to check which data types are available
+frameDetails = tof.FrameDetails()
+status = frame.getDetails(frameDetails)
 
-if ((frameDataDetails.width != 1024 and frameDataDetails.height != 1024)):
+# Build a list of available frame types
+available_types = [detail.type for detail in frameDetails.dataDetails]
+print(f"Available frame types: {available_types}")
+
+# Get frame data - only retrieve what's available
+image_depth = None
+image_ab = None
+image_conf = None
+image_xyz = None
+
+# Get the depth frame
+if "depth" in available_types:
+    image_depth = np.asarray(frame.getData("depth"))
+    print("Depth frame retrieved")
+else:
+    print("Warning: Depth frame not available")
+
+# Get the AB frame
+if "ab" in available_types:
+    image_ab = np.asarray(frame.getData("ab"))
+    print("AB frame retrieved")
+else:
+    print("Warning: AB frame not available (bitsInAB=0)")
+
+# Get the confidence frame
+if "conf" in available_types:
+    image_conf = np.asarray(frame.getData("conf"))
     image_conf2 = image_conf.flatten()
     count = 0
+    
     final_conf = np.zeros(frameDataDetails.width*frameDataDetails.height*4)
     for i in range(frameDataDetails.width*(frameDataDetails.height // 2)):
         packed_float = struct.pack('f', image_conf2[i])
@@ -154,6 +179,16 @@ if ((frameDataDetails.width != 1024 and frameDataDetails.height != 1024)):
         count = count + 2
     image_conf = np.reshape(final_conf[frameDataDetails.width*frameDataDetails.height*0:frameDataDetails.width*frameDataDetails.height*1], \
                             [frameDataDetails.height,frameDataDetails.width])
+    print("Confidence frame retrieved")
+else:
+    print("Warning: Confidence frame not available (bitsInConf=0)")
+
+# Get the XYZ frame
+if "xyz" in available_types:
+    image_xyz = np.asarray(frame.getData("xyz"))
+    print("XYZ frame retrieved")
+else:
+    print("Warning: XYZ frame not available (xyzEnable=0)")
 
 metadata = tof.Metadata
 status, metadata = frame.getMetadataStruct()
@@ -173,45 +208,121 @@ print("Frame number from metadata: ", frame_num)
 print("Mode from metadata: ", imager_mode)
 
 if int(isdisplay)==1:
-    # Create a figure with 4 subplots (3 images + 1 metadata text)
-    fig, axs = plt.subplots(1, 4, figsize=(18, 5))  # 1 row, 4 columns
+    # Count available frames and create dynamic layout
+    subplot_idx = 1
+    
+    # Create a figure with dynamic subplots
+    fig = plt.figure(figsize=(20, 8))
+    
+    # Plot the depth image if available
+    if image_depth is not None:
+        ax1 = fig.add_subplot(2, 3, subplot_idx)
+        im1 = ax1.imshow(image_depth, cmap='jet')
+        ax1.set_title("Depth Image")
+        ax1.axis("off")
+        fig.colorbar(im1, ax=ax1)
+        subplot_idx += 1
 
-    # Plot the depth image
-    axs[0].imshow(image_depth, cmap='jet')
-    axs[0].set_title("Depth Image")
-    axs[0].axis("off")
+    # Plot the AB image if available
+    if image_ab is not None:
+        ax2 = fig.add_subplot(2, 3, subplot_idx)
+        im2 = ax2.imshow(image_ab, cmap='gray')
+        ax2.set_title("AB Image")
+        ax2.axis("off")
+        fig.colorbar(im2, ax=ax2)
+        subplot_idx += 1
 
-    # Plot the AB image
-    axs[1].imshow(image_ab, cmap='gray')
-    axs[1].set_title("AB Image")
-    axs[1].axis("off")
+    # Plot the Confidence image if available
+    if image_conf is not None:
+        ax3 = fig.add_subplot(2, 3, subplot_idx)
+        im3 = ax3.imshow(image_conf, cmap='gray')
+        ax3.set_title("Confidence Image")
+        ax3.axis("off")
+        fig.colorbar(im3, ax=ax3)
+        subplot_idx += 1
 
-    # Plot the Confidence image
-    axs[2].imshow(image_conf, cmap='gray')
-    axs[2].set_title("Confidence Image")
-    axs[2].axis("off")
-
-    # Add colorbars
-    fig.colorbar(axs[0].imshow(image_depth, cmap='jet'), ax=axs[0])
-    fig.colorbar(axs[1].imshow(image_ab, cmap='gray'), ax=axs[1])
-    fig.colorbar(axs[2].imshow(image_conf, cmap='gray'), ax=axs[2])
-
-    # Metadata as text in the fourth subplot
-    axs[3].axis("off")  # Hide axes
+    # Metadata as text
+    ax4 = fig.add_subplot(2, 3, subplot_idx)
+    ax4.axis("off")  # Hide axes
     metadata_text = (
         f"Sensor Temp: {sensor_temp}°C\n"
         f"Laser Temp: {laser_temp}°C\n"
         f"Frame #: {frame_num}\n"
-        f"Mode: {imager_mode}"
+        f"Mode: {imager_mode}\n"
     )
-    axs[3].text(0.1, 0.5, metadata_text, fontsize=12, verticalalignment='center')
+    ax4.text(0.1, 0.5, metadata_text, fontsize=12, verticalalignment='center')
+    subplot_idx += 1
+
+    # Point cloud visualization if XYZ is available
+    if image_xyz is not None:
+        ax5 = fig.add_subplot(2, 3, (5, 6), projection='3d')
+        
+        # Reshape XYZ data - assuming it's in format [x, y, z, x, y, z, ...]
+        # XYZ data is int16 (signed 16-bit), with each coordinate being one int16 value
+        print(f"XYZ data shape: {image_xyz.shape}, dtype: {image_xyz.dtype}")
+        
+        # Ensure data is interpreted as signed int16
+        if image_xyz.dtype != np.int16:
+            image_xyz = image_xyz.view(np.int16)
+        
+        xyz_reshaped = image_xyz.reshape(-1, 3)
+        
+        # Extract X, Y, Z coordinates
+        x = xyz_reshaped[:, 0].astype(np.int16)
+        y = xyz_reshaped[:, 1].astype(np.int16)
+        z = xyz_reshaped[:, 2].astype(np.int16)
+        
+        print(f"X range: [{x.min()}, {x.max()}], Y range: [{y.min()}, {y.max()}], Z range: [{z.min()}, {z.max()}]")
+        
+        # Filter out invalid points (z == 0)
+        valid_mask = z != 0
+        x_valid = x[valid_mask]
+        y_valid = y[valid_mask]
+        z_valid = z[valid_mask]
+        
+        # Downsample for better performance (every 10th point)
+        downsample_factor = 10
+        x_display = x_valid[::downsample_factor]
+        y_display = y_valid[::downsample_factor]
+        z_display = z_valid[::downsample_factor]
+        
+        # Create point cloud scatter plot colored by depth (Z)
+        scatter = ax5.scatter(x_display, y_display, z_display, 
+                             c=z_display, cmap='jet', 
+                             s=1, marker='.')
+        
+        ax5.set_xlabel('X')
+        ax5.set_ylabel('Y')
+        ax5.set_zlabel('Z (Depth)')
+        ax5.set_title("Point Cloud")
+        fig.colorbar(scatter, ax=ax5, shrink=0.5)
+        
+        # Set equal aspect ratio for better visualization
+        max_range = np.array([x_display.max()-x_display.min(), 
+                             y_display.max()-y_display.min(), 
+                             z_display.max()-z_display.min()]).max() / 2.0
+        mid_x = (x_display.max()+x_display.min()) * 0.5
+        mid_y = (y_display.max()+y_display.min()) * 0.5
+        mid_z = (z_display.max()+z_display.min()) * 0.5
+        ax5.set_xlim(mid_x - max_range, mid_x + max_range)
+        ax5.set_ylim(mid_y - max_range, mid_y + max_range)
+        ax5.set_zlim(mid_z - max_range, mid_z + max_range)
 
     plt.tight_layout()
     plt.show()
 else:
-    # dump the files
-    image_depth.tofile("depth_mode_" + str(mode) + ".bin")
-    image_ab.tofile("ab_mode_" + str(mode) + ".bin")
-    image_conf.tofile("conf_mode_" + str(mode) + ".bin")
+    # dump the files - only save frames that are available
+    if image_depth is not None:
+        image_depth.tofile("depth_mode_" + str(mode) + ".bin")
+        print(f"Saved: depth_mode_{mode}.bin")
+    if image_ab is not None:
+        image_ab.tofile("ab_mode_" + str(mode) + ".bin")
+        print(f"Saved: ab_mode_{mode}.bin")
+    if image_conf is not None:
+        image_conf.tofile("conf_mode_" + str(mode) + ".bin")
+        print(f"Saved: conf_mode_{mode}.bin")
+    if image_xyz is not None:
+        image_xyz.tofile("xyz_mode_" + str(mode) + ".bin")
+        print(f"Saved: xyz_mode_{mode}.bin")
 
 

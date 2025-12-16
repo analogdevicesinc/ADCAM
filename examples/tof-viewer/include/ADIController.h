@@ -1,9 +1,34 @@
-/********************************************************************************/
-/*                                                                              */
-/* Copyright (c) 2020 Analog Devices, Inc. All Rights Reserved.                 */
-/* This software is proprietary to Analog Devices, Inc. and its licensors.      */
-/*                                                                              */
-/********************************************************************************/
+/*
+ * BSD 3-Clause License
+ *
+ * Copyright (c) 2019, Analog Devices, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #ifndef ADICONTROLLER_H
 #define ADICONTROLLER_H
 
@@ -16,8 +41,8 @@
 #include <aditof/depth_sensor_interface.h>
 #include <aditof/frame.h>
 #include <aditof/system.h>
+#include <chrono>
 
-#include "ADIToFRecorder.h"
 #include "safequeue.h"
 
 namespace adicontroller {
@@ -37,12 +62,19 @@ class ADIController {
     /**
 		* @brief	Start capture thread
 		*/
-    void StartCapture();
+    void StartCapture(const uint32_t frameRate);
 
     /**
 		* @brief	Stops capture thread
 		*/
     void StopCapture();
+
+    /**
+     * @brief Request a specific frame from offline playback
+     * @param[in] index Frame index to retrieve from recorded file
+     * @return Status indicating success or failure
+     */
+    aditof::Status requestFrameOffline(uint32_t index);
 
     /**
 		* @brief			  Set the camera index for active camera
@@ -71,12 +103,12 @@ class ADIController {
     /**
 		* @brief			Start recording video.
 		* @param fileName	User sets a file name, along with its file extension
-		* @param height	Height in pixels, gathered from current camera mode
-		* @param width	Width in pixels, gathered from curren camera mode
-		* @param fps		Frames to be recorded (No parameter time at this moment)
+		* @param height	    Height in pixels, gathered from current camera mode
+		* @param width	    Width in pixels, gathered from curren camera mode
+		* @param seconds	Number of seconds to record
 		*/
     void startRecording(const std::string &fileName, unsigned int height,
-                        unsigned int width, unsigned int fps);
+                        unsigned int width, unsigned int seconds);
 
     /**
 		* @brief	Stops current recording
@@ -86,9 +118,8 @@ class ADIController {
     /**
 		* @brief				Opens a currently saved recording and plays it back
 		* @param	fileName	Chosen recording file name
-		* @param	fps			Number of frames from file
 		*/
-    int startPlayback(const std::string &fileName, int &fps);
+    int setPlaybackFile(const std::string &fileName);
 
     /**
 		* @brief	Stops current playback recording
@@ -121,17 +152,20 @@ class ADIController {
 
     /**
 		* @brief Gets the first or next frame.
+     * @return Shared pointer to the frame object, or nullptr if unavailable
 		*/
     std::shared_ptr<aditof::Frame> getFrame();
 
     /**
 		* @brief Requesting the SDK for a frame.
+     * @return True if frame request was successful, false otherwise
 		*/
-    void requestFrame();
+    bool requestFrame();
 
     /**
 		* @brief Flag indicating the existance of any
 		*        camera in the system
+     * @return True if camera is available, false otherwise
 		*/
     bool hasCamera() const;
 
@@ -139,38 +173,96 @@ class ADIController {
 
     /**
 		* @brief Get the maximum camera range.
+     * @return Maximum range value in millimeters
 		*/
     int getRangeMax() const;
 
     /**
 		* @brief Get the minimum camera range.
+     * @return Minimum range value in millimeters
 		*/
     int getRangeMin() const;
 
     /**
 		* @brief Gets camera bit counts.
+     * @return Number of bits per pixel
 		*/
     int getbitCount() const;
 
     /**
     * @brief Gets camera in use.
+    * @return Index of currently active camera
     */
     int getCameraInUse() const;
 
+    /**
+     * @brief Output delta time information for frame timing analysis
+     * @param[in] frameNumber Frame number to analyze
+     * @return True if delta time was output successfully, false otherwise
+     */
+    bool OutputDeltaTime(uint32_t frameNumber);
+
+    /**
+     * @brief Get current frame rate
+     * @param[out] fps Reference to store frames per second value
+     * @return Status indicating success or failure
+     */
+    aditof::Status getFrameRate(uint32_t &fps);
+    
+    /**
+     * @brief Get total number of frames received
+     * @param[out] framesRecevied Reference to store frame count
+     * @return Status indicating success or failure
+     */
+    aditof::Status getFramesReceived(uint32_t &framesRecevied);
+    
+    /**
+     * @brief Set frame rate and preview rate for capture
+     * @param[in] frameRate Target capture frame rate in FPS
+     * @param[in] previewRate Preview update rate (1 = every frame) [default: 1]
+     * @return Status indicating success or failure
+     */
+    aditof::Status setPreviewRate(uint32_t frameRate, uint32_t previewRate = 1);
+    
+    /**
+     * @brief Get number of frames lost during capture
+     * @param[out] framesLost Reference to store lost frame count
+     * @return Status indicating success or failure
+     */
+    aditof::Status getFramesLost(uint32_t &framesLost);
+
     std::vector<std::shared_ptr<aditof::Camera>> m_cameras;
-    std::unique_ptr<ADIToFRecorder> m_recorder;
-    bool m_saveBinaryFormat;
     bool panicStop = false;
     size_t panicCount = 0;
+    int m_cameraInUse;
 
   private:
     /**
 		* @brief Sets a thread while capturing camera frames.
 		*/
     void captureFrames();
+    
+    /**
+     * @brief Calculate frame loss between current and previous frame
+     * @param[in] frameNumber Current frame number from metadata
+     * @param[in,out] prevFrameNumber Previous frame number reference
+     * @param[in,out] currentFrameNumber Current frame number reference
+     */
+    void calculateFrameLoss(const uint32_t frameNumber,
+                            uint32_t &prevFrameNumber,
+                            uint32_t &currentFrameNumber);
+    
+    /**
+     * @brief Determine if frame should be dropped based on preview rate
+     * @param[in] frameNum Frame number to evaluate
+     * @return True if frame should be dropped, false if it should be kept
+     */
+    bool shouldDropFrame(uint32_t frameNum);
+    std::unordered_map<
+        uint32_t, std::chrono::time_point<std::chrono::high_resolution_clock>>
+        m_rxTimeLookUp;
 
   private:
-    int m_cameraInUse;
     std::thread m_workerThread;
     std::atomic<bool> m_stopFlag;
     SafeQueue<std::shared_ptr<aditof::Frame>> m_queue;
@@ -179,6 +271,14 @@ class ADIController {
     std::condition_variable m_requestCv;
     bool m_frameRequested;
     std::shared_ptr<aditof::Frame> m_framePtr;
+    float m_framerate = 0;
+    uint32_t m_frame_counter;
+    std::chrono::time_point<std::chrono::system_clock> m_fps_startTime;
+    uint32_t m_preview_rate;
+    uint32_t m_frame_rate;
+    uint32_t m_frames_lost = 0;
+    uint32_t m_prev_frame_number = -1;
+    uint32_t m_current_frame_number = 0;
 };
 } // namespace adicontroller
 #endif

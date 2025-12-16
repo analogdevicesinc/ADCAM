@@ -71,15 +71,22 @@ static const char Help_Menu[] =
         4: pcm-native
         5: long-range mixed
         6: short-range mixed
+
 )";
 
+/**
+ * @brief Save a frame's data to a binary file
+ * @param[in] frame The frame object containing the data to save
+ * @param[in] frameType The type of frame data to save (e.g., "depth", "ab", "xyz")
+ * @param[in] mode_num The mode number to include in the output filename
+ * @return Status indicating success or failure of the operation
+ */
 Status save_frame(aditof::Frame &frame, std::string frameType,
                   const int &mode_num) {
 
     uint16_t *data1;
     FrameDataDetails fDetails;
     Status status = Status::OK;
-
     status = frame.getData(frameType, &data1);
     if (status != Status::OK) {
         LOG(ERROR) << "Could not get frame data " + frameType + "!";

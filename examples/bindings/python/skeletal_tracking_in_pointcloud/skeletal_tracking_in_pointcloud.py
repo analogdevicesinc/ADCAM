@@ -186,8 +186,8 @@ if __name__ == "__main__":
             start_time = time.time()
 
         # Process the frame
-        ab_frame = np.array(frame.getData("ab"), dtype="uint16", copy=False)
-        xyz_map = np.array(frame.getData("xyz"), dtype="int16", copy=False)
+        ab_frame = np.asarray(frame.getData("ab"), dtype="uint16")
+        xyz_map = np.asarray(frame.getData("xyz"), dtype="int16")
         
         # Downsample the images
         ab_frame_downsampled = ab_frame[::reduction_factor, ::reduction_factor]
