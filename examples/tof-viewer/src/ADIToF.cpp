@@ -34,11 +34,7 @@
 #include <aditof/version.h>
 #include <algorithm>
 #include <cctype>
-#ifdef USE_GLOG
-#include <glog/logging.h>
-#else
 #include <aditof/log.h>
-#endif
 #include <iostream>
 
 #include "ADIMainWindow.h"

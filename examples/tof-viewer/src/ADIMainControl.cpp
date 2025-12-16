@@ -34,11 +34,7 @@
 #include "ADIMainWindow.h"
 #include "aditof/utils.h"
 
-#ifdef USE_GLOG
-#include <glog/logging.h>
-#else
 #include <aditof/log.h>
-#endif
 
 #include <cstdarg> // for va_list
 #include <cstdlib>

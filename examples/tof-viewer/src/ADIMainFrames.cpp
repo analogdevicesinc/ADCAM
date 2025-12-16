@@ -43,12 +43,7 @@
 #include <numeric>
 #include <stdexcept>
 #include <string>
-
-#ifdef USE_GLOG
-#include <glog/logging.h>
-#else
 #include <aditof/log.h>
-#endif
 
 #undef NDEBUG
 #include <cassert>

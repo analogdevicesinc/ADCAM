@@ -37,11 +37,7 @@
 
 #include "../../sdk/src/connections/target/v4l_buffer_access_interface.h"
 
-#ifdef USE_GLOG
-#include <glog/logging.h>
-#else
 #include <aditof/log.h>
-#endif
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>

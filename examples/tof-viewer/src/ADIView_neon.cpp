@@ -33,12 +33,7 @@
 #include <algorithm>
 #include <arm_neon.h>
 #include <cmath>
-
-#ifdef USE_GLOG
-#include <glog/logging.h>
-#else
 #include <aditof/log.h>
-#endif
 
 using namespace adiviewer;
 

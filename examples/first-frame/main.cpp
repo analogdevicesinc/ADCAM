@@ -37,11 +37,7 @@
 #include <aditof/version.h>
 #include <command_parser.h>
 #include <fstream>
-#ifdef USE_GLOG
-#include <glog/logging.h>
-#else
 #include <aditof/log.h>
-#endif
 #include <ios>
 #include <iostream>
 #include <map>

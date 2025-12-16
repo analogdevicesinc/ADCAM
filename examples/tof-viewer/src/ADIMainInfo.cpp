@@ -31,12 +31,7 @@
  */
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
-
-#ifdef USE_GLOG
-#include <glog/logging.h>
-#else
 #include <aditof/log.h>
-#endif
 
 using namespace adiMainWindow;
 

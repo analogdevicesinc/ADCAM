@@ -35,13 +35,7 @@
 #include "aditof/status_definitions.h"
 #include "aditof/system.h"
 #include "aditof/version.h"
-
-#ifdef USE_GLOG
-#include <glog/logging.h>
-#else
 #include <aditof/log.h>
-#endif
-
 #include <iostream>
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
