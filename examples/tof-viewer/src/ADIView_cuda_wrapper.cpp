@@ -32,12 +32,7 @@
 #include "ADIView.h"
 #include "ADIViewCuda.cuh"
 #include <sstream>
-
-#ifdef USE_GLOG
-#include <glog/logging.h>
-#else
 #include <aditof/log.h>
-#endif
 
 using namespace adiviewer;
 
