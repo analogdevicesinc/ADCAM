@@ -92,6 +92,9 @@ class ADIView {
 		*/
     ~ADIView();
 
+    /**
+     * @brief Clean up resources and stop worker threads
+     */
     void cleanUp();
 
     /**
@@ -99,23 +102,82 @@ class ADIView {
 		*/
     bool startImGUI(bool *success);
 
+    /**
+     * @brief Enable or disable logarithmic image scaling
+     * @param[in] value True to enable log scaling, false to disable
+     */
     void setLogImage(bool value) { m_logImage = value; }
+    
+    /**
+     * @brief Get current logarithmic image scaling state
+     * @return True if log scaling is enabled, false otherwise
+     */
     bool getLogImage() { return m_logImage; }
 
+    /**
+     * @brief Enable or disable binary format for saved frames
+     * @param[in] value True for binary format, false otherwise
+     */
     void setSaveBinaryFormat(bool value) { m_saveBinaryFormat = value; }
+    
+    /**
+     * @brief Get current save format setting
+     * @return True if binary format is enabled, false otherwise
+     */
     bool getSaveBinaryFormat() { return m_saveBinaryFormat; }
 
+    /**
+     * @brief Cap AB width processing
+     * @param[in] value True to cap AB width, false otherwise
+     */
     void setCapABWidth(bool value) { m_capABWidth = value; }
+    
+    /**
+     * @brief Get AB width cap state
+     * @return True if AB width is capped, false otherwise
+     */
     bool getCapABWidth() { return m_capABWidth; }
 
+    /**
+     * @brief Enable or disable automatic scaling of image data
+     * @param[in] value True to enable auto-scaling, false to disable
+     */
     void setAutoScale(bool value) { m_autoScale = value; }
+    
+    /**
+     * @brief Get auto-scaling state
+     * @return True if auto-scaling is enabled, false otherwise
+     */
     bool getAutoScale() { return m_autoScale; }
 
+    /**
+     * @brief Set maximum range for active brightness (AB) data
+     * @param[in] value Maximum range value as string
+     */
     void setABMaxRange(std::string value);
+    
+    /**
+     * @brief Set maximum range for active brightness (AB) data
+     * @param[in] value Maximum range value as unsigned integer
+     */
     void setABMaxRange(uint32_t value) { m_maxABPixelValue = value; }
+    
+    /**
+     * @brief Get maximum range for AB data
+     * @return Maximum AB pixel value
+     */
     uint32_t getABMaxRange() { return m_maxABPixelValue; }
 
+    /**
+     * @brief Set minimum range for active brightness (AB) data
+     * @param[in] value Minimum range value
+     */
     void setABMinRange(uint32_t value) { m_minABPixelValue = value; }
+    
+    /**
+     * @brief Get minimum range for AB data
+     * @return Minimum AB pixel value
+     */
     uint32_t getABMinRange() { return m_minABPixelValue; }
 
     void setUserABMaxState(bool value) { m_maxABPixelValueSet = value; }
@@ -187,7 +249,11 @@ class ADIView {
     float Max_X = 6000.0;
 
   private:
+    /**
+     * @brief Prepare image buffers for rendering
+     */
     void prepareImages();
+    
     /**
 		* @brief Creates Depth buffer data
 		*/
@@ -206,6 +272,15 @@ class ADIView {
 		* @brief Creates AB buffer data
 		*/
     void _displayAbImage();
+    
+    /**
+     * @brief Normalize active brightness buffer for display
+     * @param[in,out] abBuffer Pointer to AB data buffer
+     * @param[in] abWidth Width of AB frame
+     * @param[in] abHeight Height of AB frame
+     * @param[in] advanceScaling Enable advanced scaling algorithm
+     * @param[in] useLogScaling Apply logarithmic scaling
+     */
     void normalizeABBuffer(uint16_t *abBuffer, uint16_t abWidth,
                            uint16_t abHeight, bool advanceScaling,
                            bool useLogScaling);

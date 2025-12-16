@@ -221,10 +221,10 @@ def main():
     
         str_frame_idx = str(frame_idx).zfill(6)
         generate_metadata(metadata, frame_dir, base_filename, str_frame_idx)
-        generate_depth(np.array(frame.getData("depth"), copy=False), frame_dir, base_filename, str_frame_idx)
-        generate_ab(np.array(frame.getData("ab"), copy=False), frame_dir, base_filename, str_frame_idx, log_image = False)
-        generate_confidence(np.array(frame.getData("conf"), copy=False), frame_dir, base_filename, str_frame_idx)
-        generate_pcloud(np.array(frame.getData("xyz"), copy=False), frame_dir, base_filename, str_frame_idx, height, width)
+        generate_depth(np.asarray(frame.getData("depth")), frame_dir, base_filename, str_frame_idx)
+        generate_ab(np.asarray(frame.getData("ab")), frame_dir, base_filename, str_frame_idx, log_image = False)
+        generate_confidence(np.asarray(frame.getData("conf")), frame_dir, base_filename, str_frame_idx)
+        generate_pcloud(np.asarray(frame.getData("xyz")), frame_dir, base_filename, str_frame_idx, height, width)
 
         frame_idx += 1
         if frame_idx > end_frame:
