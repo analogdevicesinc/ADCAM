@@ -154,9 +154,8 @@ void stream_zmq_frame() {
     static zmq::context_t zmq_context(1);
     server_socket =
         std::make_unique<zmq::socket_t>(zmq_context, zmq::socket_type::push);
-    server_socket->setsockopt(ZMQ_SNDHWM, (int *)&max_send_frames,
-                              sizeof(max_send_frames));
-    server_socket->setsockopt(ZMQ_SNDTIMEO, FRAME_TIMEOUT);
+    server_socket->set(zmq::sockopt::sndhwm, static_cast<int>(max_send_frames));
+    server_socket->set(zmq::sockopt::sndtimeo, FRAME_TIMEOUT);
     server_socket->bind("tcp://*:5555");
     LOG(INFO) << "ZMQ server socket connection established.";
 
@@ -251,7 +250,7 @@ void stop_stream_thread() {
 
     // Flush the messages
     if (server_socket) {
-        server_socket->setsockopt(ZMQ_LINGER, 0);
+        server_socket->set(zmq::sockopt::linger, 0);
     }
 
     if (stream_thread.joinable()) {
@@ -691,9 +690,10 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
                 static zmq::context_t zmq_context(1);
                 server_socket = std::make_unique<zmq::socket_t>(
                     zmq_context, zmq::socket_type::push);
-                server_socket->setsockopt(ZMQ_SNDHWM, (int *)&max_send_frames,
-                                          sizeof(max_send_frames));
-                server_socket->setsockopt(ZMQ_SNDTIMEO, FRAME_TIMEOUT);
+                server_socket->set(zmq::sockopt::sndhwm,
+                                   static_cast<int>(max_send_frames));
+                server_socket->set(zmq::sockopt::sndtimeo,
+                                   static_cast<int>(FRAME_TIMEOUT));
                 server_socket->bind("tcp://*:5555");
                 LOG(INFO) << "ZMQ server socket connection established.";
             }
@@ -752,7 +752,7 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
             protoContent->set_metadata_size(frameDetails.metadataSize);
             protoContent->set_is_pcm(frameDetails.isPCM);
             protoContent->set_number_of_phases(frameDetails.numberOfPhases);
-            for (int i = 0; i < frameDetails.frameContent.size(); i++) {
+            for (size_t i = 0; i < frameDetails.frameContent.size(); i++) {
                 protoContent->add_frame_content(
                     frameDetails.frameContent.at(i));
             }
