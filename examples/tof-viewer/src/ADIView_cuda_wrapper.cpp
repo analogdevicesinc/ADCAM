@@ -31,8 +31,8 @@
  */
 #include "ADIView.h"
 #include "ADIViewCuda.cuh"
-#include <sstream>
 #include <aditof/log.h>
+#include <sstream>
 
 using namespace adiviewer;
 

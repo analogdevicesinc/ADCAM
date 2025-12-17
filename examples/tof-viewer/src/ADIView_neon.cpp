@@ -30,10 +30,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "ADIView.h"
+#include <aditof/log.h>
 #include <algorithm>
 #include <arm_neon.h>
 #include <cmath>
-#include <aditof/log.h>
 
 using namespace adiviewer;
 

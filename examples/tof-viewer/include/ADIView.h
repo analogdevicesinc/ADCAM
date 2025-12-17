@@ -107,7 +107,7 @@ class ADIView {
      * @param[in] value True to enable log scaling, false to disable
      */
     void setLogImage(bool value) { m_logImage = value; }
-    
+
     /**
      * @brief Get current logarithmic image scaling state
      * @return True if log scaling is enabled, false otherwise
@@ -119,7 +119,7 @@ class ADIView {
      * @param[in] value True for binary format, false otherwise
      */
     void setSaveBinaryFormat(bool value) { m_saveBinaryFormat = value; }
-    
+
     /**
      * @brief Get current save format setting
      * @return True if binary format is enabled, false otherwise
@@ -131,7 +131,7 @@ class ADIView {
      * @param[in] value True to cap AB width, false otherwise
      */
     void setCapABWidth(bool value) { m_capABWidth = value; }
-    
+
     /**
      * @brief Get AB width cap state
      * @return True if AB width is capped, false otherwise
@@ -143,7 +143,7 @@ class ADIView {
      * @param[in] value True to enable auto-scaling, false to disable
      */
     void setAutoScale(bool value) { m_autoScale = value; }
-    
+
     /**
      * @brief Get auto-scaling state
      * @return True if auto-scaling is enabled, false otherwise
@@ -155,13 +155,13 @@ class ADIView {
      * @param[in] value Maximum range value as string
      */
     void setABMaxRange(std::string value);
-    
+
     /**
      * @brief Set maximum range for active brightness (AB) data
      * @param[in] value Maximum range value as unsigned integer
      */
     void setABMaxRange(uint32_t value) { m_maxABPixelValue = value; }
-    
+
     /**
      * @brief Get maximum range for AB data
      * @return Maximum AB pixel value
@@ -173,7 +173,7 @@ class ADIView {
      * @param[in] value Minimum range value
      */
     void setABMinRange(uint32_t value) { m_minABPixelValue = value; }
-    
+
     /**
      * @brief Get minimum range for AB data
      * @return Minimum AB pixel value
@@ -253,7 +253,7 @@ class ADIView {
      * @brief Prepare image buffers for rendering
      */
     void prepareImages();
-    
+
     /**
 		* @brief Creates Depth buffer data
 		*/
@@ -272,7 +272,7 @@ class ADIView {
 		* @brief Creates AB buffer data
 		*/
     void _displayAbImage();
-    
+
     /**
      * @brief Normalize active brightness buffer for display
      * @param[in,out] abBuffer Pointer to AB data buffer

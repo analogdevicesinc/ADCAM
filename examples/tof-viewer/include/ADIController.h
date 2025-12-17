@@ -208,14 +208,14 @@ class ADIController {
      * @return Status indicating success or failure
      */
     aditof::Status getFrameRate(uint32_t &fps);
-    
+
     /**
      * @brief Get total number of frames received
      * @param[out] framesRecevied Reference to store frame count
      * @return Status indicating success or failure
      */
     aditof::Status getFramesReceived(uint32_t &framesRecevied);
-    
+
     /**
      * @brief Set frame rate and preview rate for capture
      * @param[in] frameRate Target capture frame rate in FPS
@@ -223,7 +223,7 @@ class ADIController {
      * @return Status indicating success or failure
      */
     aditof::Status setPreviewRate(uint32_t frameRate, uint32_t previewRate = 1);
-    
+
     /**
      * @brief Get number of frames lost during capture
      * @param[out] framesLost Reference to store lost frame count
@@ -241,7 +241,7 @@ class ADIController {
 		* @brief Sets a thread while capturing camera frames.
 		*/
     void captureFrames();
-    
+
     /**
      * @brief Calculate frame loss between current and previous frame
      * @param[in] frameNumber Current frame number from metadata
@@ -251,7 +251,7 @@ class ADIController {
     void calculateFrameLoss(const uint32_t frameNumber,
                             uint32_t &prevFrameNumber,
                             uint32_t &currentFrameNumber);
-    
+
     /**
      * @brief Determine if frame should be dropped based on preview rate
      * @param[in] frameNum Frame number to evaluate

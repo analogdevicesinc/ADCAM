@@ -35,6 +35,7 @@
 #include "implot.h"
 #include <GLFW/glfw3.h>
 #include <aditof/frame_handler.h>
+#include <aditof/log.h>
 #include <cmath>
 #include <fstream>
 #include <glm/glm.hpp>
@@ -43,7 +44,6 @@
 #include <numeric>
 #include <stdexcept>
 #include <string>
-#include <aditof/log.h>
 
 #undef NDEBUG
 #include <cassert>
@@ -125,12 +125,10 @@ void ADIMainWindow::GetHoveredImagePix(ImVec2 &hoveredImagePixel,
         return;
     }
 
-    hoveredUIPixel.x =
-        (std::max)((std::min)(hoveredUIPixel.x, _displayDepthDimensions.x),
-                   0.0f);
-    hoveredUIPixel.y =
-        (std::max)((std::min)(hoveredUIPixel.y, _displayDepthDimensions.y),
-                   0.0f);
+    hoveredUIPixel.x = (std::max)(
+        (std::min)(hoveredUIPixel.x, _displayDepthDimensions.x), 0.0f);
+    hoveredUIPixel.y = (std::max)(
+        (std::min)(hoveredUIPixel.y, _displayDepthDimensions.y), 0.0f);
 
     // Scale the hovered pixel to the image pixel co-ordinate system
     const float uiCoordinateToImageCoordinateRatio =
