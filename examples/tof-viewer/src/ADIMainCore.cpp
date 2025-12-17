@@ -44,7 +44,7 @@
 #include <stdio.h>
 
 #include <aditof/system.h>
-#include <cJSON.h>
+#include <json.h>
 
 #include "roboto-bold.h"
 #include "roboto-regular.h"
@@ -132,38 +132,45 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
     std::ifstream ifs(DEFAULT_TOOLS_CONFIG_FILENAME);
     std::string content((std::istreambuf_iterator<char>(ifs)),
                         (std::istreambuf_iterator<char>()));
-    cJSON *config_json = cJSON_Parse(content.c_str());
+    json_object *config_json = json_tokener_parse(content.c_str());
 
     if (config_json != NULL) {
         // Get option to look or not for network cameras
-        const cJSON *json_skip_network_cameras =
-            cJSON_GetObjectItemCaseSensitive(config_json,
-                                             "skip_network_cameras");
-        if (cJSON_IsString(json_skip_network_cameras) &&
-            (json_skip_network_cameras->valuestring != NULL)) {
-            std::string value = json_skip_network_cameras->valuestring;
-            if (value == "on") {
-                m_skip_network_cameras = true;
-            } else if (value == "off") {
-                m_skip_network_cameras = false;
-            } else {
-                LOG(WARNING) << "Invalid value for 'skip_network_cameras'. "
-                                "Accepted values: on, off";
+        json_object *json_skip_network_cameras = NULL;
+        if (json_object_object_get_ex(config_json, "skip_network_cameras",
+                                      &json_skip_network_cameras)) {
+            if (json_object_is_type(json_skip_network_cameras, json_type_string)) {
+                const char *valuestring = json_object_get_string(json_skip_network_cameras);
+                if (valuestring != NULL) {
+                    std::string value = valuestring;
+                    if (value == "on") {
+                        m_skip_network_cameras = true;
+                    } else if (value == "off") {
+                        m_skip_network_cameras = false;
+                    } else {
+                        LOG(WARNING) << "Invalid value for 'skip_network_cameras'. "
+                                        "Accepted values: on, off";
+                    }
+                }
             }
         }
 
         // Get the IP address of the network camera to which the application should try to connect to
-        const cJSON *json_camera_ip =
-            cJSON_GetObjectItemCaseSensitive(config_json, "camera_ip");
-        if (cJSON_IsString(json_camera_ip) &&
-            (json_camera_ip->valuestring != NULL)) {
-            m_cameraIp = json_camera_ip->valuestring;
-            if (!m_cameraIp.empty()) {
-                m_cameraIp = "ip:" + m_cameraIp;
+        json_object *json_camera_ip = NULL;
+        if (json_object_object_get_ex(config_json, "camera_ip",
+                                      &json_camera_ip)) {
+            if (json_object_is_type(json_camera_ip, json_type_string)) {
+                const char *valuestring = json_object_get_string(json_camera_ip);
+                if (valuestring != NULL) {
+                    m_cameraIp = valuestring;
+                    if (!m_cameraIp.empty()) {
+                        m_cameraIp = "ip:" + m_cameraIp;
+                    }
+                }
             }
         }
 
-        cJSON_Delete(config_json);
+        json_object_put(config_json);
     }
     if (!ifs.fail()) {
         ifs.close();
