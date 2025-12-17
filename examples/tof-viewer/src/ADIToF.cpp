@@ -29,12 +29,12 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <aditof/log.h>
 #include <aditof/system.h>
 #include <aditof/version-kit.h>
 #include <aditof/version.h>
 #include <algorithm>
 #include <cctype>
-#include <aditof/log.h>
 #include <iostream>
 
 #include "ADIMainWindow.h"

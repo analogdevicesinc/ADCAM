@@ -139,8 +139,10 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
         json_object *json_skip_network_cameras = NULL;
         if (json_object_object_get_ex(config_json, "skip_network_cameras",
                                       &json_skip_network_cameras)) {
-            if (json_object_is_type(json_skip_network_cameras, json_type_string)) {
-                const char *valuestring = json_object_get_string(json_skip_network_cameras);
+            if (json_object_is_type(json_skip_network_cameras,
+                                    json_type_string)) {
+                const char *valuestring =
+                    json_object_get_string(json_skip_network_cameras);
                 if (valuestring != NULL) {
                     std::string value = valuestring;
                     if (value == "on") {
@@ -148,8 +150,9 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
                     } else if (value == "off") {
                         m_skip_network_cameras = false;
                     } else {
-                        LOG(WARNING) << "Invalid value for 'skip_network_cameras'. "
-                                        "Accepted values: on, off";
+                        LOG(WARNING)
+                            << "Invalid value for 'skip_network_cameras'. "
+                               "Accepted values: on, off";
                     }
                 }
             }
@@ -160,7 +163,8 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
         if (json_object_object_get_ex(config_json, "camera_ip",
                                       &json_camera_ip)) {
             if (json_object_is_type(json_camera_ip, json_type_string)) {
-                const char *valuestring = json_object_get_string(json_camera_ip);
+                const char *valuestring =
+                    json_object_get_string(json_camera_ip);
                 if (valuestring != NULL) {
                     m_cameraIp = valuestring;
                     if (!m_cameraIp.empty()) {
