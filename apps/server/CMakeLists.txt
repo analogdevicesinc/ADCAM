@@ -46,6 +46,12 @@ if(NOT WITH_SUBMODULES AND NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../libadit
 else()
     target_include_directories(${PROJECT_NAME} PRIVATE ${CPPZMQ_INSTALL_DIR} ${LIBZMQ_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} PUBLIC libzmq-static)
+    # When linking libzmq statically, we need its system dependencies
+    find_package(Threads REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(${PROJECT_NAME} PRIVATE rt)
+    endif()
 endif()
 
 
