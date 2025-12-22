@@ -1,0 +1,50 @@
+From 1ddede2ce8a8e36e9b60ed56ea6ee79391bdadab Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Thu, 18 Dec 2025 18:20:10 +0530
+Subject: [PATCH 1/4] arch: arm: boot: dts: overlays: Add fsync PWM and GPIO
+ support for interrupt
+
+- Add PWM configuration for fsync signal using the first PWM controller
+- Configure GPIO for interrupt and set up the appropriate pin for fsync
+- Introduce a new fragment to expose the PWM as a GPIO for the adsd3500
+sensor
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ arch/arm/boot/dts/overlays/adsd3500-overlay.dts | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/arch/arm/boot/dts/overlays/adsd3500-overlay.dts b/arch/arm/boot/dts/overlays/adsd3500-overlay.dts
+index 5ab86aa79029..7e3c48ba1719 100644
+--- a/arch/arm/boot/dts/overlays/adsd3500-overlay.dts
++++ b/arch/arm/boot/dts/overlays/adsd3500-overlay.dts
+@@ -16,6 +16,9 @@ cam0_sensor: adsd3500@38 {
+                 compatible = "adi,adsd3500";
+                 reg = <0x38>;
+                 status = "okay";
++		interrupt-gpios = <&rp1_gpio 35 0>;
++		pwms = <&pwm 0 50000000>; /* PWM for fsync */
++		pwm-names = "fsync";
+                 port {
+                     cam0_sensor_ep: endpoint {
+                         remote-endpoint = <&csi0_ep>;
+@@ -60,4 +63,16 @@ gpio@68 {
+             };
+         };
+     };
++
++    fragment@3 {
++	target-path = "/";
++	__overlay__ {
++		pwm: pwm-gpio {
++			compatible = "pwm-gpio";
++			#pwm-cells = <2>;
++			status = "okay";
++			pwm-gpios = <&rp1_gpio 35 0>;  /* CAM0_CLK GPIO */
++		};
++	};
++    };
+ };
+-- 
+2.25.1
+
