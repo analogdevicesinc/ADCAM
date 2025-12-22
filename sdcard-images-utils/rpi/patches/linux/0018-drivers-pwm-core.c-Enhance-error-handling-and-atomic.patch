@@ -1,0 +1,119 @@
+From f9f5af332d5c04e97e9707c98122a3613a83b1ab Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Thu, 18 Dec 2025 18:24:14 +0530
+Subject: [PATCH 2/4] drivers: pwm: core.c: Enhance error handling and atomic
+ PWM operations
+
+- Check for the presence of the apply method before calling it in __pwm_apply
+- Handle polarity changes and restore initial state in the absence of apply method
+- Introduce a fallback mechanism for configuring PWM when the atomic API is not implemented
+- Add debug warning if the driver uses legacy non-atomic operations
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/pwm/core.c | 80 ++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 70 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/pwm/core.c b/drivers/pwm/core.c
+index 03f5ebfd037e..74f885b999e2 100644
+--- a/drivers/pwm/core.c
++++ b/drivers/pwm/core.c
+@@ -199,18 +199,69 @@ static int __pwm_apply(struct pwm_device *pwm, const struct pwm_state *state)
+ 	    state->usage_power == pwm->state.usage_power)
+ 		return 0;
+ 
+-	err = chip->ops->apply(chip, pwm, state);
+-	trace_pwm_apply(pwm, state, err);
+-	if (err)
+-		return err;
++	if (chip->ops->apply) {
++		err = chip->ops->apply(chip, pwm, state);
++		trace_pwm_apply(pwm, state, err);
++		if (err)
++			return err;
+ 
+-	pwm->state = *state;
++		pwm->state = *state;
+ 
+-	/*
+-	 * only do this after pwm->state was applied as some
+-	 * implementations of .get_state depend on this
+-	 */
+-	pwm_apply_debug(pwm, state);
++		/*
++		 * only do this after pwm->state was applied as some
++		 * implementations of .get_state depend on this
++		 */
++		pwm_apply_debug(pwm, state);
++	} else {
++		/*
++		 * FIXME: restore the initial state in case of error.
++		 */
++		if (state->polarity != pwm->state.polarity) {
++			if (!chip->ops->set_polarity)
++				return -EINVAL;
++
++			/*
++			 * Changing the polarity of a running PWM is
++			 * only allowed when the PWM driver implements
++			 * ->apply().
++			 */
++			if (pwm->state.enabled) {
++				chip->ops->disable(chip, pwm);
++				pwm->state.enabled = false;
++			}
++
++			err = chip->ops->set_polarity(chip, pwm,
++					state->polarity);
++			if (err)
++				return err;
++
++			pwm->state.polarity = state->polarity;
++		}
++
++		if (state->period != pwm->state.period ||
++				state->duty_cycle != pwm->state.duty_cycle) {
++			err = chip->ops->config(pwm->chip, pwm,
++					state->duty_cycle,
++					state->period);
++			if (err)
++				return err;
++
++			pwm->state.duty_cycle = state->duty_cycle;
++			pwm->state.period = state->period;
++		}
++
++		if (state->enabled != pwm->state.enabled) {
++			if (state->enabled) {
++				err = chip->ops->enable(chip, pwm);
++				if (err)
++					return err;
++			} else {
++				chip->ops->disable(chip, pwm);
++			}
++
++			pwm->state.enabled = state->enabled;
++		}
++	}
+ 
+ 	return 0;
+ }
+@@ -1118,6 +1169,15 @@ static bool pwm_ops_check(const struct pwm_chip *chip)
+ {
+ 	const struct pwm_ops *ops = chip->ops;
+ 
++	/* driver supports legacy, non-atomic operation */
++	if (ops->config && ops->enable && ops->disable) {
++		if (IS_ENABLED(CONFIG_PWM_DEBUG))
++			dev_warn(pwmchip_parent(chip),
++					"Driver needs updating to atomic API\n");
++
++		return true;
++	}
++
+ 	if (!ops->apply)
+ 		return false;
+ 
+-- 
+2.25.1
+
