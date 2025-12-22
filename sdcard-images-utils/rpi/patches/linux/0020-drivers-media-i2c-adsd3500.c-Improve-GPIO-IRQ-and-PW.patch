@@ -1,0 +1,172 @@
+From d93314da690e0f30c55bc954c3bc47d9ff3dc44e Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Thu, 18 Dec 2025 18:39:37 +0530
+Subject: [PATCH 4/4] drivers: media: i2c: adsd3500.c: Improve GPIO IRQ and PWM
+ fsync handling
+
+- Switch interrupt GPIO handling to devm APIs with better error reporting
+- Clean up IRQ setup and teardown when switching between sync modes
+- Initialize PWM fsync polarity explicitly and tighten debug logging
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/adsd3500.c | 60 ++++++++++++++++++++----------------
+ 1 file changed, 34 insertions(+), 26 deletions(-)
+
+diff --git a/drivers/media/i2c/adsd3500.c b/drivers/media/i2c/adsd3500.c
+index e35528e56ff9..53711ab5db42 100755
+--- a/drivers/media/i2c/adsd3500.c
++++ b/drivers/media/i2c/adsd3500.c
+@@ -930,70 +930,77 @@ static int adsd3500_set_frame_rate(struct adsd3500 *priv, s64 val)
+ 
+ static int adsd3500_configure_interrupt(struct adsd3500 *adsd3500)
+ {
+-
+ 	struct device *dev = adsd3500->dev;
+-	struct i2c_client *client = adsd3500->i2c_client;
+ 	int ret = 0;
+ 
+ 	dev_dbg(dev, "Entered: %s\n", __func__);
+-	adsd3500->irq_gpio = gpiod_get_optional(dev, "interrupt", GPIOD_IN);
++
++	adsd3500->irq_gpio = devm_gpiod_get_optional(dev, "interrupt", GPIOD_IN);
+ 	if (IS_ERR(adsd3500->irq_gpio)) {
+-		dev_err(dev, "Unable to get \"interrupt\" gpio\n");
+-		return PTR_ERR(adsd3500->irq_gpio);
++		ret = PTR_ERR(adsd3500->irq_gpio);
++		dev_err(dev, "Unable to get \"interrupt\" gpio: %d\n", ret);
++		adsd3500->irq_gpio = NULL;
++		return ret;
++	}
++
++	if (!adsd3500->irq_gpio) {
++		dev_err(dev, "No interrupt GPIO specified, skipping IRQ setup\n");
++		return 0;
+ 	}
+ 
+ 	adsd3500->irq = gpiod_to_irq(adsd3500->irq_gpio);
+-	if(adsd3500->irq < 0){
+-		dev_err(dev, "Unable to find the valid irq\n");
++	if (adsd3500->irq < 0) {
++		ret = adsd3500->irq;
++		dev_err(dev, "Unable to map GPIO to IRQ: %d\n", ret);
++		return ret;
+ 	}
+ 
+ 	ret = devm_request_irq(dev, adsd3500->irq, adsd3500_irq_handler,
+ 			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+-			client->name, adsd3500);
+-	if(ret < 0){
+-		dev_err(dev, "Failed to request IRQ %d\n",adsd3500->irq);
++			"adsd3500", adsd3500);
++	if (ret < 0) {
++		dev_err(dev, "Failed to request IRQ %d: %d\n", adsd3500->irq, ret);
++		return ret;
+ 	}
+ 
+-	return ret;
++	dev_dbg(dev, "IRQ %d registered for GPIO %d\n", adsd3500->irq, desc_to_gpio(adsd3500->irq_gpio));
+ 
++	return 0;
+ }
+ 
+-
+ static int adsd3500_set_fsync_trigger(struct adsd3500 *adsd3500, s32 val)
+ {
+-	struct device *dev = adsd3500->dev;
+-	struct i2c_client *client = adsd3500->i2c_client;
+ 	struct pwm_state state;
+ 	int ret;
+ 
+ 	if(adsd3500->pwm_fsync == NULL){
+-		dev_warn(dev, "Failed to get the pwm device\n");
++		dev_warn(adsd3500->dev, "Failed to get the pwm device\n");
+ 		return -ENODEV;
+ 	}
+ 
+-	dev_dbg(dev, "Entered: %s Value: %d\n", __func__, val);
++	dev_dbg(adsd3500->dev, "Entered: %s Value: %d\n", __func__, val);
+ 	adsd3500->curr_sync_mode = val;
+ 
+ 	if(adsd3500->curr_sync_mode == PWM_TRIGGER){
+-		dev_dbg(dev, "Enable frame sync using pwm trigger\n");
++		dev_dbg(adsd3500->dev, "Enable frame sync using pwm trigger\n");
+ 		if(IS_ERR(adsd3500->pwm_fsync)){
+-			dev_err(&client->dev, "Failed to get the pwm device\n");
++			dev_err(adsd3500->dev, "Failed to get the pwm device\n");
+ 			goto error;
+ 		}
+ 		devm_free_irq(adsd3500->dev, adsd3500->irq, adsd3500);
+-		gpiod_put(adsd3500->irq_gpio);
++		devm_gpiod_put(adsd3500->dev, adsd3500->irq_gpio);
+ 
+ 		pwm_init_state(adsd3500->pwm_fsync, &state);
+ 		state.polarity = PWM_POLARITY_NORMAL;
+ 		state.period = DIV_ROUND_UP(1 * NSEC_PER_SEC, adsd3500->framerate);
+ 		ret = pwm_apply_might_sleep(adsd3500->pwm_fsync, &state);
+ 		if(ret){
+-			dev_err(&client->dev, "Failed to change the PWM state polarity\n");
++			dev_err(adsd3500->dev, "Failed to change the PWM state polarity\n");
+ 		}
+ 
+ 		ret = adsd3500_set_frame_rate(adsd3500, adsd3500->framerate);
+ 		if(ret){
+-			dev_err(&client->dev, "Failed to set the frame rate\n");
++			dev_err(adsd3500->dev, "Failed to set the frame rate\n");
+ 		}
+ 
+ 		ret = regmap_write(adsd3500->regmap, ENABLE_FSYNC_TRIGGER, FSYNC_HIZ);
+@@ -1002,13 +1009,13 @@ static int adsd3500_set_fsync_trigger(struct adsd3500 *adsd3500, s32 val)
+ 		}
+ 	}
+ 	else if(adsd3500->curr_sync_mode == INTR_TRIGGER){
+-		dev_dbg(dev, "Enable interrupt trigger\n");
++		dev_dbg(adsd3500->dev, "Enable interrupt trigger\n");
+ 		pwm_init_state(adsd3500->pwm_fsync, &state);
+ 		state.polarity = PWM_POLARITY_INVERSED;
+ 
+ 		ret = pwm_apply_might_sleep(adsd3500->pwm_fsync, &state);
+ 		if(ret) {
+-			dev_err(&client->dev, "Failed to change the PWM state polarity\n");
++			dev_err(adsd3500->dev, "Failed to change the PWM state polarity\n");
+ 		}
+ 
+ 		ret = adsd3500_configure_interrupt(adsd3500);
+@@ -1022,7 +1029,7 @@ static int adsd3500_set_fsync_trigger(struct adsd3500 *adsd3500, s32 val)
+ 		}
+ 	}
+ 	else{
+-		dev_err(dev, "Invalid sync mode %d\n", adsd3500->curr_sync_mode);
++		dev_err(adsd3500->dev, "Invalid sync mode %d\n", adsd3500->curr_sync_mode);
+ 	}
+ 
+ 	return 0;
+@@ -1685,6 +1692,7 @@ static int adsd3500_parse_dt(struct adsd3500 *priv)
+ 		priv->framerate = ADSD3500_DEFAULT_FPS;
+ 		pwm_init_state(priv->pwm_fsync, &state);
+ 		state.period = DIV_ROUND_UP(1 * NSEC_PER_SEC, priv->framerate);
++		state.polarity = PWM_POLARITY_INVERSED;
+ 		pwm_set_relative_duty_cycle(&state, 50, 100);
+ 		ret = pwm_apply_might_sleep(priv->pwm_fsync, &state);
+ 		if(ret){
+@@ -1954,7 +1962,7 @@ static int adsd3500_probe(struct i2c_client *client)
+ 	v4l2_ctrl_handler_free(&adsd3500->ctrls);
+ 	mutex_destroy(&adsd3500->lock);
+ release_gpio:
+-	gpiod_put(adsd3500->irq_gpio);
++	devm_gpiod_put(dev, adsd3500->irq_gpio);
+ 	proc_remove(adsd3500->proc_file);
+ 	proc_remove(adsd3500->proc_dir);
+ 
+@@ -1969,7 +1977,7 @@ static void adsd3500_remove(struct i2c_client *client)
+ 	v4l2_async_unregister_subdev(&adsd3500->sd);
+ 	media_entity_cleanup(&adsd3500->sd.entity);
+ 	devm_free_irq(adsd3500->dev, adsd3500->irq, adsd3500);
+-	gpiod_put(adsd3500->irq_gpio);
++	devm_gpiod_put(adsd3500->dev, adsd3500->irq_gpio);
+ 	proc_remove(adsd3500->proc_file);
+ 	proc_remove(adsd3500->proc_dir);
+ 	v4l2_ctrl_handler_free(&adsd3500->ctrls);
+-- 
+2.25.1
+
