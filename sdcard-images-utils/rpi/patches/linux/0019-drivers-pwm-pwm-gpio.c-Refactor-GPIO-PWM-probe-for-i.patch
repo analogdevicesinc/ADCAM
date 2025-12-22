@@ -1,0 +1,142 @@
+From 9892bbab4aa973b8b6e9b2a1dc99eb52b283d729 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Thu, 18 Dec 2025 18:34:41 +0530
+Subject: [PATCH 3/4] drivers: pwm: pwm-gpio.c: Refactor GPIO PWM probe for
+ improved error handling
+
+- Refactor `gpio_pwm_probe` to improve error handling and GPIO management
+- Use `devm_pwmchip_alloc` to allocate PWM chip and clean up code for GPIO initialization
+- Fix issues with GPIO descriptor acquisition by ensuring proper parent device reference
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/pwm/pwm-gpio.c | 78 +++++++++++++++++++-----------------------
+ 1 file changed, 36 insertions(+), 42 deletions(-)
+
+diff --git a/drivers/pwm/pwm-gpio.c b/drivers/pwm/pwm-gpio.c
+index a5bc80be28c8..d5430dabfd0a 100644
+--- a/drivers/pwm/pwm-gpio.c
++++ b/drivers/pwm/pwm-gpio.c
+@@ -100,9 +100,9 @@ static int gpio_pwm_set_polarity(struct pwm_chip *chip, struct pwm_device *pwm,
+ 	struct gpio_pwm_data *gpio_data = pwm_get_chip_data(pwm);
+ 	struct gpio_desc *gpiod;
+ 
+-	dev_info(&chip->dev, "Entered: %s polarity: %d\n", __func__, polarity);
++	dev_dbg(&chip->dev, "Entered: %s polarity: %d\n", __func__, polarity);
+ 	if(polarity == PWM_POLARITY_NORMAL){
+-		gpiod = devm_gpiod_get(&chip->dev, "pwm", GPIOD_OUT_LOW);
++		gpiod = devm_gpiod_get(chip->dev.parent, "pwm", GPIOD_OUT_LOW);
+ 		if (IS_ERR(gpiod)) {
+ 			dev_err(&chip->dev, "Failed to get \"pwm\" gpio\n");
+ 			return PTR_ERR(gpiod);
+@@ -111,7 +111,7 @@ static int gpio_pwm_set_polarity(struct pwm_chip *chip, struct pwm_device *pwm,
+ 	}
+ 
+ 	if(polarity == PWM_POLARITY_INVERSED) {
+-		devm_gpiod_put(&chip->dev, gpio_data->gpiod);
++		devm_gpiod_put(chip->dev.parent, gpio_data->gpiod);
+ 		gpio_data->gpiod = NULL;
+ 	}
+ 
+@@ -160,65 +160,59 @@ static const struct pwm_ops gpio_pwm_ops = {
+ 
+ static int gpio_pwm_probe(struct platform_device *pdev)
+ {
++	struct device *dev = &pdev->dev;
+ 	struct gpio_desc *gpiod;
+ 	struct gpio_pwm_data *gpio_data;
+ 	struct gpio_pwm_chip *gpio_chip;
+-	int hrtimer = 0;
++	struct pwm_chip *chip;
+ 	int ret;
+ 
+-	gpio_chip = devm_kzalloc(&pdev->dev, sizeof(*gpio_chip), GFP_KERNEL);
+-	if (!gpio_chip)
+-		return -ENOMEM;
+-
+-	gpio_chip->chip.dev = pdev->dev;
+-	gpio_chip->chip.ops = &gpio_pwm_ops;
+-	gpio_chip->chip.base = -1;
+-	gpio_chip->chip.npwm = 1;
+-	gpio_chip->chip.of_xlate = of_pwm_xlate_with_flags;
+-	gpio_chip->chip.of_pwm_n_cells = 3;
++	chip = devm_pwmchip_alloc(dev, 1, sizeof(*gpio_chip));
++	if (IS_ERR(chip))
++		return PTR_ERR(chip);
+ 
+-	ret = pwmchip_add(&gpio_chip->chip);
+-	if (ret < 0) {
+-		dev_err(&pdev->dev, "failed to add PWM chip: %d\n", ret);
+-		return ret;
+-	}
++	gpio_chip = pwmchip_get_drvdata(chip);
+ 
+-	gpiod = devm_gpiod_get(&pdev->dev, "pwm", GPIOD_OUT_LOW);
++	gpiod = devm_gpiod_get(dev, "pwm", GPIOD_OUT_LOW);
+ 	if (IS_ERR(gpiod)) {
+-		int error;
+-
+-		error = PTR_ERR(gpiod);
+-		if (error != -EPROBE_DEFER)
+-			dev_err(&pdev->dev,
+-				"failed to get gpio flags, error: %d\n",
+-				error);
+-		return error;
++		ret = PTR_ERR(gpiod);
++		if (ret != -EPROBE_DEFER)
++			dev_err(dev, "Failed to acquire GPIO: %d\n", ret);
++		return ret;
+ 	}
+ 
+-	gpio_data = devm_kzalloc(&pdev->dev, sizeof(*gpio_data),
+-				 GFP_KERNEL);
++	gpio_data = devm_kzalloc(dev, sizeof(*gpio_data), GFP_KERNEL);
++	if (!gpio_data)
++		return -ENOMEM;
+ 
+-	hrtimer_init(&gpio_data->timer,
+-		     CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+-	gpio_data->timer.function = &gpio_pwm_timer;
+ 	gpio_data->gpiod = gpiod;
+ 	gpio_data->pin_on = false;
+ 	gpio_data->run = false;
+ 
+-	if (hrtimer_is_hres_active(&gpio_data->timer))
+-		hrtimer++;
++	hrtimer_init(&gpio_data->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
++	gpio_data->timer.function = &gpio_pwm_timer;
+ 
+-	pwm_set_chip_data(&gpio_chip->chip.pwms[0], gpio_data);
++	chip->dev.parent = dev;
++	chip->ops = &gpio_pwm_ops;
++	chip->base = -1;
++	chip->npwm = 1;
++	chip->of_xlate = of_pwm_xlate_with_flags;
++	chip->of_pwm_n_cells = 3;
+ 
+-	if (!hrtimer) {
+-		dev_warn(&pdev->dev, "unable to use High-Resolution timer,");
+-		dev_warn(&pdev->dev, "%s is restricted to low resolution.",
+-			  "pwm-gpio");
++	ret = __devm_pwmchip_add(dev, chip, THIS_MODULE);
++	if (ret < 0) {
++		dev_err(dev, "Failed to register PWM chip: %d\n", ret);
++		return ret;
+ 	}
+ 
+-	platform_set_drvdata(pdev, gpio_chip);
++	pwm_set_chip_data(&chip->pwms[0], gpio_data);
++
++	platform_set_drvdata(pdev, chip);
+ 
+-	dev_dbg(&pdev->dev, "GPIO PWMs loaded\n");
++	dev_info(dev, "PWM-GPIO registered: GPIO %d, %s timer, pwmchip%u\n",
++			desc_to_gpio(gpiod),
++			hrtimer_is_hres_active(&gpio_data->timer) ? "high-res" : "low-res",
++			chip->id);
+ 
+ 	return 0;
+ }
+-- 
+2.25.1
+
