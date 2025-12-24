@@ -307,13 +307,18 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
             }
 
             // Check what frame types are available based on metadata config
-            bool haveAB, haveDepth, haveXYZ;
+            bool haveAB, haveDepth, haveXYZ, haveRGB;
             if (m_off_line) {
                 // Offline: use cached availability from UpdateOfflineFrameTypeAvailability()
                 haveAB = m_enable_ab_display && frame->haveDataType("ab");
                 haveDepth =
                     m_enable_depth_display && frame->haveDataType("depth");
                 haveXYZ = m_enable_xyz_display && frame->haveDataType("xyz");
+#ifdef WITH_RGB_SUPPORT
+                haveRGB = frame->haveDataType("rgb");
+#else
+                haveRGB = false;
+#endif
             } else {
                 // Live mode: For AB and XYZ, check config. For depth, always show if data exists
                 // (bitsInDepth may be 0 for ISP-computed depth modes)
@@ -329,6 +334,11 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
                     haveDepth = frame->haveDataType("depth");
                     haveXYZ = frame->haveDataType("xyz");
                 }
+#ifdef WITH_RGB_SUPPORT
+                haveRGB = frame->haveDataType("rgb");
+#else
+                haveRGB = false;
+#endif
             }
 
             uint32_t numberAvailableDataTypes = 0;
@@ -336,6 +346,9 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
             numberAvailableDataTypes += haveAB ? 1 : 0;
             numberAvailableDataTypes += haveDepth ? 1 : 0;
             numberAvailableDataTypes += haveXYZ ? 1 : 0;
+#ifdef WITH_RGB_SUPPORT
+            numberAvailableDataTypes += haveRGB ? 1 : 0;
+#endif
 
             ImGuiIO &io = ImGui::GetIO();
             if (io.KeyShift) {
@@ -416,9 +429,16 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
             if (haveXYZ) {
                 DisplayPointCloudWindow(overlayFlags);
             }
+#ifdef WITH_RGB_SUPPORT
+            // Display AB window if either AB or RGB data is available
+            if (haveAB || haveRGB) {
+                DisplayActiveBrightnessWindow(overlayFlags);
+            }
+#else
             if (haveAB) {
                 DisplayActiveBrightnessWindow(overlayFlags);
             }
+#endif
             if (haveDepth) {
                 DisplayDepthWindow(overlayFlags);
             }

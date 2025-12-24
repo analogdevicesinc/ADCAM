@@ -68,6 +68,21 @@ typedef enum {
 	 */
     ADI_IMAGE_FORMAT_AB16,
 
+    /** Image type RGB.
+	 *
+	 * \details
+	 * Each pixel of RGB data is three bytes representing Red, Green, Blue components.
+	 * The value of the data represents color information.
+	 *
+	 * \details
+	 * This format represents visible light and is captured by the RGB camera.
+	 *
+	 * \details
+	 * Stride indicates the length of each line in bytes and should be used to determine the start location of each
+	 * line of the image in memory.
+	 */
+    ADI_IMAGE_FORMAT_RGB,
+
 } ADI_Image_Format_t;
 
 #ifdef __cplusplus

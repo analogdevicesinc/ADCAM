@@ -48,7 +48,7 @@ DEFAULT_DEPTH_BYTES = 2
 # RGB Frame Constants (for direct binary extraction)
 DEPTH_FRAME_SIZE_MP = 4194304   # Mode 0: 1024*1024*4 bytes (Depth+AB)
 DEPTH_FRAME_SIZE_QMP = 2621440  # QMP modes: 512*512*10 bytes (Depth+AB+Conf+XYZ)
-RGB_FRAME_SIZE = 3456000        # 1920x1200 NV12 format
+RGB_FRAME_SIZE = 1358848        # Actual NV12 size in .adcam files (1920x1200)
 RGB_WIDTH = 1920
 RGB_HEIGHT = 1200
 
@@ -57,20 +57,25 @@ def safe_join(*args):
 
 def nv12_to_rgb(nv12_data, width, height):
     """
-    Convert NV12 format to RGB using BT.601 coefficients
+    Convert NV12 format to RGB using ITU-R BT.709 coefficients (HDTV standard)
 
     NV12 Layout:
-    - Y plane: width * height bytes (luminance)
-    - UV plane: width * height / 2 bytes (chrominance, interleaved)
+    - Y plane: width * height bytes (luminance, range 0-255)
+    - UV plane: width * height / 2 bytes (chrominance, interleaved, range 0-255)
+      U and V centered at 128 (0 is 16, 255 is 240 in 8-bit)
     """
     y_size = width * height
     uv_size = y_size // 2
+
+    # Validate data size
+    if len(nv12_data) < y_size + uv_size:
+        raise ValueError(f"Insufficient NV12 data: expected {y_size + uv_size}, got {len(nv12_data)}")
 
     # Extract Y and UV planes
     y_plane = np.frombuffer(nv12_data[:y_size], dtype=np.uint8).reshape((height, width))
     uv_plane = np.frombuffer(nv12_data[y_size:y_size + uv_size], dtype=np.uint8).reshape((height // 2, width // 2, 2))
 
-    # Upsample UV to full resolution
+    # Upsample UV to full resolution using nearest neighbor
     u = np.repeat(np.repeat(uv_plane[:, :, 0], 2, axis=0), 2, axis=1)
     v = np.repeat(np.repeat(uv_plane[:, :, 1], 2, axis=0), 2, axis=1)
 
@@ -79,10 +84,10 @@ def nv12_to_rgb(nv12_data, width, height):
     u = u.astype(np.float32) - 128.0
     v = v.astype(np.float32) - 128.0
 
-    # BT.601 conversion (standard for SD video)
-    r = y + 1.402 * v
-    g = y - 0.344136 * u - 0.714136 * v
-    b = y + 1.772 * u
+    # ITU-R BT.709 conversion (HDTV standard, better color accuracy)
+    r = y + 1.5748 * v
+    g = y - 0.18732 * u - 0.46812 * v
+    b = y + 1.8556 * u
 
     # Clip and convert to uint8
     rgb = np.stack([
@@ -172,7 +177,7 @@ def generate_pcloud(xyz_frame, directory, base_filename, index, height, width):
         point_cloud.points = o3d.utility.Vector3dVector(xyz_data.astype(np.float64))
         point_cloud.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
         o3d.io.write_point_cloud(safe_join(directory, f'pointcloud_{base_filename}_{index}{PLY_EXT}'), point_cloud)
-        except Exception as e:
+    except Exception as e:
         print(f"Error generating point cloud: {e}")
 
 def generate_rgb(rgb_data, directory, base_filename, index):
@@ -185,9 +190,32 @@ def generate_rgb(rgb_data, directory, base_filename, index):
         print(f"\nWarning: Failed to generate RGB frame {index}: {e}")
 
 
+def find_latest_adcam_file():
+    """
+    Find the latest .adcam file in the data_collect media folder.
+    Returns the absolute path to the latest file, or None if not found.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    build_dir = os.path.abspath(os.path.join(script_dir, '../../../../build'))
+    media_dir = os.path.join(build_dir, 'examples', 'data_collect', 'media')
+    
+    if not os.path.exists(media_dir):
+        return None
+    
+    # Find all .adcam files
+    adcam_files = [f for f in os.listdir(media_dir) if f.endswith('.adcam')]
+    if not adcam_files:
+        return None
+    
+    # Return the latest file (by modification time)
+    latest_file = max([os.path.join(media_dir, f) for f in adcam_files], 
+                     key=os.path.getmtime)
+    return latest_file
+
 def generate_vid(main_dir, base_filename, processed_frames, width, height):
     vid_dir = safe_join(main_dir, f'vid_{base_filename}')
-    make_dir(vid_dir)
+    if not os.path.exists(vid_dir):
+        os.makedirs(vid_dir)
     video_path = safe_join(vid_dir, f'vid_{base_filename}.mp4')
     video = cv.VideoWriter(video_path, cv.VideoWriter_fourcc(*"mp4v"), 10, (width * 2, height))
     for i in processed_frames:
@@ -204,11 +232,19 @@ def generate_vid(main_dir, base_filename, processed_frames, width, height):
 def main():
     parser = argparse.ArgumentParser(
         description='Script to parse a raw file and extract different frame data')
-    parser.add_argument("filename", type=str, help="bin filename to parse")
+    parser.add_argument("filename", nargs='?', type=str, default=None,
+                       help=".adcam filename to parse (optional, auto-finds latest from data_collect if not provided)")
     parser.add_argument("-o", "--outdir", type=str, default=None, help="Output directory (optional)")
     parser.add_argument("-f", "--frames", type=str, default=None,
                         help="Frame range: N (just N), N- (from N to end), N-M (N to M inclusive)")
     args = parser.parse_args()
+
+    # Auto-detect latest .adcam file if not provided
+    if args.filename is None:
+        args.filename = find_latest_adcam_file()
+        if args.filename is None:
+            sys.exit("Error: No .adcam file provided and no latest file found in data_collect media folder")
+        print(f"Auto-detected latest file: {args.filename}")
 
     if not os.path.exists(args.filename):
         sys.exit(f"Error: {args.filename} does not exist")
@@ -373,18 +409,24 @@ def main():
                 frame_marker = struct.unpack('I', rgb_file_handle.read(4))[0]
                 frame_size = struct.unpack('I', rgb_file_handle.read(4))[0]
 
+                # Calculate actual RGB size in this frame
+                actual_rgb_size = frame_size - (depth_size + ab_size)
+                
                 # Check if RGB is in this frame (frame > depth+AB only)
-                if frame_size > (depth_size + ab_size):
+                if actual_rgb_size > 0:
                     # Seek to RGB data within frame buffer
                     rgb_file_handle.seek(frame_position + 8 + rgb_offset_in_frame)
-                    rgb_data = rgb_file_handle.read(RGB_FRAME_SIZE)
+                    rgb_data = rgb_file_handle.read(actual_rgb_size)
 
-                    if len(rgb_data) == RGB_FRAME_SIZE:
-                        print(f"  - Extracting RGB (1920x1200, NV12 format)")
-                        generate_rgb(rgb_data, frame_dir, base_filename, str_frame_idx)
-                        print(f"    Saved RGB PNG")
+                    if len(rgb_data) > 0:
+                        print(f"  - Extracting RGB (1920x1200, NV12 format, {len(rgb_data)} bytes)")
+                        try:
+                            generate_rgb(rgb_data, frame_dir, base_filename, str_frame_idx)
+                            print(f"    Saved RGB PNG")
+                        except ValueError as ve:
+                            print(f"    Warning: {ve} - skipping RGB")
                     else:
-                        print(f"  RGB data incomplete: {len(rgb_data)} bytes (expected {RGB_FRAME_SIZE})")
+                        print(f"  - No RGB data available")
                 else:
                     print(f"  - No RGB in frame (size: {frame_size} bytes, needs > {depth_size + ab_size})")
             except Exception as e:
@@ -394,10 +436,10 @@ def main():
         if frame_idx > end_frame:
             break
 
-    print(f"Processed {frame_idx - start_frame} frames."
+    print(f"Processed {frame_idx - start_frame} frames.")
 
     if rgb_file_handle is not None:
-    rgb_file_handle.close()
+        rgb_file_handle.close()
 
     camera1.stop()
 

@@ -11,6 +11,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_CUDA_ACCELERATION "Enable CUDA GPU acceleration if available" ON)
 
+# Inherit RGB support from parent project
+# If not set by parent, default to ON
+if(NOT DEFINED WITH_RGB_CAMERA)
+    set(WITH_RGB_CAMERA ON)
+endif()
+
 # Disable ARM and CUDA support on Windows - use x86 SIMD (AVX2) instead
 if(WIN32)
     set(USE_CUDA OFF)
@@ -137,6 +143,14 @@ else()
         ${ADIToF_SOURCES}
         ${OS_SPECIFIC_SOURCES}
     )
+endif()
+
+# Add RGB support compile definition if enabled
+if(WITH_RGB_CAMERA)
+    target_compile_definitions(ADIToFGUI PRIVATE WITH_RGB_SUPPORT)
+    message(STATUS "RGB camera support enabled in tof-viewer")
+else()
+    message(STATUS "RGB camera support disabled in tof-viewer (original AB-only behavior)")
 endif()
 
 # Link Libraries

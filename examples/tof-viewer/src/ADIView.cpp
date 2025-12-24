@@ -143,6 +143,16 @@ ADIView::ADIView(std::shared_ptr<ADIController> ctrl, const std::string &name,
     } else {
         LOG(INFO) << "Point cloud processing disabled by config (xyzEnable=0)";
     }
+
+#ifdef WITH_RGB_SUPPORT
+    // Create RGB worker thread (only if enabled at build time)
+    // Thread will check haveDataType("rgb") at runtime per frame
+    // This allows dynamic enable/disable based on actual frame content
+    m_rgbThreadCreated = true;
+    m_rgbImageWorker = std::thread(std::bind(&ADIView::_displayRgbImage, this));
+    LOG(INFO) << "RGB capture thread created (will process frames containing "
+                 "RGB data)";
+#endif // WITH_RGB_SUPPORT
 }
 
 ADIView::~ADIView() {
@@ -150,12 +160,15 @@ ADIView::~ADIView() {
         m_ctrl->StopCapture();
     }
 
+    // Signal all worker threads to stop
     std::unique_lock<std::mutex> lock(m_frameCapturedMutex);
     m_stopWorkersFlag = true;
     lock.unlock();
-    m_frameCapturedCv.notify_all();
+    m_frameCapturedCv
+        .notify_all(); // Wake all threads from condition variable wait
 
     // Only join threads that were actually created
+    // Each thread checks joinable() to ensure safe operation
     if (m_depthThreadCreated && m_depthImageWorker.joinable()) {
         m_depthImageWorker.join();
     }
@@ -165,6 +178,14 @@ ADIView::~ADIView() {
     if (m_xyzThreadCreated && m_pointCloudImageWorker.joinable()) {
         m_pointCloudImageWorker.join();
     }
+
+#ifdef WITH_RGB_SUPPORT
+    // Join RGB worker thread (only if enabled at build time)
+    if (m_rgbThreadCreated && m_rgbImageWorker.joinable()) {
+        m_rgbImageWorker.join();
+        LOG(INFO) << "RGB worker thread joined successfully";
+    }
+#endif // WITH_RGB_SUPPORT
 
     vertexArraySize = 0;
     m_capturedFrame = nullptr;
@@ -1225,3 +1246,307 @@ void ADIView::startCamera() {
 
 // ARM NEON implementations are in ADIView_neon.cpp (compiled separately)
 // CUDA implementations are in ADIView_cuda_wrapper.cpp and ADIView_cuda.cu (compiled separately)
+
+#ifdef WITH_RGB_SUPPORT
+
+/**
+ * @brief Worker thread for RGB image capture and conversion
+ * 
+ * Synchronization Pattern (Two-Phase Locking):
+ * Phase 1: Acquire m_frameCapturedMutex, check m_rgbFrameAvailable, release lock
+ * Phase 2: Process RGB data without lock (safe because main thread blocks on barrier)
+ * Phase 3: Participate in barrier via m_waitKeyBarrier counter
+ * 
+ * This follows the SDK's established pattern used for depth and AB frames.
+ * Ensures thread-safe RGB frame capture with minimal lock contention.
+ */
+void ADIView::_displayRgbImage() {
+    LOG(INFO) << "RGB worker thread started";
+
+    while (!m_stopWorkersFlag) {
+        // ============================================================
+        // PHASE 1: Wait for new frame (SHORT LOCK)
+        // ============================================================
+        {
+            std::unique_lock<std::mutex> lock(m_frameCapturedMutex);
+
+            // Condition variable wait with predicate prevents spurious wakeups
+            // Predicate is checked again after lock reacquisition
+            m_frameCapturedCv.wait(lock, [&]() {
+                return m_rgbFrameAvailable || m_stopWorkersFlag;
+            });
+
+            if (m_stopWorkersFlag) {
+                LOG(INFO) << "RGB worker thread received shutdown signal";
+                break;
+            }
+
+            // Clear frame availability flag while still holding lock
+            m_rgbFrameAvailable = false;
+
+            if (m_capturedFrame == nullptr) {
+                LOG(WARNING)
+                    << "RGB worker: m_capturedFrame is null, skipping frame";
+                continue;
+            }
+
+            lock.unlock(); // CRITICAL: Release lock BEFORE expensive processing
+        }
+
+        // ============================================================
+        // PHASE 2: Process RGB data (NO LOCK)
+        // ============================================================
+        // Safe to access m_capturedFrame without lock because:
+        // - Main thread doesn't update m_capturedFrame until barrier is reached
+        // - Barrier only triggers after all workers signal completion
+        // - This provides implicit synchronization
+
+        try {
+            // Get NV12 (YUV420) data pointer from frame
+            uint8_t *nv12_data = nullptr;
+            auto status =
+                m_capturedFrame->getData("rgb", (uint16_t **)&nv12_data);
+
+            if (status != aditof::Status::OK || nv12_data == nullptr) {
+                LOG(WARNING)
+                    << "RGB worker: Failed to get RGB data from frame (status="
+                    << static_cast<int>(status) << ")";
+                continue;
+            }
+
+            // Get actual frame dimensions from data details
+            // This is dynamic - actual resolution may vary by mode
+            aditof::FrameDataDetails frameRgbDetails;
+            m_capturedFrame->getDataDetails("rgb", frameRgbDetails);
+
+            int frameHeight = static_cast<int>(frameRgbDetails.height);
+            int frameWidth = static_cast<int>(frameRgbDetails.width);
+
+            if (frameHeight <= 0 || frameWidth <= 0) {
+                LOG(WARNING) << "RGB worker: Invalid frame dimensions "
+                             << frameWidth << "x" << frameHeight;
+                continue;
+            }
+
+            // Store actual RGB frame dimensions for display
+            rgbFrameWidth = frameWidth;
+            rgbFrameHeight = frameHeight;
+
+            LOG(INFO) << "RGB worker: Processing frame " << frameWidth << "x"
+                      << frameHeight << " (expected: " << RGB_WIDTH << "x"
+                      << RGB_HEIGHT << ")";
+
+            // Calculate expected NV12 size dynamically
+            // NV12 format: Y plane (W*H) + UV plane (W*H/2) = W*H*1.5 bytes
+            size_t expected_nv12_size = (frameWidth * frameHeight * 3) / 2;
+
+            // Allocate NV12 buffer on first use
+            if (rgb_video_data == nullptr) {
+                rgb_video_data = new uint8_t[expected_nv12_size];
+                if (rgb_video_data == nullptr) {
+                    LOG(ERROR) << "RGB worker: Failed to allocate NV12 buffer ("
+                               << expected_nv12_size << " bytes)";
+                    continue;
+                }
+                LOG(INFO) << "RGB worker: Allocated NV12 buffer: "
+                          << expected_nv12_size << " bytes";
+            }
+
+            // Allocate RGB output buffer on first use
+            if (rgb_video_data_rgb == nullptr) {
+                size_t rgb_buffer_size =
+                    frameHeight * frameWidth * 3; // RGB: 3 bytes per pixel
+                rgb_video_data_rgb = new uint8_t[rgb_buffer_size];
+                if (rgb_video_data_rgb == nullptr) {
+                    LOG(ERROR) << "RGB worker: Failed to allocate RGB buffer ("
+                               << rgb_buffer_size << " bytes)";
+                    continue;
+                }
+                LOG(INFO) << "RGB worker: Allocated RGB buffer: "
+                          << rgb_buffer_size << " bytes";
+            }
+
+            // Copy NV12 data to local buffer
+            // Original data may be used by recorder, so we make a copy
+            memcpy(rgb_video_data, nv12_data, expected_nv12_size);
+
+            // Debug: Sample some Y and UV values to verify data integrity
+            static int debug_frame_count = 0;
+            if (debug_frame_count < 3) { // Only first 3 frames
+                int y_size = frameWidth * frameHeight;
+                LOG(INFO) << "RGB worker [Frame " << debug_frame_count
+                          << "]: Sample Y values (first 10): "
+                          << (int)nv12_data[0] << " " << (int)nv12_data[1]
+                          << " " << (int)nv12_data[2] << " "
+                          << (int)nv12_data[3] << " " << (int)nv12_data[4]
+                          << " " << (int)nv12_data[5] << " "
+                          << (int)nv12_data[6] << " " << (int)nv12_data[7]
+                          << " " << (int)nv12_data[8] << " "
+                          << (int)nv12_data[9];
+                LOG(INFO) << "RGB worker [Frame " << debug_frame_count
+                          << "]: Sample UV values (first 10): "
+                          << (int)nv12_data[y_size] << " "
+                          << (int)nv12_data[y_size + 1] << " "
+                          << (int)nv12_data[y_size + 2] << " "
+                          << (int)nv12_data[y_size + 3] << " "
+                          << (int)nv12_data[y_size + 4] << " "
+                          << (int)nv12_data[y_size + 5] << " "
+                          << (int)nv12_data[y_size + 6] << " "
+                          << (int)nv12_data[y_size + 7] << " "
+                          << (int)nv12_data[y_size + 8] << " "
+                          << (int)nv12_data[y_size + 9];
+                debug_frame_count++;
+            }
+
+            // Convert NV12 to RGB using BT.709 (HDTV) color space
+            if (!convertNV12toRGB(rgb_video_data, rgb_video_data_rgb,
+                                  frameWidth, frameHeight)) {
+                LOG(ERROR) << "RGB worker: NV12 to RGB conversion failed";
+                continue;
+            }
+
+            // Signal that RGB data is ready for display
+            {
+                std::lock_guard<std::mutex> data_lock(rgb_data_ready_mtx);
+                rgb_data_ready = true;
+            }
+            rgb_data_ready_cv.notify_one();
+
+        } catch (const std::exception &e) {
+            LOG(ERROR) << "RGB worker: Exception during frame processing: "
+                       << e.what();
+            continue;
+        }
+
+        // ============================================================
+        // PHASE 3: Barrier synchronization (MINIMAL LOCK)
+        // ============================================================
+        // Synchronize with main thread: wait for all worker threads to complete
+        // This ensures depth, AB, RGB, and point cloud threads all finish
+        // before main thread proceeds to next frame
+        {
+            std::unique_lock<std::mutex> imshow_lock(m_imshowMutex);
+            m_waitKeyBarrier++;
+
+            // Only notify main thread when ALL worker threads have signaled completion
+            if (m_waitKeyBarrier == numOfThreads) {
+                imshow_lock.unlock();
+                m_barrierCv.notify_one(); // Wake main thread from barrier wait
+            }
+        }
+    }
+
+    // Cleanup: release allocated buffers
+    if (rgb_video_data != nullptr) {
+        delete[] rgb_video_data;
+        rgb_video_data = nullptr;
+    }
+    if (rgb_video_data_rgb != nullptr) {
+        delete[] rgb_video_data_rgb;
+        rgb_video_data_rgb = nullptr;
+    }
+    LOG(INFO) << "RGB worker thread exited cleanly";
+}
+
+/**
+ * @brief Convert NV12 (YUV420) format to RGB using BT.709 color space
+ * 
+ * NV12 Format (YUV420 Semi-Planar):
+ * - Y plane: Contains luminance values for all pixels
+ *   Layout: [Y0, Y1, Y2, ..., Yn] where n = width * height
+ * - UV plane: Contains interleaved chrominance pairs
+ *   Layout: [U0, V0, U1, V1, ..., Un, Vn] where n = (width/2) * (height/2)
+ *   Each U/V pair covers a 2x2 block of Y pixels
+ * 
+ * Color Conversion (ITU-R BT.709 - HDTV Standard):
+ * Y is in range [0, 255], U and V centered at 128
+ * R = Y + 1.5748 * (V - 128)
+ * G = Y - 0.18732 * (U - 128) - 0.46812 * (V - 128)
+ * B = Y + 1.8556 * (U - 128)
+ * 
+ * @param[in] nv12_data Input NV12 data buffer (Y plane + UV plane)
+ * @param[out] rgb_data Output RGB data (3 bytes per pixel: R, G, B)
+ * @param[in] width Frame width in pixels
+ * @param[in] height Frame height in pixels
+ * @return true if conversion successful, false on error
+ */
+bool ADIView::convertNV12toRGB(const uint8_t *nv12_data, uint8_t *rgb_data,
+                               int width, int height) {
+    // Input validation
+    if (nv12_data == nullptr || rgb_data == nullptr) {
+        LOG(ERROR) << "convertNV12toRGB: Null input or output pointer";
+        return false;
+    }
+
+    if (width <= 0 || height <= 0) {
+        LOG(ERROR) << "convertNV12toRGB: Invalid dimensions " << width << "x"
+                   << height;
+        return false;
+    }
+
+    try {
+        // Calculate plane offsets
+        // NV12 format: Y plane (width * height) + UV plane (width * height / 2)
+        // UV plane layout: (height/2) rows, each row has (width/2) pairs of [U,V]
+        int y_size = width * height;
+
+        const uint8_t *y_plane = nv12_data;
+        const uint8_t *uv_plane = nv12_data + y_size;
+
+        // Process each pixel with BT.709 color matrix
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                // Y plane index: linear, one per pixel
+                int y_idx = y * width + x;
+
+                // UV plane index: NV12 has UV at half resolution
+                // UV is organized as: (height/2) rows × (width/2) columns × 2 bytes [U,V]
+                // Each U,V pair covers a 2×2 block of Y pixels
+                int uv_row = y / 2; // Which UV row (half the height)
+                int uv_col = x / 2; // Which UV column (half the width)
+
+                // Calculate UV index: row * (width) + column * 2
+                // The stride is width because each row has width/2 pairs, each pair is 2 bytes
+                int uv_idx = uv_row * width + uv_col * 2;
+
+                // Read YUV values from planes
+                uint8_t y_val = y_plane[y_idx];
+                uint8_t u_val = uv_plane[uv_idx]; // U (blue-difference chroma)
+                uint8_t v_val =
+                    uv_plane[uv_idx + 1]; // V (red-difference chroma)
+
+                // Convert to float for color matrix calculations
+                // U and V are centered at 128
+                float y_f = static_cast<float>(y_val);
+                float u_f = static_cast<float>(u_val) - 128.0f;
+                float v_f = static_cast<float>(v_val) - 128.0f;
+
+                // Apply ITU-R BT.709 (HDTV) color matrix
+                // More accurate than BT.601 (SDTV) for modern cameras
+                float r = y_f + 1.5748f * v_f;
+                float g = y_f - 0.18732f * u_f - 0.46812f * v_f;
+                float b = y_f + 1.8556f * u_f;
+
+                // Clip to valid range [0, 255] and convert to uint8
+                int rgb_idx = y_idx * 3; // RGB: 3 bytes per pixel
+
+                // Output as BGR for proper OpenGL display
+                rgb_data[rgb_idx + 0] = static_cast<uint8_t>(
+                    std::min(255.0f, std::max(0.0f, b))); // B channel
+                rgb_data[rgb_idx + 1] = static_cast<uint8_t>(
+                    std::min(255.0f, std::max(0.0f, g))); // G channel
+                rgb_data[rgb_idx + 2] = static_cast<uint8_t>(
+                    std::min(255.0f, std::max(0.0f, r))); // R channel
+            }
+        }
+
+        return true;
+
+    } catch (const std::exception &e) {
+        LOG(ERROR) << "convertNV12toRGB: Exception during conversion: "
+                   << e.what();
+        return false;
+    }
+}
+
+#endif // WITH_RGB_SUPPORT

@@ -212,6 +212,34 @@ class ADIView {
     int16_t *pointCloud_video_data;
     uint8_t *ab_video_data_8bit;
     uint8_t *depth_video_data_8bit;
+
+#ifdef WITH_RGB_SUPPORT
+    // RGB frame capture related members (following AB/Depth pattern)
+    // Only compiled if WITH_RGB_SUPPORT is enabled at build time
+    bool m_rgbFrameAvailable = false;
+    bool m_rgbThreadCreated = false;
+    std::thread m_rgbImageWorker;
+
+    // RGB data buffers
+    uint8_t *rgb_video_data = nullptr;     // NV12 raw data from frame (YUV420)
+    uint8_t *rgb_video_data_rgb = nullptr; // Converted RGB data for display
+
+    // RGB synchronization (separate from depth/AB, follows SDK pattern)
+    std::mutex rgb_data_ready_mtx;
+    std::condition_variable rgb_data_ready_cv;
+    bool rgb_data_ready = false;
+
+    // RGB frame parameters - dynamic resolution handled at runtime
+    // These are used as constants but actual dimensions from getDataDetails()
+    static constexpr int RGB_WIDTH = 1920;
+    static constexpr int RGB_HEIGHT = 1200;
+    static constexpr int RGB_FRAME_SIZE = 1358848; // NV12 format: typical size
+
+    // Actual RGB frame dimensions (set dynamically from frame data)
+    int rgbFrameWidth = 0;
+    int rgbFrameHeight = 0;
+#endif // WITH_RGB_SUPPORT
+
     float *normalized_vertices = nullptr;
     size_t pointcloudTableSize = 0;
 
@@ -348,6 +376,33 @@ class ADIView {
     bool ab_data_ready = false;
 
     const size_t N = 50;
+
+#ifdef WITH_RGB_SUPPORT
+    /**
+     * @brief Worker thread function for RGB image capture and conversion
+     * 
+     * Implements two-phase locking pattern:
+     * - Phase 1: Brief lock to check frame availability
+     * - Phase 2: Process RGB data without lock (main thread blocked on barrier)
+     * - Phase 3: Participate in barrier synchronization
+     */
+    void _displayRgbImage();
+
+    /**
+     * @brief Convert NV12 (YUV420) format to RGB using BT.709 color space
+     * 
+     * @param[in] nv12_data Input NV12 data (Y plane followed by UV plane)
+     * @param[out] rgb_data Output RGB data in interleaved format [R,G,B,R,G,B,...]
+     * @param[in] width Frame width in pixels
+     * @param[in] height Frame height in pixels
+     * @return true if conversion successful, false on error (null pointers, invalid dimensions)
+     * 
+     * Color space: ITU-R BT.709 (HDTV standard)
+     * More accurate than BT.601 (SD) for modern cameras
+     */
+    bool convertNV12toRGB(const uint8_t *nv12_data, uint8_t *rgb_data,
+                          int width, int height);
+#endif // WITH_RGB_SUPPORT
 
     // Call this before your function
     auto startTimer() { return std::chrono::high_resolution_clock::now(); }
