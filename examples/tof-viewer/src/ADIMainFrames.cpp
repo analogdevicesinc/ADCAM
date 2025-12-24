@@ -198,6 +198,14 @@ int32_t ADIMainWindow::synchronizeVideo(std::shared_ptr<aditof::Frame> &frame) {
         // AND what data is actually available in the frame
         int32_t activeThreads = 0;
 
+        // Reset all frame availability flags first (they might be stale from previous frame)
+        m_view_instance->m_depthFrameAvailable = false;
+        m_view_instance->m_abFrameAvailable = false;
+        m_view_instance->m_pcFrameAvailable = false;
+#ifdef WITH_RGB_SUPPORT
+        m_view_instance->m_rgbFrameAvailable = false;
+#endif
+
         // Check if depth data is available in the frame
         if (m_view_instance->m_depthThreadCreated &&
             m_view_instance->m_capturedFrame->haveDataType("depth")) {

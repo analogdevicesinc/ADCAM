@@ -78,7 +78,8 @@ class ADIView {
 		*/
     ADIView(std::shared_ptr<adicontroller::ADIController> ctrl,
             const std::string &name, bool enableAB = true,
-            bool enableDepth = true, bool enableXYZ = true);
+            bool enableDepth = true, bool enableXYZ = true,
+            bool enableRGB = true);
 
     /**
 		* @brief Destructor
@@ -220,9 +221,8 @@ class ADIView {
     bool m_rgbThreadCreated = false;
     std::thread m_rgbImageWorker;
 
-    // RGB data buffers
-    uint8_t *rgb_video_data = nullptr;     // NV12 raw data from frame (YUV420)
-    uint8_t *rgb_video_data_rgb = nullptr; // Converted RGB data for display
+    // RGB data buffer (converted to BGR for OpenGL display)
+    uint8_t *rgb_video_data_rgb = nullptr; // Converted BGR data for display
 
     // RGB synchronization (separate from depth/AB, follows SDK pattern)
     std::mutex rgb_data_ready_mtx;

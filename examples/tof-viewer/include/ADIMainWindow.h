@@ -690,6 +690,7 @@ class ADIMainWindow {
     bool m_enable_ab_display = true;
     bool m_enable_depth_display = true;
     bool m_enable_xyz_display = true;
+    bool m_enable_rgb_display = true;
 };
 } // namespace adiMainWindow
 #endif //ADIMAINWINDOW_H

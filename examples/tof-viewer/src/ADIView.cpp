@@ -66,7 +66,8 @@ using namespace adiviewer;
 using namespace adicontroller;
 
 ADIView::ADIView(std::shared_ptr<ADIController> ctrl, const std::string &name,
-                 bool enableAB, bool enableDepth, bool enableXYZ)
+                 bool enableAB, bool enableDepth, bool enableXYZ,
+                 bool enableRGB)
     : m_ctrl(ctrl), m_viewName(name), m_distanceVal(0), m_smallSignal(false),
       m_crtSmallSignalState(false) {
 
@@ -145,13 +146,16 @@ ADIView::ADIView(std::shared_ptr<ADIController> ctrl, const std::string &name,
     }
 
 #ifdef WITH_RGB_SUPPORT
-    // Create RGB worker thread (only if enabled at build time)
-    // Thread will check haveDataType("rgb") at runtime per frame
-    // This allows dynamic enable/disable based on actual frame content
-    m_rgbThreadCreated = true;
-    m_rgbImageWorker = std::thread(std::bind(&ADIView::_displayRgbImage, this));
-    LOG(INFO) << "RGB capture thread created (will process frames containing "
-                 "RGB data)";
+    // Conditionally create RGB worker thread based on config
+    if (enableRGB) {
+        m_rgbThreadCreated = true;
+        m_rgbImageWorker =
+            std::thread(std::bind(&ADIView::_displayRgbImage, this));
+        LOG(INFO) << "RGB capture thread created (will process frames "
+                     "containing RGB data)";
+    } else {
+        LOG(INFO) << "RGB processing disabled by config (rgbCameraEnable=0)";
+    }
 #endif // WITH_RGB_SUPPORT
 }
 
@@ -1261,8 +1265,6 @@ void ADIView::startCamera() {
  * Ensures thread-safe RGB frame capture with minimal lock contention.
  */
 void ADIView::_displayRgbImage() {
-    LOG(INFO) << "RGB worker thread started";
-
     while (!m_stopWorkersFlag) {
         // ============================================================
         // PHASE 1: Wait for new frame (SHORT LOCK)
@@ -1277,7 +1279,6 @@ void ADIView::_displayRgbImage() {
             });
 
             if (m_stopWorkersFlag) {
-                LOG(INFO) << "RGB worker thread received shutdown signal";
                 break;
             }
 
@@ -1285,12 +1286,10 @@ void ADIView::_displayRgbImage() {
             m_rgbFrameAvailable = false;
 
             if (m_capturedFrame == nullptr) {
-                LOG(WARNING)
-                    << "RGB worker: m_capturedFrame is null, skipping frame";
                 continue;
             }
 
-            lock.unlock(); // CRITICAL: Release lock BEFORE expensive processing
+            lock.unlock(); // CRITICAL: Release lock BEFORE processing
         }
 
         // ============================================================
@@ -1308,14 +1307,10 @@ void ADIView::_displayRgbImage() {
                 m_capturedFrame->getData("rgb", (uint16_t **)&nv12_data);
 
             if (status != aditof::Status::OK || nv12_data == nullptr) {
-                LOG(WARNING)
-                    << "RGB worker: Failed to get RGB data from frame (status="
-                    << static_cast<int>(status) << ")";
                 continue;
             }
 
             // Get actual frame dimensions from data details
-            // This is dynamic - actual resolution may vary by mode
             aditof::FrameDataDetails frameRgbDetails;
             m_capturedFrame->getDataDetails("rgb", frameRgbDetails);
 
@@ -1323,8 +1318,6 @@ void ADIView::_displayRgbImage() {
             int frameWidth = static_cast<int>(frameRgbDetails.width);
 
             if (frameHeight <= 0 || frameWidth <= 0) {
-                LOG(WARNING) << "RGB worker: Invalid frame dimensions "
-                             << frameWidth << "x" << frameHeight;
                 continue;
             }
 
@@ -1332,78 +1325,21 @@ void ADIView::_displayRgbImage() {
             rgbFrameWidth = frameWidth;
             rgbFrameHeight = frameHeight;
 
-            LOG(INFO) << "RGB worker: Processing frame " << frameWidth << "x"
-                      << frameHeight << " (expected: " << RGB_WIDTH << "x"
-                      << RGB_HEIGHT << ")";
-
-            // Calculate expected NV12 size dynamically
-            // NV12 format: Y plane (W*H) + UV plane (W*H/2) = W*H*1.5 bytes
-            size_t expected_nv12_size = (frameWidth * frameHeight * 3) / 2;
-
-            // Allocate NV12 buffer on first use
-            if (rgb_video_data == nullptr) {
-                rgb_video_data = new uint8_t[expected_nv12_size];
-                if (rgb_video_data == nullptr) {
-                    LOG(ERROR) << "RGB worker: Failed to allocate NV12 buffer ("
-                               << expected_nv12_size << " bytes)";
-                    continue;
-                }
-                LOG(INFO) << "RGB worker: Allocated NV12 buffer: "
-                          << expected_nv12_size << " bytes";
-            }
-
-            // Allocate RGB output buffer on first use
+            // Allocate RGB output buffer on first use (convert directly to display format)
             if (rgb_video_data_rgb == nullptr) {
                 size_t rgb_buffer_size =
                     frameHeight * frameWidth * 3; // RGB: 3 bytes per pixel
                 rgb_video_data_rgb = new uint8_t[rgb_buffer_size];
                 if (rgb_video_data_rgb == nullptr) {
-                    LOG(ERROR) << "RGB worker: Failed to allocate RGB buffer ("
-                               << rgb_buffer_size << " bytes)";
+                    LOG(ERROR) << "RGB worker: Failed to allocate RGB buffer";
                     continue;
                 }
-                LOG(INFO) << "RGB worker: Allocated RGB buffer: "
-                          << rgb_buffer_size << " bytes";
             }
 
-            // Copy NV12 data to local buffer
-            // Original data may be used by recorder, so we make a copy
-            memcpy(rgb_video_data, nv12_data, expected_nv12_size);
-
-            // Debug: Sample some Y and UV values to verify data integrity
-            static int debug_frame_count = 0;
-            if (debug_frame_count < 3) { // Only first 3 frames
-                int y_size = frameWidth * frameHeight;
-                LOG(INFO) << "RGB worker [Frame " << debug_frame_count
-                          << "]: Sample Y values (first 10): "
-                          << (int)nv12_data[0] << " " << (int)nv12_data[1]
-                          << " " << (int)nv12_data[2] << " "
-                          << (int)nv12_data[3] << " " << (int)nv12_data[4]
-                          << " " << (int)nv12_data[5] << " "
-                          << (int)nv12_data[6] << " " << (int)nv12_data[7]
-                          << " " << (int)nv12_data[8] << " "
-                          << (int)nv12_data[9];
-                LOG(INFO) << "RGB worker [Frame " << debug_frame_count
-                          << "]: Sample UV values (first 10): "
-                          << (int)nv12_data[y_size] << " "
-                          << (int)nv12_data[y_size + 1] << " "
-                          << (int)nv12_data[y_size + 2] << " "
-                          << (int)nv12_data[y_size + 3] << " "
-                          << (int)nv12_data[y_size + 4] << " "
-                          << (int)nv12_data[y_size + 5] << " "
-                          << (int)nv12_data[y_size + 6] << " "
-                          << (int)nv12_data[y_size + 7] << " "
-                          << (int)nv12_data[y_size + 8] << " "
-                          << (int)nv12_data[y_size + 9];
-                debug_frame_count++;
-            }
-
-            // Convert NV12 to RGB using BT.709 (HDTV) color space
-            if (!convertNV12toRGB(rgb_video_data, rgb_video_data_rgb,
-                                  frameWidth, frameHeight)) {
-                LOG(ERROR) << "RGB worker: NV12 to RGB conversion failed";
-                continue;
-            }
+            // Convert NV12 directly to RGB using BT.709 (HDTV) color space
+            // No need for intermediate NV12 buffer - convert on-the-fly
+            convertNV12toRGB(nv12_data, rgb_video_data_rgb, frameWidth,
+                             frameHeight);
 
             // Signal that RGB data is ready for display
             {
@@ -1413,8 +1349,6 @@ void ADIView::_displayRgbImage() {
             rgb_data_ready_cv.notify_one();
 
         } catch (const std::exception &e) {
-            LOG(ERROR) << "RGB worker: Exception during frame processing: "
-                       << e.what();
             continue;
         }
 
@@ -1437,15 +1371,10 @@ void ADIView::_displayRgbImage() {
     }
 
     // Cleanup: release allocated buffers
-    if (rgb_video_data != nullptr) {
-        delete[] rgb_video_data;
-        rgb_video_data = nullptr;
-    }
     if (rgb_video_data_rgb != nullptr) {
         delete[] rgb_video_data_rgb;
         rgb_video_data_rgb = nullptr;
     }
-    LOG(INFO) << "RGB worker thread exited cleanly";
 }
 
 /**

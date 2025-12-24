@@ -65,12 +65,13 @@ void ADIMainWindow::InitCamera(std::string filePath) {
     m_enable_ab_display = true;
     m_enable_depth_display = true;
     m_enable_xyz_display = true;
+    m_enable_rgb_display = true;
 
     // Initially create with all displays enabled (will be updated after mode is set)
     m_view_instance = std::make_shared<adiviewer::ADIView>(
         std::make_shared<adicontroller::ADIController>(m_cameras_list),
         "ToFViewer " + version, m_enable_ab_display, m_enable_depth_display,
-        m_enable_xyz_display);
+        m_enable_xyz_display, m_enable_rgb_display);
 
     if (!m_off_line) {
         m_cameras_list.clear();
@@ -151,10 +152,13 @@ void ADIMainWindow::UpdateOfflineFrameTypeAvailability() {
             m_enable_ab_display = (metadata->bitsInAb != 0);
             // XYZ availability is based on xyzEnabled flag in metadata
             m_enable_xyz_display = (metadata->xyzEnabled != 0);
+            // RGB availability is based on frame data type
+            m_enable_rgb_display = frame.haveDataType("rgb");
 
             LOG(INFO) << "Offline frame types available: depth="
                       << m_enable_depth_display << " ab=" << m_enable_ab_display
                       << " xyz=" << m_enable_xyz_display
+                      << " rgb=" << m_enable_rgb_display
                       << " (from metadata: bitsInDepth="
                       << (int)metadata->bitsInDepth
                       << " bitsInAb=" << (int)metadata->bitsInAb
@@ -205,6 +209,32 @@ void ADIMainWindow::PrepareCamera(uint8_t mode) {
     aditof::CameraDetails camDetails;
     status = GetActiveCamera()->getDetails(camDetails);
     //int32_t totalCaptures = camDetails.frameType.totalCaptures;
+
+    // For live mode, check what frame types are actually available based on config
+    if (!m_off_line) {
+        // Check frameType.dataDetails to see which data types are available
+        bool hasDepth = false, hasAB = false, hasXYZ = false, hasRGB = false;
+        for (const auto &detail : camDetails.frameType.dataDetails) {
+            if (detail.type == "depth")
+                hasDepth = true;
+            else if (detail.type == "ab")
+                hasAB = true;
+            else if (detail.type == "xyz")
+                hasXYZ = true;
+            else if (detail.type == "rgb")
+                hasRGB = true;
+        }
+
+        m_enable_depth_display = hasDepth;
+        m_enable_ab_display = hasAB;
+        m_enable_xyz_display = hasXYZ;
+        m_enable_rgb_display = hasRGB;
+
+        LOG(INFO) << "Live mode frame types: depthEnabled=" << (int)hasDepth
+                  << " abEnabled=" << (int)hasAB
+                  << " xyzEnabled=" << (int)hasXYZ
+                  << " rgbEnabled=" << (int)hasRGB;
+    }
 
     // For offline mode, recreate viewer with all frame types enabled
     // The threads will check metadata per-frame to decide if processing is needed
