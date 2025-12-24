@@ -21,6 +21,7 @@ option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
 option(WITH_NETWORK "Build network interface?" OFF)
+option(WITH_RGB_CAMERA "Build with RGB camera support?" OFF)
 
 ################################# FIXED #######################################
 
@@ -159,6 +160,9 @@ if(${ON_TARGET})
                         set(LIBTOFI_LIBDIR_PATH "${CMAKE_SOURCE_DIR}/../libs")
                 endif()
         endif()
+	if (WITH_RGB_CAMERA)
+		add_definitions(-DHAS_RGB_CAMERA)
+	endif()
 endif()
 
 set(CONFIG_DIR_NAME "config")

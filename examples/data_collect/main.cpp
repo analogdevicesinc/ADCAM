@@ -440,7 +440,19 @@ int main(int argc, char *argv[]) {
             std::chrono::milliseconds(5)); // Sleep for 5ms
     }
 
-    LOG(INFO) << "Capture complete. Frames captured: " << frames_captured;
+    // Wait for all requested frames to be written to disk
+    LOG(INFO) << "Waiting for frames to be written...";
+    uint32_t framesWritten = 0;
+    framesWritten = camera->getRecordedFrameCount();
+    int waitCount = 0;
+    while (framesWritten < n_frames && waitCount < 100) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        framesWritten = camera->getRecordedFrameCount();
+        waitCount++;
+    }
+
+    LOG(INFO) << "Capture complete. Frames requested: " << frames_captured
+              << ", Frames written: " << framesWritten;
     status = camera->stopRecording();
     if (status != Status::OK) {
         LOG(WARNING) << "Unable to stop recording!";
