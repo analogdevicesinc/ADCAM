@@ -48,6 +48,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __COMPUTE_CRC_H__
 
 #if __cplusplus
+#include <cstdint>
 extern "C" {
 #endif
 

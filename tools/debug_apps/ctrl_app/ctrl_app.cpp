@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
     uint8_t data[CTRL_SIZE] = {0};
     int status;
 
-#ifdef NVIDIA
+#if defined(NVIDIA) || defined(NXP)
     std::string video = "/dev/media0";
     std::string deviceName = "adsd3500";
     std::string subdevPath;
@@ -195,9 +195,8 @@ int main(int argc, char **argv) {
         std::cout << "failed to find device paths at video: " << video;
         return status;
     }
-#endif
 
-#ifdef RPI
+#elif defined(RPI)
     const std::string target = "adsd3500";
     std::string media_dev = find_media_device_with_entity(target);
 
@@ -212,6 +211,9 @@ int main(int argc, char **argv) {
 	    std::cout << "Could not find ADSD3500 v4l-subdev node" << std::endl;
 	    return 1;
     }
+
+#else
+    #error "Unsupported platform: define NVIDIA, NXP, or RPI"
 #endif
 
     int fd = open(subdevPath.c_str(), O_RDWR | O_NONBLOCK);
