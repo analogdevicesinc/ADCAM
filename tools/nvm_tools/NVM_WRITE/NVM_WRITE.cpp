@@ -11,6 +11,7 @@
 #include <string>
 
 #include "include/compute_crc.h"
+#include <array>
 #include <cstring>
 #include <errno.h>
 #include <fcntl.h>
@@ -39,7 +40,7 @@ using namespace std;
 #define ADI_STATUS_NVM_FLASH_UPDATE 0x000F
 #define FULL_UPDATE_CMD 0x12
 #define VER_MAJ 1
-#define VER_MIN 5
+#define VER_MIN 6
 #define VER_PATCH 0
 #define MAX_BIN_SIZE 1048576
 #define MIN_BIN_SIZE 741376
@@ -52,6 +53,11 @@ const char *debugfs_name = "/proc/adsd3500/value";
 #ifdef NXP
 #define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (0x009819e1)
 const char *debugfs_name = "/sys/kernel/debug/adsd3500/value";
+#endif
+
+#ifdef RPI
+#define V4L2_CID_ADSD3500_DEV_CHIP_CONFIG (0x009819d1)
+const char *debugfs_name = "/proc/adsd3500/value";
 #endif
 
 /* Seed value for CRC computation */
@@ -73,6 +79,67 @@ bool validate_ext(const char *filename) {
     } else {
         return true;
     }
+}
+
+std::string find_media_device_with_entity(const std::string &entity_name)
+{
+    for (int i = 0; i <= 3; i++)
+    {
+        std::string media_dev = "/dev/media" + std::to_string(i);
+        std::string cmd = "media-ctl -d " + media_dev + " --print-dot 2>/dev/null";
+
+        std::array<char, 256> buffer{};
+        std::string dot_output;
+
+        FILE *pipe = popen(cmd.c_str(), "r");
+        if (!pipe)
+            continue;
+
+        while (fgets(buffer.data(), buffer.size(), pipe))
+            dot_output += buffer.data();
+
+        pclose(pipe);
+
+        if (dot_output.empty())
+            continue;
+
+        if (dot_output.find(entity_name) != std::string::npos)
+            return media_dev;
+    }
+
+    return "";
+}
+
+std::string find_subdev_in_media(const std::string &media_dev,
+                                 const std::string &entity_name)
+{
+    std::string cmd = "media-ctl -d " + media_dev + " --print-dot 2>/dev/null";
+
+    std::array<char, 256> buffer{};
+    std::string dot;
+
+    FILE *pipe = popen(cmd.c_str(), "r");
+    if (!pipe)
+        return "";
+
+    while (fgets(buffer.data(), buffer.size(), pipe))
+        dot += buffer.data();
+
+    pclose(pipe);
+
+    if (dot.empty())
+        return "";
+
+    size_t pos = dot.find(entity_name);
+    if (pos == std::string::npos)
+        return "";
+
+    size_t dev_pos = dot.find("/dev/v4l-subdev", pos);
+    if (dev_pos == std::string::npos)
+        return "";
+
+    size_t end = dot.find_first_of(" \"\n", dev_pos);
+    return dot.substr(dev_pos, end - dev_pos);
 }
 
 bool findDevicePathsAtVideo(const std::string &video, std::string &subdev_path,
@@ -193,10 +260,6 @@ int main(int argc, char **argv) {
     uint8_t Status_Command;
     bool status = true;
 
-    std::string video = "/dev/media0";
-    std::string deviceName = "adsd3500";
-    std::string subdevPath;
-
     if (argc < 2) {
         std::cout << "Please pass valid file.\nEg: Flash.nvm" << std::endl;
         return 1;
@@ -209,11 +272,36 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+#if defined(NVIDIA) || defined(NXP)
+    std::string video = "/dev/media0";
+    std::string deviceName = "adsd3500";
+    std::string subdevPath;
+
     status = findDevicePathsAtVideo(video, subdevPath, deviceName);
     if (!status) {
         std::cout << "failed to find device paths at video: " << video;
         return status;
     }
+
+#elif defined(RPI)
+    const std::string target = "adsd3500";
+    std::string media_dev = find_media_device_with_entity(target);
+
+    if (media_dev.empty()) {
+	    std::cout << "ADSD3500 not found in /dev/media0..media3" << std::endl;
+	    return 1;
+    }
+
+    std::string subdevPath = find_subdev_in_media(media_dev, target);
+
+    if (subdevPath.empty()) {
+	    std::cout << "Could not find ADSD3500 v4l-subdev node" << std::endl;
+	    return 1;
+    }
+
+#else
+    #error "Unsupported platform: define NVIDIA, NXP, or RPI"
+#endif
 
     fd = open(subdevPath.c_str(), O_RDWR | O_NONBLOCK);
     if (fd == -1) {

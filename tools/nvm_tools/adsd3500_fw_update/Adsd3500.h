@@ -45,6 +45,11 @@ class Adsd3500 {
   private:
     int xioctl(int fd, int request, void *arg);
 
+    std::string find_media_device_with_entity(const std::string &entity_name);
+
+    std::string find_subdev_in_media(const std::string &media_dev,
+                                     const std::string &entity_name);
+
     bool findDevicePathsAtVideo(const std::string &video,
                                 std::string &subdev_path,
                                 std::string &device_name);
