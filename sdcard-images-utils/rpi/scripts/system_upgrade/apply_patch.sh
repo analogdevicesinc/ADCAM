@@ -5,7 +5,7 @@ set -x
 ROOTDIR=`pwd`
 
 CONFIG_FILE="/boot/firmware/config.txt"
-OVERLAY_ENTRY="dtoverlay=adsd3500,cam0"
+OVERLAY_ENTRY="dtoverlay=adsd3500-adsd3100"
 KERNEL_ENTRY="kernel=kernel_adi.img"
 
 function apply_ubuntu_overlay()
@@ -23,7 +23,7 @@ function update_kernel(){
 	
 	chmod 755 bcm2712-rpi-5-b.dtb	
 	sudo cp bcm2712-rpi-5-b.dtb /boot/firmware/
-	sudo cp adsd3500.dtbo /boot/firmware/overlays/
+	sudo cp adsd3500-adsd3100.dtbo /boot/firmware/overlays/
 	sudo cp Image.gz /boot/firmware/kernel_adi.img
 	mkdir -p test
 	tar -xvf modules.tar.gz -C test > /dev/null 2>&1
