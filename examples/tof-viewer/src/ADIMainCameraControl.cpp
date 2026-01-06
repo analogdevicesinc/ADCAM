@@ -373,12 +373,10 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
 
             uint32_t numberAvailableDataTypes = 0;
 
-            numberAvailableDataTypes += haveAB ? 1 : 0;
+            // RGB shares the AB window, so count as AB/RGB window (not separate)
+            numberAvailableDataTypes += (haveAB || haveRGB) ? 1 : 0;
             numberAvailableDataTypes += haveDepth ? 1 : 0;
             numberAvailableDataTypes += haveXYZ ? 1 : 0;
-#ifdef WITH_RGB_SUPPORT
-            numberAvailableDataTypes += haveRGB ? 1 : 0;
-#endif
 
             ImGuiIO &io = ImGui::GetIO();
             if (io.KeyShift) {
