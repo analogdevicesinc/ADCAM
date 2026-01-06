@@ -1,6 +1,17 @@
 #!/bin/bash
 #ToF sensor power/reset sequence using max7327 GPIOs via sysfs
 
+# --- Read module name from device tree, remove null byte ---
+MODULE=$(tr -d '\0' < /proc/device-tree/chosen/overlay-name 2>/dev/null)
+
+# --- Check module type ---
+if [[ "$MODULE" != "adi_dual_adsd3500_adsd3100" ]]; then
+    echo "Skipping ToF power sequence: MODULE=$MODULE"
+    exit 0
+fi
+
+echo "MODULE matched: $MODULE"
+
 # --- GPIO mapping ---
 declare -A GPIO=(
     [ISP_RST]=603
