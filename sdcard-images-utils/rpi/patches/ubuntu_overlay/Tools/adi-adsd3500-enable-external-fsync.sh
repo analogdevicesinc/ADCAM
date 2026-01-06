@@ -10,4 +10,4 @@ echo 0 > /sys/class/gpio/$NET_HOST_IO_SEL/value
 echo 0 > /sys/class/gpio/$HOST_IO_DIR/value
 
 # Enable external fsync
-#v4l2-ctl --set-ctrl=fsync_trigger=0 -d /dev/v4l-subdev1
+v4l2-ctl --set-ctrl=fsync_trigger=0 -d /dev/v4l-subdev2
