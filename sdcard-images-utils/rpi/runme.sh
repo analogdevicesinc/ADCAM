@@ -112,7 +112,7 @@ function sw_version_info()
 	echo -n "Branch Name    : " >> $SW_VERSION_FILE ; echo "$BRANCH" >> $SW_VERSION_FILE
 	echo -n "Branch Commit  : " >> $SW_VERSION_FILE ; echo "$BR_COMMIT" >> $SW_VERSION_FILE
 	echo -n "Build  Date    : " >> $SW_VERSION_FILE ; date >> $SW_VERSION_FILE
-	echo    "Kernel Version : 6.12.47" >> $SW_VERSION_FILE
+	echo    "Kernel Version : 6.12.47-adi+" >> $SW_VERSION_FILE
 	mv $SW_VERSION_FILE $PATCH_DIR
 }
 
@@ -138,7 +138,7 @@ function create_package()
 function main()
 {
 	
-	#download_linux_kernel
+	download_linux_kernel
 
 	apply_git_format_patches
 
