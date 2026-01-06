@@ -1,0 +1,59 @@
+From 887ed39b6c134d4b9dd2dcf3ec5d77a7329ae6bc Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 6 Jan 2026 14:23:12 +0530
+Subject: [PATCH] arch: arm: boot: dts: overlays: add dual ADSD3500-ADSD3100
+ support
+
+- Update Makefile to build adsd3500-adsd3100.dtbo and modify the overlay
+- DTS to set clock-frequency and overlay-name for adi_dual_adsd3500_adsd3100.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ arch/arm/boot/dts/overlays/Makefile                       | 2 +-
+ ...adsd3500-overlay.dts => adsd3500-adsd3100-overlay.dts} | 8 ++++++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+ rename arch/arm/boot/dts/overlays/{adsd3500-overlay.dts => adsd3500-adsd3100-overlay.dts} (93%)
+
+diff --git a/arch/arm/boot/dts/overlays/Makefile b/arch/arm/boot/dts/overlays/Makefile
+index cb9529d15262..697c770bbbf5 100644
+--- a/arch/arm/boot/dts/overlays/Makefile
++++ b/arch/arm/boot/dts/overlays/Makefile
+@@ -11,7 +11,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
+ 	ads1015.dtbo \
+ 	ads1115.dtbo \
+ 	ads7846.dtbo \
+-	adsd3500.dtbo \
++	adsd3500-adsd3100.dtbo \
+ 	adv7282m.dtbo \
+ 	adv728x-m.dtbo \
+ 	akkordion-iqdacplus.dtbo \
+diff --git a/arch/arm/boot/dts/overlays/adsd3500-overlay.dts b/arch/arm/boot/dts/overlays/adsd3500-adsd3100-overlay.dts
+similarity index 93%
+rename from arch/arm/boot/dts/overlays/adsd3500-overlay.dts
+rename to arch/arm/boot/dts/overlays/adsd3500-adsd3100-overlay.dts
+index 7e3c48ba1719..a952fa65f9d5 100644
+--- a/arch/arm/boot/dts/overlays/adsd3500-overlay.dts
++++ b/arch/arm/boot/dts/overlays/adsd3500-adsd3100-overlay.dts
+@@ -11,6 +11,7 @@ __overlay__ {
+             #address-cells = <1>;
+             #size-cells = <0>;
+             status = "okay";
++	    clock-frequency = <1000000>;
+ 
+             cam0_sensor: adsd3500@38 {
+                 compatible = "adi,adsd3500";
+@@ -75,4 +76,11 @@ pwm: pwm-gpio {
+ 		};
+ 	};
+     };
++
++    fragment@4 {
++	target-path = "/chosen";
++	__overlay__ {
++		overlay-name = "adi_dual_adsd3500_adsd3100";
++	};
++    };
+ };
+-- 
+2.25.1
+
