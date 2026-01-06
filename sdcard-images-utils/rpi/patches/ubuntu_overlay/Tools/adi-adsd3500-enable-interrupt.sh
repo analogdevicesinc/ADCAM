@@ -10,4 +10,4 @@ echo 1 > /sys/class/gpio/$NET_HOST_IO_SEL/value
 echo 1 > /sys/class/gpio/$HOST_IO_DIR/value
 
 # Enable interrupt support
-#v4l2-ctl --set-ctrl=fsync_trigger=1 -d /dev/v4l-subdev1
+v4l2-ctl --set-ctrl=fsync_trigger=1 -d /dev/v4l-subdev2
