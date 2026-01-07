@@ -20,7 +20,8 @@ function apply_ubuntu_overlay()
 }
 
 function update_kernel(){
-	
+
+	sudo cp sw-versions /boot/
 	chmod 755 bcm2712-rpi-5-b.dtb	
 	sudo cp bcm2712-rpi-5-b.dtb /boot/firmware/
 	sudo cp adsd3500-adsd3100.dtbo /boot/firmware/overlays/
@@ -29,8 +30,6 @@ function update_kernel(){
 	tar -xvf modules.tar.gz -C test > /dev/null 2>&1
 	sudo cp -rf test/lib/modules/6.12.47* /lib/modules/
 	sudo rm -rf test
-
-
 
 }
 
