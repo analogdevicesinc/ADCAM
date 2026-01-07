@@ -1,0 +1,27 @@
+From 28ae11be4f674871544a71e4bcb91a7063abfbcb Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Wed, 7 Jan 2026 11:38:57 +0530
+Subject: [PATCH] drivers: media: i2c: adsd3500.c: Change the default value of
+ the fw_load module parameter to true
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/adsd3500.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/i2c/adsd3500.c b/drivers/media/i2c/adsd3500.c
+index 53711ab5db42..e0f105aebe61 100755
+--- a/drivers/media/i2c/adsd3500.c
++++ b/drivers/media/i2c/adsd3500.c
+@@ -23,7 +23,7 @@
+ #include <media/v4l2-fwnode.h>
+ #include <media/v4l2-subdev.h>
+ 
+-static bool fw_load = false;
++static bool fw_load = true;
+ module_param(fw_load, bool, 0644);
+ MODULE_PARM_DESC(fw_load, "Boolean enabling/disbaling firmware loading by driver");
+ 
+-- 
+2.25.1
+
