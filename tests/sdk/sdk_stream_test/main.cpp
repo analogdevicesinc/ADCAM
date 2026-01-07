@@ -16,14 +16,10 @@
 #include <ctime>
 #include <fstream>
 
-#ifdef USE_GLOG
-#include <glog/logging.h>
-#else
 #include <aditof/log.h>
 #include <cstring>
 #define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
-#endif
 #include <algorithm>
 #include <iostream>
 #include <map>
