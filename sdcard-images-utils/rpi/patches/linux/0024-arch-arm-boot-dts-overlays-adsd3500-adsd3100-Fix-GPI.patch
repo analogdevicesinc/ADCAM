@@ -1,0 +1,32 @@
+From f65314c9bf484f4a23237bbb9ef8b3fc4f75130b Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Thu, 8 Jan 2026 16:02:23 +0530
+Subject: [PATCH] arch: arm: boot: dts: overlays: adsd3500-adsd3100: Fix GPIO
+ line name
+
+- Fixed the inconsistent naming for "I2CM SEL" to "I2CM_SEL" to maintain uniformity.
+- Fixed the inconsistent naming for "NET HOST_IO_SEL" to "NET_HOST_IO_SEL" to maintain uniformity.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ arch/arm/boot/dts/overlays/adsd3500-adsd3100-overlay.dts | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/boot/dts/overlays/adsd3500-adsd3100-overlay.dts b/arch/arm/boot/dts/overlays/adsd3500-adsd3100-overlay.dts
+index a952fa65f9d5..d6f1dfb152c3 100644
+--- a/arch/arm/boot/dts/overlays/adsd3500-adsd3100-overlay.dts
++++ b/arch/arm/boot/dts/overlays/adsd3500-adsd3100-overlay.dts
+@@ -57,8 +57,8 @@ gpio@68 {
+                 status = "okay";
+                 gpio-controller;
+                 #gpio-cells = <2>;
+-                gpio-line-names = "EN_1P8", "EN_0P8", "P2", "I2CM SEL",
+-                                  "ISP_BS3/ISP_INT", "NET HOST_IO_SEL", "ISP_BS0",
++                gpio-line-names = "EN_1P8", "EN_0P8", "P2", "I2CM_SEL",
++                                  "ISP_BS3/ISP_INT", "NET_HOST_IO_SEL", "ISP_BS0",
+                                   "ISP_BS1", "HOST_IO_DIR", "ISP_BS4", "ISP_BS5",
+                                   "FSYNC_DIR", "EN_VAUX", "EN_VAUX_LS", "EN_SYS";
+             };
+-- 
+2.25.1
+
