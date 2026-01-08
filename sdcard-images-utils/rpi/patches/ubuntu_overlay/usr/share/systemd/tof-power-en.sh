@@ -1,5 +1,5 @@
 #!/bin/bash
-#ToF sensor power/reset sequence using max7327 GPIOs via sysfs
+# ToF sensor power/reset sequence using max7327 GPIOs via sysfs
 
 # --- Read module name from device tree, remove null byte ---
 MODULE=$(tr -d '\0' < /proc/device-tree/chosen/overlay-name 2>/dev/null)
@@ -12,28 +12,50 @@ fi
 
 echo "MODULE matched: $MODULE"
 
-# --- GPIO mapping ---
-declare -A GPIO=(
-    [ISP_RST]=603
-    [EN_1P8]=623
-    [EN_0P8]=624
-    [P2]=625
-    [I2CM_SEL]=626
-    [ISP_BS3]=627
-    [NET_HOST_IO_SEL]=628
-    [ISP_BS0]=629
-    [ISP_BS1]=630
-    [HOST_IO_DIR]=631
-    [ISP_BS4]=632
-    [ISP_BS5]=633
-    [FSYNC_DIR]=634
-    [EN_VAUX]=635
-    [EN_VAUX_LS]=636
-    [EN_SYS]=637
-)
+# --- Dynamically fetch GPIO labels ---
+declare -A GPIO
 
-# --- GPIO list for export ---
-GPIO_LIST=(603 623 624 625 626 627 628 629 630 631 632 633 634 635 636 637)
+# List of GPIO labels we are interested in, including ISP_RST at the start
+GPIO_LIST=("ISP_RST" "EN_1P8" "EN_0P8" "P2" "I2CM_SEL" "ISP_BS3" "NET_HOST_IO_SEL" "ISP_BS0" "ISP_BS1" "HOST_IO_DIR" "ISP_BS4" "ISP_BS5" "FSYNC_DIR" "EN_VAUX" "EN_VAUX_LS" "EN_SYS")
+
+# Check for GPIO34 first and assign it directly to ISP_RST
+GPIO34_RESULT=$(sudo cat /sys/kernel/debug/gpio | grep -i "\bGPIO34\b")
+if [[ -n "$GPIO34_RESULT" ]]; then
+    gpio_num=$(echo "$GPIO34_RESULT" | sed -E 's/.*gpio-([0-9]+).*/\1/')
+    if [[ -n "$gpio_num" ]]; then
+        GPIO["ISP_RST"]=$gpio_num
+        echo "Special case: GPIO34 assigned to ISP_RST -> GPIO$gpio_num"
+    else
+        echo "GPIO34 found, but GPIO number not extracted correctly"
+	exit 0
+    fi
+else
+    echo "GPIO34 not found"
+    exit 0
+fi
+
+# Now process the GPIO labels, starting from the second element (index 1)
+for label in "${GPIO_LIST[@]:1}"; do
+    # Search for each GPIO label in the debug output and extract the GPIO number
+    result=$(sudo cat /sys/kernel/debug/gpio | grep -i "\b$label\b")
+
+    # Check if the result is non-empty and contains the GPIO number
+    if [[ -n "$result" ]]; then
+        gpio_num=$(echo "$result" | sed -E 's/.*gpio-([0-9]+).*/\1/')
+
+        # Store the GPIO number in the associative array
+        if [[ -n "$gpio_num" ]]; then
+            GPIO["$label"]=$gpio_num
+            echo "Label: $label -> GPIO$gpio_num"
+        else
+            echo "Label: $label found, but GPIO number not extracted correctly"
+	    exit 0
+        fi
+    else
+        echo "Label: $label not found"
+	exit 0
+    fi
+done
 
 # Function to export and configure GPIO
 setup_gpio() {
@@ -50,8 +72,9 @@ setup_gpio() {
 echo "Configuring GPIOs via sysfs..."
 
 # Configure all GPIOs: ISP_BS3 as input, others as output low
-for gpio in "${GPIO_LIST[@]}"; do
-    if [ "$gpio" -eq "${GPIO[ISP_BS3]}" ]; then
+for label in "${GPIO_LIST[@]}"; do
+    gpio=${GPIO[$label]}
+    if [ "$label" == "ISP_BS3" ]; then
         setup_gpio "$gpio" "in"
     else
         setup_gpio "$gpio" "out" 0
