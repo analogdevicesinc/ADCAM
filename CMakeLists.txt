@@ -25,8 +25,7 @@ option(WITH_NETWORK "Build network interface?" OFF)
 ################################# FIXED #######################################
 
 ### Note: Turn the following off when building on the host
-option(NVIDIA "Set to ON when building on NVIDIA" OFF)
-option(NXP "Set to ON when building on NXP i.MX" OFF)
+option(NVIDIA "Set to ON when building on NVIDIA" ON)
 option(RPI "Set to ON when building on Raspberry Pi" OFF)
 
 if (WITH_NETWORK)
@@ -92,7 +91,7 @@ set(LIBADITOF_SUBMODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libaditof)
 
 # Check whether we configure thgs for remote or we're on target
 set(SELECTED_PLATFORMS 0)
-set(ALL_PLATFORMS NVIDIA NXP RPI)
+set(ALL_PLATFORMS NVIDIA RPI)
 foreach(platform IN LISTS ALL_PLATFORMS)
     if(${platform})
         math(EXPR SELECTED_PLATFORMS "${SELECTED_PLATFORMS}+1")
@@ -130,8 +129,6 @@ endif()
 # Add the device definition
 if(NVIDIA)
      add_definitions(-DNVIDIA)
-elseif(NXP)
-     add_definitions(-DNXP)
 elseif(RPI)
      add_definitions(-DRPI)
 endif()
