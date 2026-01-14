@@ -387,21 +387,6 @@ class ADIView {
      * - Phase 3: Participate in barrier synchronization
      */
     void _displayRgbImage();
-
-    /**
-     * @brief Convert NV12 (YUV420) format to RGB using BT.709 color space
-     * 
-     * @param[in] nv12_data Input NV12 data (Y plane followed by UV plane)
-     * @param[out] rgb_data Output RGB data in interleaved format [R,G,B,R,G,B,...]
-     * @param[in] width Frame width in pixels
-     * @param[in] height Frame height in pixels
-     * @return true if conversion successful, false on error (null pointers, invalid dimensions)
-     * 
-     * Color space: ITU-R BT.709 (HDTV standard)
-     * More accurate than BT.601 (SD) for modern cameras
-     */
-    bool convertNV12toRGB(const uint8_t *nv12_data, uint8_t *rgb_data,
-                          int width, int height);
 #endif // WITH_RGB_SUPPORT
 
     // Call this before your function

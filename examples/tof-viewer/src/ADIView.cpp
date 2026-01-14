@@ -25,6 +25,7 @@
 #include "ADIView.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
+#include <cstring>
 #include <iostream>
 //#include <GL\gl3w.h>
 #include <chrono>
@@ -1301,12 +1302,12 @@ void ADIView::_displayRgbImage() {
         // - This provides implicit synchronization
 
         try {
-            // Get NV12 (YUV420) data pointer from frame
-            uint8_t *nv12_data = nullptr;
+            // Get BGR data pointer from frame (SDK already converted NV12→BGR)
+            uint8_t *bgr_data = nullptr;
             auto status =
-                m_capturedFrame->getData("rgb", (uint16_t **)&nv12_data);
+                m_capturedFrame->getData("rgb", (uint16_t **)&bgr_data);
 
-            if (status != aditof::Status::OK || nv12_data == nullptr) {
+            if (status != aditof::Status::OK || bgr_data == nullptr) {
                 continue;
             }
 
@@ -1325,21 +1326,21 @@ void ADIView::_displayRgbImage() {
             rgbFrameWidth = frameWidth;
             rgbFrameHeight = frameHeight;
 
-            // Allocate RGB output buffer on first use (convert directly to display format)
+            // Allocate BGR output buffer on first use
             if (rgb_video_data_rgb == nullptr) {
-                size_t rgb_buffer_size =
-                    frameHeight * frameWidth * 3; // RGB: 3 bytes per pixel
-                rgb_video_data_rgb = new uint8_t[rgb_buffer_size];
+                size_t bgr_buffer_size =
+                    frameHeight * frameWidth * 3; // BGR: 3 bytes per pixel
+                rgb_video_data_rgb = new uint8_t[bgr_buffer_size];
                 if (rgb_video_data_rgb == nullptr) {
-                    LOG(ERROR) << "RGB worker: Failed to allocate RGB buffer";
+                    LOG(ERROR) << "RGB worker: Failed to allocate BGR buffer";
                     continue;
                 }
             }
 
-            // Convert NV12 directly to RGB using BT.709 (HDTV) color space
-            // No need for intermediate NV12 buffer - convert on-the-fly
-            convertNV12toRGB(nv12_data, rgb_video_data_rgb, frameWidth,
-                             frameHeight);
+            // Copy BGR data from SDK to display buffer
+            // SDK has already converted NV12→BGR in buffer_processor.cpp
+            size_t bgr_size = frameHeight * frameWidth * 3;
+            std::memcpy(rgb_video_data_rgb, bgr_data, bgr_size);
 
             // Signal that RGB data is ready for display
             {
@@ -1374,107 +1375,6 @@ void ADIView::_displayRgbImage() {
     if (rgb_video_data_rgb != nullptr) {
         delete[] rgb_video_data_rgb;
         rgb_video_data_rgb = nullptr;
-    }
-}
-
-/**
- * @brief Convert NV12 (YUV420) format to RGB using BT.709 color space
- * 
- * NV12 Format (YUV420 Semi-Planar):
- * - Y plane: Contains luminance values for all pixels
- *   Layout: [Y0, Y1, Y2, ..., Yn] where n = width * height
- * - UV plane: Contains interleaved chrominance pairs
- *   Layout: [U0, V0, U1, V1, ..., Un, Vn] where n = (width/2) * (height/2)
- *   Each U/V pair covers a 2x2 block of Y pixels
- * 
- * Color Conversion (ITU-R BT.709 - HDTV Standard):
- * Y is in range [0, 255], U and V centered at 128
- * R = Y + 1.5748 * (V - 128)
- * G = Y - 0.18732 * (U - 128) - 0.46812 * (V - 128)
- * B = Y + 1.8556 * (U - 128)
- * 
- * @param[in] nv12_data Input NV12 data buffer (Y plane + UV plane)
- * @param[out] rgb_data Output RGB data (3 bytes per pixel: R, G, B)
- * @param[in] width Frame width in pixels
- * @param[in] height Frame height in pixels
- * @return true if conversion successful, false on error
- */
-bool ADIView::convertNV12toRGB(const uint8_t *nv12_data, uint8_t *rgb_data,
-                               int width, int height) {
-    // Input validation
-    if (nv12_data == nullptr || rgb_data == nullptr) {
-        LOG(ERROR) << "convertNV12toRGB: Null input or output pointer";
-        return false;
-    }
-
-    if (width <= 0 || height <= 0) {
-        LOG(ERROR) << "convertNV12toRGB: Invalid dimensions " << width << "x"
-                   << height;
-        return false;
-    }
-
-    try {
-        // Calculate plane offsets
-        // NV12 format: Y plane (width * height) + UV plane (width * height / 2)
-        // UV plane layout: (height/2) rows, each row has (width/2) pairs of [U,V]
-        int y_size = width * height;
-
-        const uint8_t *y_plane = nv12_data;
-        const uint8_t *uv_plane = nv12_data + y_size;
-
-        // Process each pixel with BT.709 color matrix
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                // Y plane index: linear, one per pixel
-                int y_idx = y * width + x;
-
-                // UV plane index: NV12 has UV at half resolution
-                // UV is organized as: (height/2) rows × (width/2) columns × 2 bytes [U,V]
-                // Each U,V pair covers a 2×2 block of Y pixels
-                int uv_row = y / 2; // Which UV row (half the height)
-                int uv_col = x / 2; // Which UV column (half the width)
-
-                // Calculate UV index: row * (width) + column * 2
-                // The stride is width because each row has width/2 pairs, each pair is 2 bytes
-                int uv_idx = uv_row * width + uv_col * 2;
-
-                // Read YUV values from planes
-                uint8_t y_val = y_plane[y_idx];
-                uint8_t u_val = uv_plane[uv_idx]; // U (blue-difference chroma)
-                uint8_t v_val =
-                    uv_plane[uv_idx + 1]; // V (red-difference chroma)
-
-                // Convert to float for color matrix calculations
-                // U and V are centered at 128
-                float y_f = static_cast<float>(y_val);
-                float u_f = static_cast<float>(u_val) - 128.0f;
-                float v_f = static_cast<float>(v_val) - 128.0f;
-
-                // Apply ITU-R BT.709 (HDTV) color matrix
-                // More accurate than BT.601 (SDTV) for modern cameras
-                float r = y_f + 1.5748f * v_f;
-                float g = y_f - 0.18732f * u_f - 0.46812f * v_f;
-                float b = y_f + 1.8556f * u_f;
-
-                // Clip to valid range [0, 255] and convert to uint8
-                int rgb_idx = y_idx * 3; // RGB: 3 bytes per pixel
-
-                // Output as BGR for proper OpenGL display
-                rgb_data[rgb_idx + 0] = static_cast<uint8_t>(
-                    std::min(255.0f, std::max(0.0f, b))); // B channel
-                rgb_data[rgb_idx + 1] = static_cast<uint8_t>(
-                    std::min(255.0f, std::max(0.0f, g))); // G channel
-                rgb_data[rgb_idx + 2] = static_cast<uint8_t>(
-                    std::min(255.0f, std::max(0.0f, r))); // R channel
-            }
-        }
-
-        return true;
-
-    } catch (const std::exception &e) {
-        LOG(ERROR) << "convertNV12toRGB: Exception during conversion: "
-                   << e.what();
-        return false;
     }
 }
 
