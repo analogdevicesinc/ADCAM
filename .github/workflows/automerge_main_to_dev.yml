@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - dev-1.0.0-b.1
+      - dev-0.2.0
 
 jobs:
   merge:
@@ -24,13 +24,13 @@ jobs:
        
       - name: Ensure dev branch exists
         run: |
-          if git ls-remote --exit-code --heads origin dev-1.0.0-b.1; then
+          if git ls-remote --exit-code --heads origin dev-0.2.0; then
             echo "Branch exists on remote"
-            git fetch origin dev-1.0.0-b.1
-            git checkout dev-1.0.0-b.1
+            git fetch origin dev-0.2.0
+            git checkout dev-0.2.0
           else
             echo "Branch does not exist, creating it"
-            git checkout -b dev-1.0.0-b.1
+            git checkout -b dev-0.2.0
           fi
    
 
@@ -46,4 +46,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git dev-1.0.0-b.1 --force
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git dev-0.2.0 --force
