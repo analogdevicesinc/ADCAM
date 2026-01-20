@@ -2,6 +2,20 @@
 
 MODULE=$(strings /proc/device-tree/tegra-camera-platform/modules/module0/badge)
 
+MEDIA_DEVICE="/dev/media0"
+DOT_OUTPUT=$(media-ctl -d "$MEDIA_DEVICE" --print-dot)
+DOT_OUTPUT=$(echo "$DOT_OUTPUT" | sed 's/\\n/\n/g')
+SUBDEV_PATH=$(echo "$DOT_OUTPUT" | awk '/adsd3500/ {getline; if ($0 ~ /\/dev\/v4l-subdev/) print $1}' | tr -d '",')
+VIDEO_PATH=$(echo "$DOT_OUTPUT" | awk '/vi-output, adsd3500/ {getline; if ($0 ~ /\/dev\/video/) print $1}' | tr -d '",')
+
+if [[ -n "$SUBDEV_PATH" && -n "$VIDEO_PATH" ]]; then
+    echo "adsd3500 subdev: $SUBDEV_PATH" > /dev/null
+    echo "adsd3500 video : $VIDEO_PATH"  > /dev/null
+else
+    echo "adsd3500 device not found in $MEDIA_DEVICE"
+    exit 1
+fi
+
 adsd3500_power_sequence(){
 
 	#Pull ADSD3500 reset low
@@ -48,16 +62,16 @@ adsd3500_power_sequence(){
 
 load_firmware() {
 
-    VALUE=$(v4l2-ctl -d /dev/v4l-subdev1 --get-ctrl load_firmware)
+    VALUE=$(v4l2-ctl -d $SUBDEV_PATH --get-ctrl load_firmware)
     echo "The read value is $VALUE"
 
     if [ "$VALUE" = "load_firmware: 0" ]; then
         echo "Send host boot firmware to ADSD3500"
-        v4l2-ctl -d /dev/v4l-subdev1 --set-ctrl load_firmware=1
+        v4l2-ctl -d $SUBDEV_PATH --set-ctrl load_firmware=1
         ret=$?
     elif [ "$VALUE" = "load_firmware: 1" ]; then
         echo "Send host boot firmware to ADSD3500"
-        v4l2-ctl -d /dev/v4l-subdev1 --set-ctrl load_firmware=0
+        v4l2-ctl -d $SUBDEV_PATH --set-ctrl load_firmware=0
         ret=$?
     else
         echo "Unexpected value: $VALUE"
