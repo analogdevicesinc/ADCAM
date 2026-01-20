@@ -1,0 +1,225 @@
+From 944ca38ca8547416416e821f6ddf30650b08105c Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 20 Jan 2026 13:53:32 +0530
+Subject: [PATCH] media: i2c: adsd3500: reorganize mode tables and add RAW12
+ formats
+
+- Refactor ADSD3500 mode enumerations and frame format tables with explicit RAW8/RAW12 separation.
+- Add new resolutions and RAW12 modes while preserving deterministic mode indexing.
+- Changed the driver version number as "7.0.0"
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/adsd3500_mode_tbls.h | 165 ++++++++++++++-----------
+ drivers/media/i2c/adsd3500_regs.h      |   2 +-
+ 2 files changed, 92 insertions(+), 75 deletions(-)
+
+diff --git a/drivers/media/i2c/adsd3500_mode_tbls.h b/drivers/media/i2c/adsd3500_mode_tbls.h
+index bf8997db..8737e4b9 100644
+--- a/drivers/media/i2c/adsd3500_mode_tbls.h
++++ b/drivers/media/i2c/adsd3500_mode_tbls.h
+@@ -5,6 +5,7 @@ enum {
+ 	ADSD3500_MODE_512x512_30FPS,
+ 	ADSD3500_MODE_1024x512_30FPS,
+ 	ADSD3500_MODE_1024x4096_30FPS,
++	ADSD3500_MODE_1280x512_30FPS,
+ 	ADSD3500_MODE_1536x512_30FPS,
+ 	ADSD3500_MODE_1792x512_30FPS,
+ 	ADSD3500_MODE_2048x512_30FPS,
+@@ -54,18 +55,26 @@ enum {
+ 	ADSD3500_MODE_3072x3840_30FPS,
+ 	ADSD3500_MODE_512x1920_30FPS,
+ 	ADSD3500_MODE_1536x1920_30FPS,
+-	ADSD3500_MODE_2048x4608_30FPS,
+-	ADSD3500_MODE_1024x2304_30FPS,
+-	ADSD3500_MODE_1024x2880_30FPS,
+-	ADSD3500_MODE_512x1440_30FPS,
+-	ADSD3500_MODE_1024x1024_30FPS,
+-	ADSD3500_MODE_1024x3072_30FPS,
+-	ADSD3500_MODE_2048x5376_30FPS,
+-	ADSD3500_MODE_2048x3584_30FPS,
++	ADSD3500_MODE_2048x4608_RAW12_30FPS,
++	ADSD3500_MODE_1024x2304_RAW12_30FPS,
++	ADSD3500_MODE_1024x2880_RAW12_30FPS,
++	ADSD3500_MODE_512x1440_RAW12_30FPS,
++	ADSD3500_MODE_2048x3072_RAW12_30FPS,
++	ADSD3500_MODE_1024x1536_RAW12_30FPS,
++	ADSD3500_MODE_1024x1920_RAW12_30FPS,
++	ADSD3500_MODE_512x960_RAW12_30FPS,
++	ADSD3500_MODE_512x512_RAW12_30FPS,
++	ADSD3500_MODE_512x640_RAW12_30FPS,
++	ADSD3500_MODE_2048x512_RAW12_30FPS,
++	ADSD3500_MODE_1024x1024_RAW12_30FPS,
++	ADSD3500_MODE_1024x3072_RAW12_30FPS,
++	ADSD3500_MODE_1024x4096_RAW12_30FPS,
++	ADSD3500_MODE_2048x5376_RAW12_30FPS,
++	ADSD3500_MODE_2048x3584_RAW12_30FPS,
+ };
+ 
+ static const int adsd3500_30fps[] = {
+-    30,
++	30,
+ };
+ 
+ /*
+@@ -73,71 +82,79 @@ static const int adsd3500_30fps[] = {
+  * device tree!
+  */
+ static const struct camera_common_frmfmt adsd3500_frmfmt[] = {
+-    {{512,  512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x512_30FPS},
+-    {{1024, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x512_30FPS},
+-    {{1024, 4096}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x4096_30FPS},
+-    {{1536, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1536x512_30FPS},
+-    {{1792, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1792x512_30FPS},
+-    {{2048, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x512_30FPS},
+-    {{2048, 2048}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x2048_30FPS},
+-    {{2304, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2304x512_30FPS},
+-    {{2560, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2560x512_30FPS},
+-    {{512,  640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x640_30FPS},
+-    {{1024, 640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x640_30FPS},
+-    {{1536, 640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1536x640_30FPS},
+-    {{2048, 640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x640_30FPS},
+-    {{2560, 640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2560x640_30FPS},
+-    {{256,  320},  adsd3500_30fps, 1, 0, ADSD3500_MODE_256x320_30FPS},
+-    {{512,  320},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x320_30FPS},
+-    {{768,  320},  adsd3500_30fps, 1, 0, ADSD3500_MODE_768x320_30FPS},
+-    {{1024, 320},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x320_30FPS},
+-    {{1280, 320},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1280x320_30FPS},
+-    {{2048, 3328}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x3328_30FPS},
+-    {{1024, 1664}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1664_30FPS},
+-    {{1024, 2080}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x2080_30FPS},
+-    {{512,  1040}, adsd3500_30fps, 1, 0, ADSD3500_MODE_512x1040_30FPS},
+-    {{2048, 2560}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x2560_30FPS},
+-    {{1024, 1280}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1280_30FPS},
+-    {{1024, 1600}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1600_30FPS},
+-    {{512,  800},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x800_30FPS},
+-    {{2048, 4096}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x4096_30FPS},
+-    {{1024, 2048}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x2048_30FPS},
+-    {{1024, 2560}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x2560_30FPS},
+-    {{512,  1280}, adsd3500_30fps, 1, 0, ADSD3500_MODE_512x1280_30FPS},
+-    {{2048, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x3072_30FPS},
+-    {{1024, 1536}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1536_30FPS},
+-    {{1024, 1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1920_30FPS},
+-    {{512,  960},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x960_30FPS},
+-    {{3584, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3584x3072_30FPS},
+-    {{1792, 1536}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1792x1536_30FPS},
+-    {{1792, 1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1792x1920_30FPS},
+-    {{896,  960},  adsd3500_30fps, 1, 0, ADSD3500_MODE_896x960_30FPS},
+-    {{3584, 2048}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3584x2048_30FPS},
+-    {{1792, 1024}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1792x1024_30FPS},
+-    {{1792, 1280}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1792x1280_30FPS},
+-    {{896,  640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_896x640_30FPS},
+-    {{4096, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_4096x3072_30FPS},
+-    {{2048, 1536}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x1536_30FPS},
+-    {{2048, 1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x1920_30FPS},
+-    {{1024, 960},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x960_30FPS},
+-    {{2048, 6144}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x6144_30FPS},
+-    {{3072, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x3072_30FPS},
+-    {{3072, 3840}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x3840_30FPS},
+-    {{512,  1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_512x1920_30FPS},
+-    {{1536, 1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1536x1920_30FPS},
+-    {{2048, 4608}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x4608_30FPS},
+-    {{1024, 2304}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x2304_30FPS},
+-    {{1024, 2880}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x2880_30FPS},
+-    {{512,  1440}, adsd3500_30fps, 1, 0, ADSD3500_MODE_512x1440_30FPS},
+-    {{512,  512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x512_30FPS},
+-    {{512,  640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x640_30FPS},
+-    {{2048, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x512_30FPS},
+-    {{1024, 1024}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1024_30FPS},
+-    {{1024, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x3072_30FPS},
+-    {{1024, 4096}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x4096_30FPS},
+-    {{2048, 5376}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x5376_30FPS},
+-    {{2048, 3584}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x3584_30FPS},
+-    /* Add modes with no device tree support after below */
++	/* RAW8 modes (0-52) */
++	{{512,  512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x512_30FPS},           // mode0
++	{{1024, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x512_30FPS},          // mode1
++	{{1024, 4096}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x4096_30FPS},         // mode2
++	{{1280, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1280x512_30FPS},          // mode3
++	{{1536, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1536x512_30FPS},          // mode4
++	{{1792, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1792x512_30FPS},          // mode5
++	{{2048, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x512_30FPS},          // mode6
++	{{2048, 2048}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x2048_30FPS},         // mode7
++	{{2304, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2304x512_30FPS},          // mode8
++	{{2560, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2560x512_30FPS},          // mode9
++	{{512,  640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x640_30FPS},           // mode10
++	{{1024, 640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x640_30FPS},          // mode11
++	{{1536, 640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1536x640_30FPS},          // mode12
++	{{2048, 640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x640_30FPS},          // mode13
++	{{2560, 640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2560x640_30FPS},          // mode14
++	{{256,  320},  adsd3500_30fps, 1, 0, ADSD3500_MODE_256x320_30FPS},           // mode15
++	{{512,  320},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x320_30FPS},           // mode16
++	{{768,  320},  adsd3500_30fps, 1, 0, ADSD3500_MODE_768x320_30FPS},           // mode17
++	{{1024, 320},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x320_30FPS},          // mode18
++	{{1280, 320},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1280x320_30FPS},          // mode19
++	{{2048, 3328}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x3328_30FPS},         // mode20
++	{{1024, 1664}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1664_30FPS},         // mode21
++	{{1024, 2080}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x2080_30FPS},         // mode22
++	{{512,  1040}, adsd3500_30fps, 1, 0, ADSD3500_MODE_512x1040_30FPS},          // mode23
++	{{2048, 2560}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x2560_30FPS},         // mode24
++	{{1024, 1280}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1280_30FPS},         // mode25
++	{{1024, 1600}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1600_30FPS},         // mode26
++	{{512,  800},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x800_30FPS},           // mode27
++	{{2048, 4096}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x4096_30FPS},         // mode28
++	{{1024, 2048}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x2048_30FPS},         // mode29
++	{{1024, 2560}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x2560_30FPS},         // mode30
++	{{512,  1280}, adsd3500_30fps, 1, 0, ADSD3500_MODE_512x1280_30FPS},          // mode31
++	{{2048, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x3072_30FPS},         // mode32
++	{{1024, 1536}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1536_30FPS},         // mode33
++	{{1024, 1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1920_30FPS},         // mode34
++	{{512,  960},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x960_30FPS},           // mode35
++	{{3584, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3584x3072_30FPS},         // mode36
++	{{1792, 1536}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1792x1536_30FPS},         // mode37
++	{{1792, 1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1792x1920_30FPS},         // mode38
++	{{896,  960},  adsd3500_30fps, 1, 0, ADSD3500_MODE_896x960_30FPS},           // mode39
++	{{3584, 2048}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3584x2048_30FPS},         // mode40
++	{{1792, 1024}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1792x1024_30FPS},         // mode41
++	{{1792, 1280}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1792x1280_30FPS},         // mode42
++	{{896,  640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_896x640_30FPS},           // mode43
++	{{4096, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_4096x3072_30FPS},         // mode44
++	{{2048, 1536}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x1536_30FPS},         // mode45
++	{{2048, 1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x1920_30FPS},         // mode46
++	{{1024, 960},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x960_30FPS},          // mode47
++	{{2048, 6144}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x6144_30FPS},         // mode48
++	{{3072, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x3072_30FPS},         // mode49
++	{{3072, 3840}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x3840_30FPS},         // mode50
++	{{512,  1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_512x1920_30FPS},          // mode51
++	{{1536, 1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1536x1920_30FPS},         // mode52
++
++	/* RAW12 modes (53-68) */
++	{{2048, 4608}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x4608_RAW12_30FPS},   // mode53
++	{{1024, 2304}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x2304_RAW12_30FPS},   // mode54
++	{{1024, 2880}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x2880_RAW12_30FPS},   // mode55
++	{{512,  1440}, adsd3500_30fps, 1, 0, ADSD3500_MODE_512x1440_RAW12_30FPS},    // mode56
++	{{2048, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x3072_RAW12_30FPS},   // mode57
++	{{1024, 1536}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1536_RAW12_30FPS},   // mode58
++	{{1024, 1920}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1920_RAW12_30FPS},   // mode59
++	{{512,  960},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x960_RAW12_30FPS},     // mode60
++	{{512,  512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x512_RAW12_30FPS},     // mode61
++	{{512,  640},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x640_RAW12_30FPS},     // mode62
++	{{2048, 512},  adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x512_RAW12_30FPS},    // mode63
++	{{1024, 1024}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x1024_RAW12_30FPS},   // mode64
++	{{1024, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x3072_RAW12_30FPS},   // mode65
++	{{1024, 4096}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x4096_RAW12_30FPS},   // mode66
++	{{2048, 5376}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x5376_RAW12_30FPS},   // mode67
++	{{2048, 3584}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x3584_RAW12_30FPS},   // mode68
++	/* Add modes with no device tree support after below */
+ };
+ 
+ #endif /* __ADSD3500_I2C_TABLES__ */
+diff --git a/drivers/media/i2c/adsd3500_regs.h b/drivers/media/i2c/adsd3500_regs.h
+index 626d8987..9349f9ed 100644
+--- a/drivers/media/i2c/adsd3500_regs.h
++++ b/drivers/media/i2c/adsd3500_regs.h
+@@ -11,7 +11,7 @@
+ 
+ #include <linux/bitfield.h>
+ 
+-#define DRIVER_VERSION 			    "6.2.0"
++#define DRIVER_VERSION 			    "7.0.0"
+ #define GET_CHIP_ID_CMD                     0x0112
+ 
+ #define STREAM_ON_CMD                       0x00AD
+-- 
+2.25.1
+
