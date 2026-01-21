@@ -809,8 +809,7 @@ void ADIMainWindow::ShowStartWizard() {
                 }
             }
             ImGui::SameLine();
-            if (ImGuiExtensions::ADIButton("Close",
-                                           m_is_open_device)) {
+            if (ImGuiExtensions::ADIButton("Close", m_is_open_device)) {
                 CameraStop();
                 if (initCameraWorker.joinable()) {
                     initCameraWorker.join();
