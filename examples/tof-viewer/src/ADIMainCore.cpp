@@ -720,13 +720,25 @@ void ADIMainWindow::ShowStartWizard() {
     static uint32_t selected = 1;
     uint32_t state_change_check = selected;
 
+    ImGui::BeginDisabled(m_is_open_device);
+
     ImGui::RadioButton("Saved Stream", selected == 0);
-    if (ImGui::IsItemClicked())
+    if (ImGui::IsItemClicked()) {
         selected = 0;
+        m_off_line = true;
+        RefreshDevices();
+    }
+
     ImGui::SameLine();
+
     ImGui::RadioButton("Live Camera", selected == 1);
-    if (ImGui::IsItemClicked())
+    if (ImGui::IsItemClicked()) {
         selected = 1;
+        m_off_line = false;
+        RefreshDevices();
+    }
+
+    ImGui::EndDisabled();
 
     if (selected == 1 && selected != state_change_check) {
         if (m_is_open_device) {
@@ -742,7 +754,6 @@ void ADIMainWindow::ShowStartWizard() {
         else if (wizard_height > 300)
             wizard_height -= 20;
 
-        m_off_line = true;
         const bool openAvailable = !m_connected_devices.empty();
 
         { // Use block to control the moment when ImGuiExtensions::ButtonColorChanger gets destroyed
@@ -758,7 +769,7 @@ void ADIMainWindow::ShowStartWizard() {
 
                 if (!fs.empty()) {
 
-                    RefreshDevices();
+                    //RefreshDevices();
 
                     //m_is_open_device = true;
                     m_is_playing = false;
@@ -797,6 +808,21 @@ void ADIMainWindow::ShowStartWizard() {
                     return;
                 }
             }
+            ImGui::SameLine();
+            if (ImGuiExtensions::ADIButton("Close",
+                                           m_is_open_device)) {
+                CameraStop();
+                if (initCameraWorker.joinable()) {
+                    initCameraWorker.join();
+                    m_cameraModes.clear();
+                    _cameraModes.clear();
+                }
+                m_view_instance->cleanUp();
+                m_view_instance.reset();
+
+                m_is_open_device = false;
+                m_cameraWorkerDone = false;
+            }
             if (m_is_open_device) {
                 NewLine(5.0f);
                 ImGui::Text("File selected");
@@ -810,7 +836,6 @@ void ADIMainWindow::ShowStartWizard() {
 #pragma endregion // WizardOffline
     } else {
 #pragma region WizardOnline
-        m_off_line = false;
         ImGuiExtensions::ADIComboBox(
             "Camera", "(No available devices)", ImGuiComboFlags_None,
             m_connected_devices, &m_selected_device_index, m_is_open_device);
@@ -856,18 +881,6 @@ void ADIMainWindow::ShowStartWizard() {
             m_callback_initialized = false;
             m_cameraWorkerDone = false;
             m_is_open_device = false;
-            RefreshDevices();
-        }
-        NewLine(5.0f);
-
-        if (ImGuiExtensions::ADICheckbox("Max FPS Network Test (Debug)",
-                                         &m_network_link_test,
-                                         m_is_open_device)) {
-            if (m_network_link_test) {
-                m_ip_suffix = ":netlinktest";
-            } else {
-                m_ip_suffix.clear();
-            }
             RefreshDevices();
         }
         NewLine(5.0f);
