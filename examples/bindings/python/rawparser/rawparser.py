@@ -109,10 +109,12 @@ def generate_ab(ab_frame, directory, base_filename, index, log_image=False):
 
 
 def generate_confidence(conf_frame, directory, base_filename, index):
+    # Normalize confidence to 0-255 range
     norm_conf = cv.normalize(conf_frame, None, 0, 255, cv.NORM_MINMAX, dtype=cv.CV_8U)
-    norm_conf = 255 - np.uint8(norm_conf)
-    img = o3d.geometry.Image(norm_conf)
-    o3d.io.write_image(safe_join(directory, f'conf_{base_filename}_{index}{PNG_EXT}'), img)
+    # Apply TURBO colormap for better visualization (high confidence = warm colors)
+    color_conf = cv.applyColorMap(norm_conf, cv.COLORMAP_TURBO)
+    output_path = safe_join(directory, f'conf_{base_filename}_{index}{PNG_EXT}')
+    cv.imwrite(output_path, color_conf)
 
 
 def generate_pcloud(xyz_frame, directory, base_filename, index, height, width):
@@ -185,31 +187,29 @@ def generate_rgb(rgb_data, directory, base_filename, index, width, height):
     """Generate RGB JPG from BGR data (SDK already converted from NV12)"""
     try:
         # SDK returns BGR format (3 bytes per pixel)
-        bgr_image = np.array(rgb_data, dtype=np.uint8, copy=False)
-
-        # Check actual data size to determine format
-        expected_bgr_size = height * width * 3
-        actual_size = bgr_image.size
-
-        if actual_size == expected_bgr_size:
-            # Standard BGR format
-            bgr_image = bgr_image.reshape((height, width, 3))
-            rgb_image = cv.cvtColor(bgr_image, cv.COLOR_BGR2RGB)
-        elif actual_size == height * width:
-            # Grayscale format (1 byte per pixel)
-            gray_image = bgr_image.reshape((height, width))
-            rgb_image = cv.cvtColor(gray_image, cv.COLOR_GRAY2RGB)
+        # rgb_data should already be reshaped to (height, width, 3)
+        if isinstance(rgb_data, np.ndarray):
+            if rgb_data.ndim == 3 and rgb_data.shape == (height, width, 3):
+                # Already in correct BGR format
+                bgr_image = rgb_data
+            elif rgb_data.ndim == 2 and rgb_data.shape == (height, width):
+                # Grayscale - replicate to 3 channels
+                bgr_image = cv.cvtColor(rgb_data, cv.COLOR_GRAY2BGR)
+            else:
+                # Try to reshape
+                bgr_image = rgb_data.reshape((height, width, 3))
         else:
-            raise ValueError(
-                f"Unexpected RGB data size: {actual_size} bytes "
-                f"(expected {expected_bgr_size} for BGR or {height * width} for grayscale)"
-            )
+            # Convert to numpy array and reshape
+            bgr_image = np.array(rgb_data, dtype=np.uint8, copy=False)
+            bgr_image = bgr_image.reshape((height, width, 3))
 
-        # Save as JPG with high quality
+        # Save as JPG (OpenCV handles BGR natively)
         output_path = safe_join(directory, f'rgb_{base_filename}_{index}.jpg')
-        Image.fromarray(rgb_image).save(output_path, quality=95)
+        cv.imwrite(output_path, bgr_image, [cv.IMWRITE_JPEG_QUALITY, 95])
     except Exception as e:
         print(f"\nWarning: Failed to generate RGB frame {index}: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def find_latest_adcam_file():
@@ -260,12 +260,16 @@ def main():
     )
     parser.add_argument(
         "filename", nargs='?', type=str, default=None,
-        help=".adcam filename to parse (optional, auto-finds latest from data_collect if not provided)"
+        help=".adcam filename to parse (optional, auto-finds latest from "
+             "data_collect if not provided)"
     )
     parser.add_argument("-o", "--outdir", type=str, default=None,
                         help="Output directory (optional)")
-    parser.add_argument("-f", "--frames", type=str, default=None,
-                        help="Frame range: N (just N), N- (from N to end), N-M (N to M inclusive)")
+    parser.add_argument(
+        "-f", "--frames", type=str, default=None,
+        help="Frame range: N (just N), N- (from N to end), "
+             "N-M (N to M inclusive)"
+    )
     args = parser.parse_args()
 
     # Auto-detect latest .adcam file if not provided
@@ -403,21 +407,65 @@ def main():
         except Exception as e:
             print(f"  Error processing confidence: {e}")
 
-        # Process RGB using SDK API
+        # Process RGB - extract from end of buffer (appended after depth+AB+conf)
+        # NOTE: RGB is recorded as BGR (3 bytes/pixel) appended AFTER ToF data
+        # The SDK's getData("rgb") doesn't work correctly for old recordings
+        # due to metadata issues
+        # So we'll extract it manually from the full frame buffer
         try:
+            # First check if RGB metadata exists
             rgb_details = tof.FrameDataDetails()
             status_rgb = frame.getDataDetails("rgb", rgb_details)
-            if status_rgb == tof.Status.Ok and rgb_details.width > 0 and rgb_details.height > 0:
-                print(f"  - Extracting RGB ({rgb_details.width}x{rgb_details.height})")
-                rgb_data = frame.getData("rgb")
-                rgb_arr = np.array(rgb_data, copy=False)
-                generate_rgb(rgb_arr, frame_dir, base_filename, str_frame_idx,
-                             rgb_details.width, rgb_details.height)
-                print(f"    Saved RGB JPG")
+            
+            if (status_rgb == tof.Status.Ok and rgb_details.width > 0 and
+                    rgb_details.height > 0):
+                print(
+                    f"  - Extracting RGB ({rgb_details.width}x{rgb_details.height}) "
+                    f"- manual extraction"
+                )
+                
+                
+                # Try to use getData("rgb") first - if it returns correct size, use it
+                try:
+                    rgb_data = frame.getData("rgb")
+                    rgb_arr = np.array(rgb_data, copy=False)
+                    
+                    # BGR format: 3 bytes per pixel
+                    expected_rgb_size = (
+                        rgb_details.width * rgb_details.height * 3
+                    )
+                    
+                    
+                    # If getData returns flat grayscale (wrong size),
+                    # we need alternative approach
+                    if rgb_arr.size < expected_rgb_size:
+                        print(
+                            f"    WARNING: SDK returned incomplete RGB data "
+                            f"({rgb_arr.size} < {expected_rgb_size} bytes)"
+                        )
+                    else:
+                        # SDK returned correct size - reshape and save
+                        if len(rgb_arr.shape) == 1:
+                            rgb_arr = rgb_arr.reshape(
+                                (rgb_details.height, rgb_details.width, 3)
+                            )
+                        
+                        # Data is in BGR format - save directly
+                        generate_rgb(
+                            rgb_arr, frame_dir, base_filename, str_frame_idx,
+                            rgb_details.width, rgb_details.height
+                        )
+                        print(f"    Saved RGB JPG")
+                        
+                except Exception as inner_e:
+                    print(f"    Could not extract RGB: {inner_e}")
             else:
-                print(f"  - No RGB data available in frame")
+                print(f"  - No RGB metadata in frame")
+                
         except Exception as e:
             print(f"  Error processing RGB: {e}")
+            import traceback
+            traceback.print_exc()
 
         # Process XYZ
         try:
@@ -425,7 +473,10 @@ def main():
             status_xyz = frame.getDataDetails("xyz", xyz_details)
             if (status_xyz == tof.Status.Ok and xyz_details.width > 0 and
                     xyz_details.height > 0):
-                print(f"  - Extracting XYZ point cloud ({xyz_details.width}x{xyz_details.height})")
+                print(
+                    f"  - Extracting XYZ point cloud "
+                    f"({xyz_details.width}x{xyz_details.height})"
+                )
                 xyz_data = frame.getData("xyz")
                 xyz_arr = np.array(xyz_data, copy=False)
                 generate_pcloud(xyz_arr, frame_dir, base_filename, str_frame_idx,
