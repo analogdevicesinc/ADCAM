@@ -221,8 +221,10 @@ class ADIView {
     bool m_rgbThreadCreated = false;
     std::thread m_rgbImageWorker;
 
-    // RGB data buffer (converted to BGR for OpenGL display)
-    uint8_t *rgb_video_data_rgb = nullptr; // Converted BGR data for display
+    // RGB data buffers (double buffering to prevent flickering)
+    uint8_t *rgb_video_data_rgb = nullptr;      // Front buffer for display
+    uint8_t *rgb_video_data_rgb_back = nullptr; // Back buffer for writing
+    uint8_t *rgb_video_data_8bit = nullptr;     // For OpenGL texture upload
 
     // RGB synchronization (separate from depth/AB, follows SDK pattern)
     std::mutex rgb_data_ready_mtx;

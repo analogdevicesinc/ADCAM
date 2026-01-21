@@ -213,6 +213,21 @@ void ADIView::cleanUp() {
         delete[] normalized_vertices;
         normalized_vertices = nullptr;
     }
+
+#ifdef WITH_RGB_SUPPORT
+    if (rgb_video_data_rgb != nullptr) {
+        delete[] rgb_video_data_rgb;
+        rgb_video_data_rgb = nullptr;
+    }
+    if (rgb_video_data_rgb_back != nullptr) {
+        delete[] rgb_video_data_rgb_back;
+        rgb_video_data_rgb_back = nullptr;
+    }
+    if (rgb_video_data_8bit != nullptr) {
+        delete[] rgb_video_data_8bit;
+        rgb_video_data_8bit = nullptr;
+    }
+#endif
 }
 
 void ADIView::setABMaxRange(std::string value) {
@@ -1326,25 +1341,35 @@ void ADIView::_displayRgbImage() {
             rgbFrameWidth = frameWidth;
             rgbFrameHeight = frameHeight;
 
-            // Allocate BGR output buffer on first use
+            // Allocate double buffers on first use (front, back, and 8-bit for OpenGL)
             if (rgb_video_data_rgb == nullptr) {
                 size_t bgr_buffer_size =
                     frameHeight * frameWidth * 3; // BGR: 3 bytes per pixel
                 rgb_video_data_rgb = new uint8_t[bgr_buffer_size];
-                if (rgb_video_data_rgb == nullptr) {
-                    LOG(ERROR) << "RGB worker: Failed to allocate BGR buffer";
+                rgb_video_data_rgb_back = new uint8_t[bgr_buffer_size];
+                rgb_video_data_8bit = new uint8_t[bgr_buffer_size];
+                if (rgb_video_data_rgb == nullptr ||
+                    rgb_video_data_rgb_back == nullptr ||
+                    rgb_video_data_8bit == nullptr) {
+                    LOG(ERROR) << "RGB worker: Failed to allocate RGB buffers";
                     continue;
                 }
+                LOG(INFO) << "RGB buffers allocated: " << frameWidth << "x"
+                          << frameHeight << " (3 buffers x " << bgr_buffer_size
+                          << " bytes)";
             }
 
-            // Copy BGR data from SDK to display buffer
+            // Copy BGR data to back buffer (NO LOCK - minimize contention)
             // SDK has already converted NV12→BGR in buffer_processor.cpp
             size_t bgr_size = frameHeight * frameWidth * 3;
-            std::memcpy(rgb_video_data_rgb, bgr_data, bgr_size);
+            std::memcpy(rgb_video_data_rgb_back, bgr_data, bgr_size);
 
-            // Signal that RGB data is ready for display
+            // Quick pointer swap under lock to make new frame available
             {
                 std::lock_guard<std::mutex> data_lock(rgb_data_ready_mtx);
+                std::swap(rgb_video_data_rgb, rgb_video_data_rgb_back);
+                // Copy to 8-bit buffer for OpenGL
+                std::memcpy(rgb_video_data_8bit, rgb_video_data_rgb, bgr_size);
                 rgb_data_ready = true;
             }
             rgb_data_ready_cv.notify_one();

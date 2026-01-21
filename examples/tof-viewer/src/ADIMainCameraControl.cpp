@@ -297,6 +297,9 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
             InitOpenGLABTexture();
             InitOpenGLDepthTexture();
             InitOpenGLPointCloudTexture();
+#ifdef WITH_RGB_SUPPORT
+            InitOpenGLRGBTexture();
+#endif
 
             if (!m_off_line) {
                 m_view_instance->m_ctrl->StartCapture(m_fps_expected);
@@ -318,6 +321,9 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
             InitOpenGLABTexture();
             InitOpenGLDepthTexture();
             InitOpenGLPointCloudTexture();
+#ifdef WITH_RGB_SUPPORT
+            InitOpenGLRGBTexture();
+#endif
         }
     }
 
@@ -458,8 +464,12 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
                 DisplayPointCloudWindow(overlayFlags);
             }
 #ifdef WITH_RGB_SUPPORT
-            // Display AB window if either AB or RGB data is available
-            if (haveAB || haveRGB) {
+            // Display RGB in separate window if available
+            if (haveRGB) {
+                DisplayRGBWindow(overlayFlags);
+            }
+            // Display AB window only if AB data is available (not when showing RGB)
+            if (haveAB) {
                 DisplayActiveBrightnessWindow(overlayFlags);
             }
 #else

@@ -110,7 +110,7 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
 #ifdef _WIN32
     wholeLogPath += "\\"; // Ensure the path ends with a slash
 #elif __linux__
-    wholeLogPath += "/";   // Ensure the path ends with a slash
+    wholeLogPath += "/"; // Ensure the path ends with a slash
 #endif
     wholeLogPath += "log_" + std::string(timebuff) + ".txt";
 
@@ -316,6 +316,16 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
     m_dict_win_position["fr-sub2"].width = 256.0f;
     m_dict_win_position["fr-sub2"].height = 256.0f;
 
+#ifdef WITH_RGB_SUPPORT
+    // RGB window: 1920x1200 native, scale to fit nicely
+    // Use 16:10 aspect ratio at 640px width
+    m_dict_win_position["fr-rgb"].x =
+        WindowCalcX(m_dict_win_position["fr-main"], 10.0f);
+    m_dict_win_position["fr-rgb"].y = m_dict_win_position["fr-main"].y;
+    m_dict_win_position["fr-rgb"].width = 409.6f;
+    m_dict_win_position["fr-rgb"].height = 256.0f; // 16:10 aspect ratio
+#endif
+
     m_dict_win_position["plotA"].x = m_dict_win_position["fr-main"].x;
     m_dict_win_position["plotA"].y =
         WindowCalcY(m_dict_win_position["fr-main"], 10.0f);
@@ -325,7 +335,9 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
     m_xyz_position = &m_dict_win_position["fr-main"];
     m_ab_position = &m_dict_win_position["fr-sub1"];
     m_depth_position = &m_dict_win_position["fr-sub2"];
-
+#ifdef WITH_RGB_SUPPORT
+    m_rgb_position = &m_dict_win_position["fr-rgb"];
+#endif
     // Setup Dear ImGui style
     //ImGui::StyleColorsDark();
     //OR

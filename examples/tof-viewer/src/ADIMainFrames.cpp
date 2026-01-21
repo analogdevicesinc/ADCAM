@@ -646,6 +646,102 @@ void ADIMainWindow::DisplayDepthWindow(ImGuiWindowFlags overlayFlags) {
     ImGui::End();
 }
 
+#ifdef WITH_RGB_SUPPORT
+//*******************************************
+//* Section: Handling of RGB Window
+//*******************************************
+
+void ADIMainWindow::InitOpenGLRGBTexture() {
+    /********************************************/
+    //RGB Texture
+    GLuint rgb_texture;
+    glGenTextures(1, &rgb_texture);
+    glBindTexture(GL_TEXTURE_2D, rgb_texture);
+
+    // Setup filtering parameters for display
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    m_gl_rgb_video_texture = rgb_texture;
+    /*************************************************/
+}
+
+void ADIMainWindow::DisplayRGBWindow(ImGuiWindowFlags overlayFlags) {
+    ImVec2 size;
+
+    // Calculate display dimensions for RGB (1920x1200 native, 16:10 aspect ratio)
+    if (m_view_instance->rgbFrameWidth > 0 &&
+        m_view_instance->rgbFrameHeight > 0) {
+        float autoscale = std::fmin(
+            (m_rgb_position->width / m_view_instance->rgbFrameWidth),
+            (m_rgb_position->height / m_view_instance->rgbFrameHeight));
+
+        size.x =
+            m_view_instance->rgbFrameWidth * autoscale * m_dpi_scale_factor;
+        size.y =
+            m_view_instance->rgbFrameHeight * autoscale * m_dpi_scale_factor;
+
+        if (rotationangledegrees == 90 || rotationangledegrees == 270) {
+            std::swap(size.x, size.y);
+        }
+
+        m_display_rgb_dimensions = {static_cast<float>(size.x),
+                                    static_cast<float>(size.y)};
+
+        size.x /= m_dpi_scale_factor;
+        size.y /= m_dpi_scale_factor;
+    }
+
+    SetWindowPosition(m_rgb_position->x, m_rgb_position->y);
+    SetWindowSize(m_rgb_position->width, m_rgb_position->height);
+
+    if (ImGui::Begin("RGB Window", nullptr,
+                     overlayFlags | ImGuiWindowFlags_NoTitleBar)) {
+
+        ImGui::SetCursorPos(ImVec2(0, 0));
+
+        if (m_view_instance->rgb_video_data_8bit != nullptr &&
+            m_view_instance->rgbFrameWidth > 0 &&
+            m_view_instance->rgbFrameHeight > 0) {
+
+            // Copy RGB buffer pointer under minimal lock
+            uint8_t *rgb_buffer_ptr = nullptr;
+            int rgb_width = 0, rgb_height = 0;
+            {
+                std::lock_guard<std::mutex> rgb_lock(
+                    m_view_instance->rgb_data_ready_mtx);
+                rgb_buffer_ptr = m_view_instance->rgb_video_data_8bit;
+                rgb_width = m_view_instance->rgbFrameWidth;
+                rgb_height = m_view_instance->rgbFrameHeight;
+            }
+
+            // Upload to OpenGL without holding lock
+            if (rgb_buffer_ptr != nullptr && rgb_width > 0 && rgb_height > 0) {
+                glBindTexture(GL_TEXTURE_2D, m_gl_rgb_video_texture);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, rgb_width, rgb_height, 0,
+                             GL_BGR, GL_UNSIGNED_BYTE, rgb_buffer_ptr);
+                glad_glGenerateMipmap(GL_TEXTURE_2D);
+
+                ImVec2 _displayRGBDimensions = m_display_rgb_dimensions;
+
+                if (rotationangledegrees == 90 || rotationangledegrees == 270) {
+                    std::swap(_displayRGBDimensions.x, _displayRGBDimensions.y);
+                }
+
+                ImageRotated(
+                    (ImTextureID)m_gl_rgb_video_texture,
+                    ImVec2(m_rgb_position->width, m_rgb_position->height),
+                    ImVec2(_displayRGBDimensions.x, _displayRGBDimensions.y),
+                    rotationangleradians);
+            }
+        }
+    }
+
+    ImGui::End();
+}
+#endif // WITH_RGB_SUPPORT
+
 //*******************************************
 //* Section: Handling of Point Cloud Window
 //*******************************************
