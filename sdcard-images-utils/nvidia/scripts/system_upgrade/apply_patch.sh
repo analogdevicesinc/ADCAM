@@ -61,6 +61,37 @@ function start_services()
 
 extlinux_conf_file="/boot/extlinux/extlinux.conf"
 
+function get_boot_device_type()
+{
+	if [[ ! -f "$extlinux_conf_file" ]]; then
+		echo "ERROR: File not found: ${extlinux_conf_file}"
+		boot_device_type="unknown"
+		return 1
+	fi
+
+	# Check for PARTUUID (SSD/NVMe boot)
+	if grep -q "PARTUUID" "${extlinux_conf_file}"; then
+		partuuid=$(grep -oP '(?<=PARTUUID=).{36}' "${extlinux_conf_file}" | head -n 1)
+		boot_device_type="ssd"
+		boot_device_info="${partuuid}"
+		echo "Boot device: SSD (NVMe)"
+		echo "PARTUUID: ${partuuid}"
+		return 0
+	# Check for microSD card boot
+	elif grep -q "root=/dev/mmcblk0p1" "${extlinux_conf_file}"; then
+		boot_device_type="sdcard"
+		boot_device_info="/dev/mmcblk0p1"
+		echo "Boot device: microSD card"
+		echo "Root device: /dev/mmcblk0p1"
+		return 0
+	else
+		boot_device_type="unknown"
+		boot_device_info=""
+		echo "WARNING: Unable to determine boot device type"
+		return 2
+	fi
+}
+
 function truncate_file() {
   if [[ ! -f "$extlinux_conf_file" ]]; then
     echo "File not found!"
@@ -73,14 +104,16 @@ function truncate_file() {
   sed -i "s/^DEFAULT .*/DEFAULT primary/" "$extlinux_conf_file"
 }
 
-function get_root_count()
-{
-	count_value="$(grep -c "root=/dev/mmcblk0p1" ${extlinux_conf_file})"
-	echo "get_root_count = ${count_value}"
-}
-
 function add_boot_label()
 {
+	# Determine root device based on boot type
+	local root_device
+	if [[ "${boot_device_type}" == "ssd" ]]; then
+		root_device="root=PARTUUID=${boot_device_info}"
+	else
+		root_device="root=/dev/mmcblk0p1"
+	fi
+
 	sudo -s <<EOF
 	echo "Add the backup kernel label"
 	echo " " >> ${extlinux_conf_file}
@@ -89,7 +122,7 @@ function add_boot_label()
 	echo "      LINUX /boot/Image.backup" >> ${extlinux_conf_file}
 	echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
 	echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
-	echo "       APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
+	echo "       APPEND \${cbootargs} ${root_device} rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
 	echo " " >> ${extlinux_conf_file}
 
 	echo "Add the ADSD3500+ADSD3100 label"
@@ -99,7 +132,7 @@ function add_boot_label()
 	echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
 	echo "      OVERLAYS /boot/adi/tegra234-p3767-camera-p3768-adsd3500.dtbo" >> ${extlinux_conf_file}
 	echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
-	echo "      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
+	echo "      APPEND \${cbootargs} ${root_device} rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
 	echo " " >> ${extlinux_conf_file}
 
 	echo "Add the ADSD3500-DUAL+ADSD3100 label"
@@ -109,7 +142,7 @@ function add_boot_label()
         echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
         echo "      OVERLAYS /boot/adi/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo" >> ${extlinux_conf_file}
         echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
-        echo "      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
+        echo "      APPEND \${cbootargs} ${root_device} rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
         echo " " >> ${extlinux_conf_file}
 
         echo "Add the ADSD3500-DUAL+ADSD3100+AR0234 label"
@@ -119,7 +152,7 @@ function add_boot_label()
         echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
         echo "      OVERLAYS /boot/adi/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dtbo" >> ${extlinux_conf_file}
         echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
-        echo "      APPEND ${cbootargs} root=/dev/mmcblk0p1 rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
+        echo "      APPEND \${cbootargs} ${root_device} rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
         echo " " >> ${extlinux_conf_file}
 
 	exit
@@ -136,10 +169,28 @@ function main()
 {
 	echo "******* Update the Extlinux Conf file *******"
 	truncate_file
-	get_root_count
-	if [[ "${count_value}" == 1 ]]; then
-		add_boot_label
+
+	echo "******* Detect Boot Device Type *******"
+	get_boot_device_type
+
+	if [[ "${boot_device_type}" == "unknown" ]]; then
+		echo "ERROR: Cannot proceed without valid boot device detection"
+		exit 1
 	fi
+
+	# Check if boot labels need to be added
+	if [[ "${boot_device_type}" == "sdcard" ]]; then
+		# For SD card, check if root device is present
+		if grep -q "root=/dev/mmcblk0p1" "${extlinux_conf_file}"; then
+			add_boot_label
+		fi
+	elif [[ "${boot_device_type}" == "ssd" ]]; then
+		# For SSD, check if PARTUUID is present
+		if grep -q "PARTUUID" "${extlinux_conf_file}"; then
+			add_boot_label
+		fi
+	fi
+
 	set_default_boot_label
 
 	echo "******* Apply Ubuntu Overlay *******"
