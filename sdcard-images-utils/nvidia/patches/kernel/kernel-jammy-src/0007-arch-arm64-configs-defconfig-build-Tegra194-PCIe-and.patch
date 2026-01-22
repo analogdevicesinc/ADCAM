@@ -1,0 +1,41 @@
+From b7724648ee98cb832295b3ca1827f32652a42483 Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Thu, 22 Jan 2026 11:15:56 +0530
+Subject: [PATCH] arch: arm64: configs: defconfig: build Tegra194 PCIe and NVMe
+ drivers into kernel
+
+- Build the Tegra194 PCIe host/endpoint drivers and the NVMe block
+driver into the kernel to ensure availability during early boot.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ arch/arm64/configs/defconfig | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index 2a9c2815df00..7a8d9568d9e5 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -270,8 +270,8 @@ CONFIG_PCIE_QCOM=y
+ CONFIG_PCIE_ARMADA_8K=y
+ CONFIG_PCIE_KIRIN=y
+ CONFIG_PCIE_HISI_STB=y
+-CONFIG_PCIE_TEGRA194_HOST=m
+-CONFIG_PCIE_TEGRA194_EP=m
++CONFIG_PCIE_TEGRA194_HOST=y
++CONFIG_PCIE_TEGRA194_EP=y
+ CONFIG_PCIE_LAYERSCAPE_GEN4=y
+ CONFIG_PCI_ENDPOINT=y
+ CONFIG_PCI_ENDPOINT_CONFIGFS=y
+@@ -314,7 +314,7 @@ CONFIG_ZRAM=m
+ CONFIG_BLK_DEV_LOOP=y
+ CONFIG_BLK_DEV_NBD=m
+ CONFIG_VIRTIO_BLK=y
+-CONFIG_BLK_DEV_NVME=m
++CONFIG_BLK_DEV_NVME=y
+ CONFIG_NVME_TCP=m
+ CONFIG_NVME_TARGET=m
+ CONFIG_NVME_TARGET_TCP=m
+-- 
+2.25.1
+
