@@ -175,7 +175,7 @@ function sw_version_info()
 	echo -n "Branch Name    : " >> $SW_VERSION_FILE ; echo "$BRANCH" >> $SW_VERSION_FILE
 	echo -n "Branch Commit  : " >> $SW_VERSION_FILE ; echo "$BR_COMMIT" >> $SW_VERSION_FILE
 	echo -n "Build  Date    : " >> $SW_VERSION_FILE ; date >> $SW_VERSION_FILE
-	echo    "Kernel Version : 5.15.148-tegra" >> $SW_VERSION_FILE
+	echo    "Kernel Version : 5.15.148-adi-tegra" >> $SW_VERSION_FILE
 	mv $SW_VERSION_FILE $PATCH_DIR
 }
 
