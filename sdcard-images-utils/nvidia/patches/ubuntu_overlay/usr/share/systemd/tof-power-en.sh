@@ -1,175 +1,143 @@
 #!/bin/bash
+# ToF sensor power/reset sequence using max7327 GPIOs via sysfs
 
-MODULE=$(strings /proc/device-tree/tegra-camera-platform/modules/module0/badge)
-MODULE1=$(strings /proc/device-tree/tegra-camera-platform/modules/module1/badge)
+# Scan all camera module badge entries and assign MODULE to the first one matching the ADI ToF sensor
+TARGET="adi_dual_adsd3500_adsd3100"
+MODULE=""
 
-if [[ $MODULE == "adi_adsd3500_adsd3100" ]]; then
-	echo "Module name: $MODULE"
-	echo "export CAM0_PWDN and set direction as output"
+for badge in \
+    /proc/device-tree/tegra-camera-platform/modules/module0/badge \
+    /proc/device-tree/tegra-camera-platform/modules/module1/badge
+do
+    if [[ -f "$badge" ]]; then
+        value=$(strings "$badge")
+        if echo "$value" | grep -q "$TARGET"; then
+            MODULE="$value"
+            break
+        fi
+    fi
+done
 
-	# export ADSD3500 reset Pin
-	if [ ! -d /sys/class/gpio/PH.06 ]
-	then
-	echo 397 > /sys/class/gpio/export
-	echo out > /sys/class/gpio/PH.06/direction
-	fi
-
-	#pull ADSD3500 reset low
-	sudo echo 0 > /sys/class/gpio/PH.06/value
-
-	#Disable the supply voltage
-	#EN_1P8
-	sudo gpioset 3 6=0
-
-	sleep 1
-
-	#EN_0P8
-	sudo gpioset 3 7=0
-
-	# Boot strap MAX7321
-	#OC0
-	sudo gpioset 2 0=0
-
-	#OC1
-	sudo gpioset 2 1=0
-
-	#OC2
-	sudo gpioset 2 2=0
-
-	#OC3
-	sudo gpioset 2 3=0
-
-	#OC4
-	sudo gpioset 2 4=0
-
-	#OC5
-	sudo gpioset 2 5=0
-
-	#OC6
-	sudo gpioset 2 6=0
-
-	#FLASH_WP
-	sudo gpioset 2 7=1
-
-
-	# Boot strap MAX7320
-	#U0
-	sudo gpioset 3 3=0
-
-	#DS2
-	sudo gpioset 3 5=1
-
-	#EN_1P8
-	sudo gpioset 3 6=1
-
-	sleep 1
-
-	#EN_0P8
-	sudo gpioset 3 7=1
-
-	#Pull ADSD3500 reset high
-	sudo echo 1 > /sys/class/gpio/PH.06/value
-	echo "ToF power sequence completed"
+if [[ -z "$MODULE" ]]; then
+    echo "Skipping ToF power sequence: MODULE=$MODULE"
+    exit 0
 fi
 
-if [[ $MODULE == "adi_dual_adsd3500_adsd3100" || $MODULE1 == "adi_dual_adsd3500_adsd3100" ]]; then
-	echo "Module name: $MODULE"
-	echo "export CAM1_PWDN and set direction as output"
+echo "Matched MODULE: $MODULE"
 
-	# export ADSD3500 reset Pin
-	if [ ! -d /sys/class/gpio/PAC.00 ]
-	then
-		echo 486 > /sys/class/gpio/export
-		echo out > /sys/class/gpio/PAC.00/direction
-	fi
+# --- Dynamically fetch GPIO labels ---
+declare -A GPIO
 
-	# Export ISP_BS3/ISP_INT pin as input
-	if [ ! -d /sys/class/gpio/gpio304 ]
-	then
-		echo 304 > /sys/class/gpio/export
-		echo in > /sys/class/gpio/gpio304/direction
-	fi
+# List of GPIO labels we are interested in, including ISP_RST at the start
+GPIO_LIST=("ISP_RST" "EN_1P8" "EN_0P8" "P2" "I2CM_SEL" "ISP_BS3" "NET_HOST_IO_SEL" "ISP_BS0" "ISP_BS1" "HOST_IO_DIR" "ISP_BS4" "ISP_BS5" "FSYNC_DIR" "EN_VAUX" "EN_VAUX_LS" "EN_SYS")
 
-	# Export NET HOST_IO_SEL pin as output
-	if [ ! -d /sys/class/gpio/gpio305 ]
-	then
-		echo 305 > /sys/class/gpio/export
-		echo out > /sys/class/gpio/gpio305/direction
-	fi
+# GPIO name to search for (easy to change later)
+GPIO_NAME="PAC.00"
 
-	# Export HOST_IO_DIR pin as output
-	if [ ! -d /sys/class/gpio/gpio308 ]
-	then
-		echo 308 > /sys/class/gpio/export
-		echo out > /sys/class/gpio/gpio308/direction
-	fi
-
-	# Export FSYNC_DIR pin as output
-	if [ ! -d /sys/class/gpio/gpio311 ]
-	then
-		echo 311 > /sys/class/gpio/export
-		echo out > /sys/class/gpio/gpio311/direction
-	fi
-
-	# Set NET HOST_IO_SEL: EXT_FSYNC = 0 / ISP_INT = 1
-	echo 1 > /sys/class/gpio/gpio305/value
-
-	#Set HOST_IO_DIR: EXT_FSYNC = 0 / ISP_INT = 1
-	echo 1 > /sys/class/gpio/gpio308/value
-
-	#Set FSYNC_DIR: External = 0 / Internal = 1
-	echo 1 > /sys/class/gpio/gpio311/value
-
-	#Pull ADSD3500 reset low
-	sudo echo 0 > /sys/class/gpio/PAC.00/value
-
-	#Disable the the supply voltage
-	#EN_1P8
-	sudo gpioset 2 0=0
-
-	#EN_0P8
-	sudo gpioset 2 1=0
-
-	sleep 0.2
-
-	#I2CM_SET
-	sudo gpioset 2 3=0
-
-	#ISP_BS0
-	sudo gpioset 2 6=0
-
-	#ISP_BS1
-	sudo gpioset 2 7=0
-
-	#ISP_BS4
-	sudo gpioset 2 9=0
-
-	#ISP_BS5
-	sudo gpioset 2 10=0
-
-	#EN_1P8
-	sudo gpioset 2 0=1
-
-	sleep 0.2
-
-	#EN_0P8
-	sudo gpioset 2 1=1
-
-	sleep 0.2
-
-	#EN_VSYS
-	sudo gpioset 2 14=1
-
-	#EN_VAUX_LS
-	sudo gpioset 2 13=1
-
-	#EN_VAUX
-	sudo gpioset 2 12=1
-	sleep 0.2
-
-	#Pull ADSD3500 reset high
-	sudo echo 1 > /sys/class/gpio/PAC.00/value
-
-	echo "ToF power sequence completed"
+# Check for the GPIO name and assign it to ISP_RST
+GPIO_RESULT=$(sudo cat /sys/kernel/debug/gpio | grep -i "\b${GPIO_NAME}\b")
+if [[ -n "$GPIO_RESULT" ]]; then
+    gpio_num=$(echo "$GPIO_RESULT" | sed -E 's/.*gpio-([0-9]+).*/\1/')
+    if [[ -n "$gpio_num" ]]; then
+        GPIO["ISP_RST"]=$gpio_num
+        echo "Special case: ${GPIO_NAME} assigned to ISP_RST -> $gpio_num"
+	echo $gpio_num > /sys/class/gpio/export
+	echo out > /sys/class/gpio/$GPIO_NAME/direction
+    else
+        echo "${GPIO_NAME} found, but GPIO number not extracted correctly"
+        exit 0
+    fi
+else
+    echo "${GPIO_NAME} not found"
+    exit 0
 fi
+
+# Now process the GPIO labels, starting from the second element (index 1)
+for label in "${GPIO_LIST[@]:1}"; do
+    # Search for each GPIO label in the debug output and extract the GPIO number
+    result=$(sudo cat /sys/kernel/debug/gpio | grep -i "\b$label\b")
+
+    # Check if the result is non-empty and contains the GPIO number
+    if [[ -n "$result" ]]; then
+        gpio_num=$(echo "$result" | sed -E 's/.*gpio-([0-9]+).*/\1/')
+
+        # Store the GPIO number in the associative array
+        if [[ -n "$gpio_num" ]]; then
+            GPIO["$label"]=$gpio_num
+            echo "Label: $label -> $gpio_num"
+        else
+            echo "Label: $label found, but GPIO number not extracted correctly"
+	    exit 0
+        fi
+    else
+        echo "Label: $label not found"
+	exit 0
+    fi
+done
+
+# Function to export and configure GPIO
+setup_gpio() {
+    local gpio=$1
+    local direction=$2
+    local value=${3:-0}
+
+    [ ! -d /sys/class/gpio/gpio$gpio ] && echo "$gpio" > /sys/class/gpio/export
+    sleep 0.05
+    echo "$direction" > /sys/class/gpio/gpio$gpio/direction
+    [[ "$direction" == "out" ]] && echo "$value" > /sys/class/gpio/gpio$gpio/value
+}
+
+echo "Configuring GPIOs via sysfs..."
+
+# Configure all GPIOs: ISP_BS3 as input, others as output low
+for label in "${GPIO_LIST[@]:1}"; do
+    gpio=${GPIO[$label]}
+    if [ "$label" == "ISP_BS3" ]; then
+        setup_gpio "$gpio" "in"
+    else
+        setup_gpio "$gpio" "out" 0
+    fi
+done
+
+echo "GPIO configuration complete."
+echo "Starting ToF power sequence..."
+
+# --- Step 1-3: Direction/selection lines ---
+echo 1 > /sys/class/gpio/gpio${GPIO[NET_HOST_IO_SEL]}/value
+echo 1 > /sys/class/gpio/gpio${GPIO[HOST_IO_DIR]}/value
+echo 1 > /sys/class/gpio/gpio${GPIO[FSYNC_DIR]}/value
+
+# --- Step 4: Pull ADSD3500 reset low ---
+echo 0 > /sys/class/gpio/$GPIO_NAME/value
+
+# --- Step 5: Disable supply voltages ---
+for pin in EN_1P8 EN_0P8; do
+    echo 0 > /sys/class/gpio/gpio${GPIO[$pin]}/value
+done
+sleep 0.2
+
+# --- Step 6: I2CM_SEL low ---
+echo 0 > /sys/class/gpio/gpio${GPIO[I2CM_SEL]}/value
+
+# --- Step 7: ISP_BS0/1/4/5 low ---
+for pin in ISP_BS0 ISP_BS1 ISP_BS4 ISP_BS5; do
+    echo 0 > /sys/class/gpio/gpio${GPIO[$pin]}/value
+done
+
+# --- Step 8: Enable supply voltages ---
+for pin in EN_1P8 EN_0P8; do
+    echo 1 > /sys/class/gpio/gpio${GPIO[$pin]}/value
+    sleep 0.2
+done
+
+# --- Step 9: Enable EN_SYS, EN_VAUX_LS, EN_VAUX ---
+for pin in EN_SYS EN_VAUX_LS EN_VAUX; do
+    echo 1 > /sys/class/gpio/gpio${GPIO[$pin]}/value
+done
+sleep 0.2
+
+# --- Step 10: Pull ADSD3500 reset high ---
+echo 1 > /sys/class/gpio/$GPIO_NAME/value
+
+echo "ToF power sequence completed."
 

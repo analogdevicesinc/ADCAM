@@ -41,6 +41,7 @@ function update_kernel()
 	mkdir test && tar -xjf kernel_supplements.tbz2 -C test > /dev/null 2>&1
 	sudo rm -rf /boot/adi
 	sudo mkdir -p /boot/adi/
+	sudo mkdir -p /lib/firmware/adi
 	sudo cp Image /boot/adi/Image
 	sudo cp -rf tegra234-p3767-camera-p3768-*.dtbo /boot/adi/
 	cd test/lib/modules/
@@ -56,6 +57,8 @@ function start_services()
 	sudo systemctl start  systemd-networkd
 	sudo systemctl enable adi-tof
 	sudo systemctl start adi-tof
+	sudo systemctl enable jetson-performance
+        sudo systemctl start jetson-performance
 
 }
 
@@ -110,8 +113,10 @@ function add_boot_label()
 	local root_device
 	if [[ "${boot_device_type}" == "ssd" ]]; then
 		root_device="root=PARTUUID=${boot_device_info}"
+		DTB_FILE="kernel_tegra234-p3768-0000+p3767-0003-nv-super.dtb"
 	else
 		root_device="root=/dev/mmcblk0p1"
+		DTB_FILE="kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb"
 	fi
 
 	sudo -s <<EOF
@@ -120,7 +125,7 @@ function add_boot_label()
 	echo "LABEL backup" >> ${extlinux_conf_file}
 	echo "      MENU LABEL backup kernel" >> ${extlinux_conf_file}
 	echo "      LINUX /boot/Image.backup" >> ${extlinux_conf_file}
-	echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
+	echo "      FDT /boot/dtb/${DTB_FILE}" >> ${extlinux_conf_file}
 	echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
 	echo "       APPEND \${cbootargs} ${root_device} rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
 	echo " " >> ${extlinux_conf_file}
@@ -129,7 +134,7 @@ function add_boot_label()
 	echo "LABEL ADSD3500+ADSD3100" >> ${extlinux_conf_file}
 	echo "      MENU LABEL ADSD3500: <CSI ToF Camera ADSD3100>" >> ${extlinux_conf_file}
 	echo "      LINUX /boot/adi/Image" >> ${extlinux_conf_file}
-	echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
+	echo "      FDT /boot/dtb/${DTB_FILE}" >> ${extlinux_conf_file}
 	echo "      OVERLAYS /boot/adi/tegra234-p3767-camera-p3768-adsd3500.dtbo" >> ${extlinux_conf_file}
 	echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
 	echo "      APPEND \${cbootargs} ${root_device} rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
@@ -139,7 +144,7 @@ function add_boot_label()
         echo "LABEL ADSD3500-DUAL+ADSD3100" >> ${extlinux_conf_file}
         echo "      MENU LABEL ADSD3500-DUAL: <CSI ToF Camera ADSD3100>" >> ${extlinux_conf_file}
         echo "      LINUX /boot/adi/Image" >> ${extlinux_conf_file}
-        echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
+	echo "      FDT /boot/dtb/${DTB_FILE}" >> ${extlinux_conf_file}
         echo "      OVERLAYS /boot/adi/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo" >> ${extlinux_conf_file}
         echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
         echo "      APPEND \${cbootargs} ${root_device} rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
@@ -149,7 +154,7 @@ function add_boot_label()
         echo "LABEL ADSD3500-DUAL+ADSD3100+AR0234" >> ${extlinux_conf_file}
         echo "      MENU LABEL ADSD3500-DUAL: <CSI ToF Camera ADSD3100>" >> ${extlinux_conf_file}
         echo "      LINUX /boot/adi/Image" >> ${extlinux_conf_file}
-        echo "      FDT /boot/dtb/kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb" >> ${extlinux_conf_file}
+	echo "      FDT /boot/dtb/${DTB_FILE}" >> ${extlinux_conf_file}
         echo "      OVERLAYS /boot/adi/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dtbo" >> ${extlinux_conf_file}
         echo "      INITRD /boot/initrd" >> ${extlinux_conf_file}
         echo "      APPEND \${cbootargs} ${root_device} rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0" >> ${extlinux_conf_file}
