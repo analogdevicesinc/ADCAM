@@ -1,6 +1,28 @@
 #!/bin/bash
 
-MODULE=$(strings /proc/device-tree/tegra-camera-platform/modules/module0/badge)
+# Scan all camera module badge entries and assign MODULE to the first one matching the ADI ToF sensor
+TARGET="adi_dual_adsd3500_adsd3100"
+MODULE=""
+
+for badge in \
+    /proc/device-tree/tegra-camera-platform/modules/module0/badge \
+    /proc/device-tree/tegra-camera-platform/modules/module1/badge
+do
+    if [[ -f "$badge" ]]; then
+        value=$(strings "$badge")
+        if echo "$value" | grep -q "$TARGET"; then
+            MODULE="$value"
+            break
+        fi
+    fi
+done
+
+if [[ -z "$MODULE" ]]; then
+    echo "Target module not found"
+    exit 0
+fi
+
+echo "Matched MODULE: $MODULE"
 
 MEDIA_DEVICE="/dev/media0"
 DOT_OUTPUT=$(media-ctl -d "$MEDIA_DEVICE" --print-dot)
@@ -16,48 +38,62 @@ else
     exit 1
 fi
 
-adsd3500_power_sequence(){
+GPIO_NAME="PAC.00"
 
-	#Pull ADSD3500 reset low
-	echo 0 > /sys/class/gpio/PAC.00/value
+# Declare GPIO mapping directly
+declare -A GPIO=(
+    [EN_1P8]=300
+    [EN_0P8]=301
+    [P2]=302
+    [I2CM_SEL]=303
+    [ISP_BS3]=304
+    [NET_HOST_IO_SEL]=305
+    [ISP_BS0]=306
+    [ISP_BS1]=307
+    [HOST_IO_DIR]=308
+    [ISP_BS4]=309
+    [ISP_BS5]=310
+    [FSYNC_DIR]=311
+    [EN_VAUX]=312
+    [EN_VAUX_LS]=313
+    [EN_SYS]=314
+)
 
-	#Disable the the supply voltage
-	#EN_1P8
-	gpioset 2 0=0
+adsd3500_power_sequence() {
 
-	#EN_0P8
-	gpioset 2 1=0
+    # Pull ADSD3500 reset low
+    echo 0 > /sys/class/gpio/$GPIO_NAME/value
 
-	sleep 0.2
+    # Disable the supply voltage
+    echo 0 > /sys/class/gpio/gpio${GPIO[EN_1P8]}/value
+    echo 0 > /sys/class/gpio/gpio${GPIO[EN_0P8]}/value
 
-	#I2CM_SET
-	gpioset 2 3=0
+    sleep 0.2
 
-	#ISP_BS0
-	gpioset 2 6=1
+    # I2CM_SEL
+    echo 0 > /sys/class/gpio/gpio${GPIO[I2CM_SEL]}/value
 
-	#ISP_BS1
-	gpioset 2 7=0
+    # ISP_BS0
+    echo 1 > /sys/class/gpio/gpio${GPIO[ISP_BS0]}/value
 
-	#ISP_BS4
-	gpioset 2 9=0
+    # ISP_BS1
+    echo 0 > /sys/class/gpio/gpio${GPIO[ISP_BS1]}/value
 
-	#ISP_BS5
-	gpioset 2 10=0
+    # ISP_BS4
+    echo 0 > /sys/class/gpio/gpio${GPIO[ISP_BS4]}/value
 
-	#EN_1P8
-	gpioset 2 0=1
+    # ISP_BS5
+    echo 0 > /sys/class/gpio/gpio${GPIO[ISP_BS5]}/value
 
-	sleep 0.2
+    # Re-enable the supply voltage
+    echo 1 > /sys/class/gpio/gpio${GPIO[EN_1P8]}/value
+    sleep 0.2
 
-	#EN_0P8
-	gpioset 2 1=1
+    echo 1 > /sys/class/gpio/gpio${GPIO[EN_0P8]}/value
+    sleep 0.2
 
-	sleep 0.2
-
-	#Pull ADSD3500 reset high
-	echo 1 > /sys/class/gpio/PAC.00/value
-
+    # Pull ADSD3500 reset high
+    echo 1 > /sys/class/gpio/$GPIO_NAME/value
 }
 
 load_firmware() {

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Discover adsd3500 V4L2 sub-device and video nodes by parsing the media controller graph
 MEDIA_DEVICE="/dev/media0"
 DOT_OUTPUT=$(media-ctl -d "$MEDIA_DEVICE" --print-dot)
 DOT_OUTPUT=$(echo "$DOT_OUTPUT" | sed 's/\\n/\n/g')
@@ -14,25 +15,30 @@ else
     exit 1
 fi
 
-# export NET HOST_IO_SEL Pin
-if [ ! -d /sys/class/gpio/gpio305 ]
-then
-	echo 305 > /sys/class/gpio/export
-	echo out > /sys/class/gpio/gpio305/direction
-fi
-
-# export HOST_IO_DIR Pin
-if [ ! -d /sys/class/gpio/gpio308 ]
-then
-	echo 308 > /sys/class/gpio/export
-	echo out > /sys/class/gpio/gpio308/direction
-fi
+# Declare GPIO mapping directly
+declare -A GPIO=(
+    [EN_1P8]=300
+    [EN_0P8]=301
+    [P2]=302
+    [I2CM_SEL]=303
+    [ISP_BS3]=304
+    [NET_HOST_IO_SEL]=305
+    [ISP_BS0]=306
+    [ISP_BS1]=307
+    [HOST_IO_DIR]=308
+    [ISP_BS4]=309
+    [ISP_BS5]=310
+    [FSYNC_DIR]=311
+    [EN_VAUX]=312
+    [EN_VAUX_LS]=313
+    [EN_SYS]=314
+)
 
 # Set 0: EXT_FSYNC / 1: ISP_INT
-echo 0 > /sys/class/gpio/gpio305/value
+echo 0 > /sys/class/gpio/gpio${GPIO[NET_HOST_IO_SEL]}/value
 
 # Set 0: EXT_FSYNC / 1: ISP_INT
-echo 0 > /sys/class/gpio/gpio308/value
+echo 0 > /sys/class/gpio/gpio${GPIO[HOST_IO_DIR]}/value
 
 # Enable external fsync
 v4l2-ctl --set-ctrl=fsync_trigger=0 -d $SUBDEV_PATH

@@ -1,0 +1,11 @@
+[Unit]
+Description=Jetson Orin Nano Max Performance Mode
+After=usb-gadget.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/share/systemd/jetson-perf.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
