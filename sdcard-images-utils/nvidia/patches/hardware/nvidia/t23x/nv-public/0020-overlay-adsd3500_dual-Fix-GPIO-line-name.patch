@@ -1,0 +1,43 @@
+From 984ee10b17034a4a832a3df110efec5ed8333c9f Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Fri, 23 Jan 2026 15:45:47 +0530
+Subject: [PATCH] overlay: adsd3500_dual: Fix GPIO line name
+
+- Fixed the inconsistent naming for "I2CM SEL" to "I2CM_SEL" to maintain uniformity.
+- Fixed the inconsistent naming for "NET HOST_IO_SEL" to "NET_HOST_IO_SEL" to maintain uniformity.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ ...p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dts | 2 +-
+ overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts  | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dts b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dts
+index 4a624f0..78dcba0 100644
+--- a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dts
++++ b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dts
+@@ -414,7 +414,7 @@
+ 							reg = <0x68>;
+ 							gpio-controller;
+ 							#gpio-cells = <2>;
+-							gpio-line-names = "EN_1P8", "EN_0P8", "P2", "I2CM SEL", "ISP_BS3/ISP_INT", "NET HOST_IO_SEL", "ISP_BS0", "ISP_BS1", "HOST_IO_DIR", "ISP_BS4", "ISP_BS5", "FSYNC_DIR", "EN_VAUX", "EN_VAUX_LS", "EN_SYS";
++							gpio-line-names = "EN_1P8", "EN_0P8", "P2", "I2CM_SEL", "ISP_BS3/ISP_INT", "NET_HOST_IO_SEL", "ISP_BS0", "ISP_BS1", "HOST_IO_DIR", "ISP_BS4", "ISP_BS5", "FSYNC_DIR", "EN_VAUX", "EN_VAUX_LS", "EN_SYS";
+ 						};
+ 						adsd3500@38 {
+ 							compatible = "adi,adsd3500";
+diff --git a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+index b621234..5e8ef94 100644
+--- a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
++++ b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+@@ -2459,7 +2459,7 @@
+ 						reg = <0x68>;
+ 						gpio-controller;
+ 						#gpio-cells = <2>;
+-						gpio-line-names = "EN_1P8", "EN_0P8", "P2", "I2CM SEL", "ISP_BS3/ISP_INT", "NET HOST_IO_SEL", "ISP_BS0", "ISP_BS1", "HOST_IO_DIR", "ISP_BS4", "ISP_BS5", "FSYNC_DIR", "EN_VAUX", "EN_VAUX_LS", "EN_SYS";
++						gpio-line-names = "EN_1P8", "EN_0P8", "P2", "I2CM_SEL", "ISP_BS3/ISP_INT", "NET_HOST_IO_SEL", "ISP_BS0", "ISP_BS1", "HOST_IO_DIR", "ISP_BS4", "ISP_BS5", "FSYNC_DIR", "EN_VAUX", "EN_VAUX_LS", "EN_SYS";
+ 					};
+ 				};
+ 				pwm: pwm-gpio {
+-- 
+2.25.1
+
