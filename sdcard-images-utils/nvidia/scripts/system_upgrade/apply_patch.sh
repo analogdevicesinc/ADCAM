@@ -109,14 +109,20 @@ function truncate_file() {
 
 function add_boot_label()
 {
+	# Determine DTB file dynamically
+	DTB_FILE=$(basename "$(ls /boot/dtb/*.dtb 2>/dev/null | head -n 1)")
+
+	if [[ -z "${DTB_FILE}" ]]; then
+		echo "ERROR: No DTB file found in /boot/dtb"
+		exit 1
+	fi
+
 	# Determine root device based on boot type
 	local root_device
 	if [[ "${boot_device_type}" == "ssd" ]]; then
 		root_device="root=PARTUUID=${boot_device_info}"
-		DTB_FILE="kernel_tegra234-p3768-0000+p3767-0003-nv-super.dtb"
 	else
 		root_device="root=/dev/mmcblk0p1"
-		DTB_FILE="kernel_tegra234-p3768-0000+p3767-0005-nv-super.dtb"
 	fi
 
 	sudo -s <<EOF
