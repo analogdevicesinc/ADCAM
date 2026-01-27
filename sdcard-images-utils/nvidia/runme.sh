@@ -188,7 +188,7 @@ function main()
 	build_kernel_Image
 	copy_ubuntu_overlay
 	sw_version_info
-	cp $ROOTDIR/scripts/system_upgrade/apply_patch.sh $PATCH_DIR
+	cp $ROOTDIR/scripts/system_upgrade/*.sh $PATCH_DIR
 	cd $ROOTDIR/build
 
 	ARCHIVE_FILENAME="NVIDIA_ToF_ADSD3500_REL_PATCH_$(date +"%d%b%y").zip"
