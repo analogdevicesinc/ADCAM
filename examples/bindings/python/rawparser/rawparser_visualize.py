@@ -177,6 +177,14 @@ def visualize_directory(directory, view_mode='metadata'):
     else:
         print("✗ No depth*.png files found")
     
+    # Find first RGB file (saved as JPG by rawparser)
+    rgb_files = sorted(glob.glob(os.path.join(directory, "rgb*.jpg")))
+    if rgb_files:
+        files_to_show.append(('rgb', rgb_files[0]))
+        print(f"✓ Found RGB image: {os.path.basename(rgb_files[0])}")
+    else:
+        print("✗ No rgb*.jpg files found")
+    
     # Find first pointcloud file
     pc_files = sorted(glob.glob(os.path.join(directory, "pointcloud*.ply")))
     if pc_files:
@@ -198,7 +206,7 @@ def visualize_directory(directory, view_mode='metadata'):
             print("No metadata files to display")
             return
     elif view_mode == 'png':
-        files_to_show = [(ft, fp) for ft, fp in files_to_show if ft in ['ab', 'depth', 'conf']]
+        files_to_show = [(ft, fp) for ft, fp in files_to_show if ft in ['ab', 'depth', 'conf', 'rgb']]
         if not files_to_show:
             print("No PNG files to display")
             return
@@ -225,7 +233,7 @@ def visualize_directory(directory, view_mode='metadata'):
         elif file_type == 'pointcloud':
             # Store for later display
             pointcloud_file = file_path
-        elif file_type in ['ab', 'depth', 'conf']:
+        elif file_type in ['ab', 'depth', 'conf', 'rgb']:
             # Load image for combined display
             if os.path.exists(file_path):
                 img = cv.imread(file_path, cv.IMREAD_UNCHANGED)
@@ -241,8 +249,8 @@ def visualize_directory(directory, view_mode='metadata'):
             print(f"Creating combined display...")
             print(f"{'=' * 60}")
             
-            # Prepare images in order: AB, Depth, Confidence
-            display_order = [('ab', 'AB'), ('depth', 'Depth'), ('conf', 'Confidence')]
+            # Prepare images in order: RGB, AB, Depth, Confidence
+            display_order = [('rgb', 'RGB'), ('ab', 'AB'), ('depth', 'Depth'), ('conf', 'Confidence')]
             valid_images = [(file_type, label, images_dict[file_type]) 
                            for file_type, label in display_order 
                            if file_type in images_dict]
@@ -260,9 +268,13 @@ def visualize_directory(directory, view_mode='metadata'):
                     else:
                         normalized = img
                     
-                    # Convert grayscale to BGR for consistent stacking
+                    # Convert grayscale to BGR for consistent stacking (but keep RGB as-is)
                     if len(normalized.shape) == 2:
                         normalized = cv.cvtColor(normalized, cv.COLOR_GRAY2BGR)
+                    elif file_type == 'rgb' and normalized.shape[2] == 3:
+                        # RGB images are already in BGR format from cv.imread
+                        # Resize RGB to 640x480 for display
+                        normalized = cv.resize(normalized, (640, 480))
                     
                     # Resize to common height while maintaining aspect ratio
                     height, width = normalized.shape[:2]
@@ -291,7 +303,9 @@ def visualize_directory(directory, view_mode='metadata'):
                 combined_image = np.hstack(processed_images)
                 
                 # Display combined image
-                window_name = "Combined View: AB | Depth | Confidence"
+                # Build window name dynamically based on available images
+                view_labels = [label for _, label, _ in valid_images]
+                window_name = "Combined View: " + " | ".join(view_labels)
                 cv.imshow(window_name, combined_image)
                 cv.waitKey(1)  # Force the window to render
                 print(f"\nDisplaying combined image ({combined_image.shape[1]}x{combined_image.shape[0]})")

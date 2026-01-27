@@ -55,7 +55,7 @@ python rawparser_visualize.py --directory ./recording_output
 Displays metadata, PNG images, and point cloud sequentially.
 
 ### Features
-- **Combined PNG display**: Shows AB, Depth, and Confidence in a single window with labels
+- **Combined PNG display**: Shows RGB, AB, Depth, and Confidence in a single window with labels
 - **View mode selection**: Choose to view only metadata, PNG files, or point clouds
 - **Interactive 3D visualization**: Open3D viewer for point clouds with rotation, zoom, and pan
 - **Auto-detection**: Automatically finds the first file of each type in the directory
