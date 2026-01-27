@@ -25,7 +25,7 @@ FAILED_CHECKS=0
 WARNING_CHECKS=0
 
 # Log file
-LOG_FILE="/var/log/adi-patch-validation.log"
+LOG_FILE="/var/log/adi-patch-validation-$(date '+%Y%m%d-%H%M%S').log"
 VALIDATION_REPORT="/boot/adi-patch-validation-report.txt"
 
 # Configuration
@@ -235,7 +235,7 @@ function validate_network_configuration() {
         print_pass "Systemd network configuration exists"
 
         # Check MTU setting
-        if grep -q "MTU=15000" "/etc/systemd/network/10-rndis0.network"; then
+        if grep -q "15000" "/etc/systemd/network/10-rndis0.network"; then
             print_pass "MTU size configured to 15000"
         else
             print_warning "MTU size not set to 15000"
@@ -356,6 +356,8 @@ function validate_camera_devices() {
     # Check if v4l2-ctl is available
     if ! command -v v4l2-ctl &> /dev/null; then
         print_warning "v4l2-ctl not available, skipping detailed camera check"
+	print_warning "Please run the command install the v4l2-ctl package"
+	print_warning "sudo apt install v4l-utils"
         # Still check for video devices
         if ls /dev/video* &>/dev/null; then
             local video_devices=$(ls -1 /dev/video* 2>/dev/null | wc -l)
