@@ -25,7 +25,6 @@ which will generate all the necessary recipes for building and installing. Usefu
 | WITH_ROS2 | on/off | off | Build the ROS2 bindings. |
 | WITH_NETWORK | on/off | off | Build the network interface for a Linux or Windows host build; use **off** for building on the target. |
 | WITH_OFFLINE | on/off | off | Build the offline mode. No hardware is required. |
-| WITH_GLOG_DEPENDENCY | on/off | on | Build the sdk with GLOG dependency. Used for logging. |
 | WITH_COMMAND_LINE_TOOLS | on/off | on | Build the command line tools. |
 | WITH_COMMAND_LINE_TOOLS | on/off | on | Build the command line tools. |
 | CI_BUILD | on/off | off | Only used for continuous integrations builds. Can overwrite other cmake options. |

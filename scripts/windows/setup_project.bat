@@ -164,7 +164,7 @@ if not exist %build_dire% md %build_dire%
 
 ::build the project with the selected options
 pushd %build_dire%
-cmake -G %generator% -DNVIDIA=OFF -DNXP=OFF -DWITH_NETWORK=ON -DWITH_SUBMODULES=ON -DWITH_PROTOBUF_DEPENDENCY=ON -DWITH_GLOG_DEPENDENCY=ON %source_dir% -DCMAKE_BUILD_TYPE=%config_type%
+cmake -G %generator% -DNVIDIA=OFF -DNXP=OFF -DWITH_NETWORK=ON -DWITH_SUBMODULES=ON -DWITH_PROTOBUF_DEPENDENCY=ON %source_dir% -DCMAKE_BUILD_TYPE=%config_type%
 if %do_not_build%==0 (
 	cmake --build . --config %config_type% -j %threads%
 	)

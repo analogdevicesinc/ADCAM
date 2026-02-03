@@ -1,10 +1,9 @@
 #!/bin/bash
 
 git config --global --add safe.directory /ToF/libaditof
-git config --global --add safe.directory /ToF/libaditof/glog
-git config --global --add safe.directory /ToF/libaditof/protobuf
-git config --global --add safe.directory /ToF/libaditof/libzmq
-git config --global --add safe.directory /ToF/libaditof/cppzmq
+git config --global --add safe.directory /ToF/libaditof/dependencies/third-party/protobuf
+git config --global --add safe.directory /ToF/libaditof/dependencies/third-party/libzmq
+git config --global --add safe.directory /ToF/libaditof/dependencies/third-party/cppzmq
 git config --global --add safe.directory /libaditof/dependencies/third-party/gtest
 
 project_dir=$1
