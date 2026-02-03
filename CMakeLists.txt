@@ -30,11 +30,9 @@ option(NVIDIA "Set to ON when building on NVIDIA" ON)
 if (WITH_NETWORK)
         option(WITH_SUBMODULES "Use submodules to build the library" ON)
         option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" ON)
-        option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" ON)
 else()
         option(WITH_SUBMODULES "Use submodules to build the library" OFF)
         option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" OFF)
-        option(WITH_GLOG_DEPENDENCY "Build with GLOG dependency to be used for logging?" OFF)
 endif()
 option(WITH_OFFLINE "Build offline interface?" ON)
 option(WITH_COMMAND_LINE_TOOLS "Build with command line tools?" ON)
@@ -44,28 +42,28 @@ set(SOM_TYPE "Dual" CACHE STRING "Which SoM SDK is building for?")
 ################################## Git ########################################
 include(FindGit OPTIONAL)
 if (GIT_FOUND)
-	execute_process(
-		COMMAND ${GIT_EXECUTABLE} rev-parse --show-toplevel
-		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-		OUTPUT_VARIABLE ADITOFSDK_GIT_REPO
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-		ERROR_QUIET
-	)
+        execute_process(
+                COMMAND ${GIT_EXECUTABLE} rev-parse --show-toplevel
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                OUTPUT_VARIABLE ADITOFSDK_GIT_REPO
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+        )
 
-	if ("${ADITOFSDK_GIT_REPO}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-		execute_process(
-			COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-			WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-			OUTPUT_VARIABLE ADITOFSDK_GIT_COMMIT
-			OUTPUT_STRIP_TRAILING_WHITESPACE
-		)
-		execute_process(
-			COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
-			WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-			OUTPUT_VARIABLE TOFSDK_GIT_BRANCH
-			OUTPUT_STRIP_TRAILING_WHITESPACE
-		)
-	endif()
+        if ("${ADITOFSDK_GIT_REPO}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
+                execute_process(
+                        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        OUTPUT_VARIABLE ADITOFSDK_GIT_COMMIT
+                        OUTPUT_STRIP_TRAILING_WHITESPACE
+                )
+                execute_process(
+                        COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        OUTPUT_VARIABLE TOFSDK_GIT_BRANCH
+                        OUTPUT_STRIP_TRAILING_WHITESPACE
+                )
+        endif()
         if (WITH_SUBMODULES)
                 add_definitions(-DWITH_SUBMODULES)
                 message("Updating submodules")
@@ -139,10 +137,6 @@ if (WITH_OFFLINE)
         add_definitions(-DHAS_OFFLINE)
 endif()
 
-if(WITH_GLOG_DEPENDENCY)
-        add_definitions(-DUSE_GLOG)
-endif()
-
 if(NOT WITH_PROTOBUF_DEPENDENCY)
         if(NOT ON_TARGET)
                 message(FATAL_ERROR "SDK can be built without protobuf only on target builds!")
@@ -153,7 +147,7 @@ endif()
 
 if(${ON_TARGET})
         if(USE_DEPTH_COMPUTE_OPENSOURCE)
-	        set(LIBTOFI_LIBDIR_PATH "${CMAKE_BINARY_DIR}/libaditof/sdk/common/adi/depth-compute-opensource")
+                set(LIBTOFI_LIBDIR_PATH "${CMAKE_BINARY_DIR}/libaditof/sdk/common/adi/depth-compute-opensource")
         else()
                 if (NOT DEFINED LIBTOFI_LIBDIR_PATH)
                         set(LIBTOFI_LIBDIR_PATH "${CMAKE_SOURCE_DIR}/../libs")
