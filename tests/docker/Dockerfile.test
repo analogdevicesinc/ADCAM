@@ -1,0 +1,189 @@
+FROM ubuntu:22.04
+
+# Build arguments
+ARG BUILD_JOBS=6
+ARG GIT_BRANCH=
+ARG NVIDIA_BUILD=OFF
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Set test environment variables
+ENV TEST_RESULTS_DIR=/workspace/test-results
+ENV TEST_LOGS_DIR=/workspace/test-logs
+ENV GTEST_OUTPUT=json:/workspace/test-results/gtest_results.json
+ENV GTEST_COLOR=1
+
+# Install system dependencies required by ADCAM
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    sudo \
+    cmake \
+    g++ \
+    gcc \
+    make \
+    git \
+    curl \
+    wget \
+    python3 \
+    python3-pip \
+    python3.10-dev \
+    jq \
+    rsync \
+    # V4L2 utilities for camera detection
+    v4l-utils \
+    # ADCAM-specific dependencies
+    libopencv-dev \
+    libgl1-mesa-dev \
+    libglfw3-dev \
+    doxygen \
+    graphviz \
+    libxinerama-dev \
+    libxcursor-dev \
+    libxi-dev \
+    libxrandr-dev \
+    # GoogleTest
+    googletest \
+    libgtest-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build GoogleTest libraries
+RUN cd /usr/src/googletest && \
+    cmake . && \
+    make -j${BUILD_JOBS} && \
+    cp lib/*.a /usr/lib/ && \
+    mkdir -p /usr/local/lib/googletest && \
+    cp lib/*.a /usr/local/lib/googletest/
+
+# Install Python test utilities
+RUN pip3 install --no-cache-dir pytest pytest-json-report numpy
+
+# Set working directory
+WORKDIR /workspace
+
+# Create result directories
+RUN mkdir -p /workspace/test-results \
+    && mkdir -p /workspace/test-logs \
+    && mkdir -p /workspace/libs
+
+# Copy ToFi compute libraries if they exist
+# These are the closed-source ADSD3500 compute libraries
+# The build.sh script ensures this directory exists
+COPY libs/ /workspace/libs/
+
+# Copy project code
+COPY local_code /workspace/project
+
+# Set environment variables for ADCAM
+ENV CMAKE_PREFIX_PATH="/workspace/libs"
+ENV LD_LIBRARY_PATH="/workspace/libs:/workspace/project/build/lib"
+
+# Create build script
+RUN cat > /workspace/build_adcam.sh << 'BUILDEOF'
+#!/bin/bash
+set -e
+set -o pipefail
+
+BUILD_DIR="/workspace/project/build"
+LOG_DIR="/workspace/test-logs"
+GIT_BRANCH="${GIT_BRANCH:-}"
+NVIDIA_BUILD="${NVIDIA_BUILD:-OFF}"
+
+mkdir -p "$LOG_DIR"
+
+# Check if this is a git repository
+if [ -d "/workspace/project/.git" ]; then
+    echo "Git repository detected"
+    
+    # Checkout specific branch if specified
+    if [ -n "$GIT_BRANCH" ]; then
+        echo "======================================="
+        echo "Checking out branch: $GIT_BRANCH"
+        echo "======================================="
+        cd /workspace/project
+        git fetch origin || echo "Warning: Could not fetch from remote"
+        git checkout "$GIT_BRANCH" || git checkout -b "$GIT_BRANCH" "origin/$GIT_BRANCH" || echo "Warning: Could not checkout branch"
+        echo "Current branch: $(git branch --show-current 2>/dev/null || echo 'detached HEAD')"
+        echo "Current commit: $(git rev-parse --short HEAD)"
+        echo ""
+    fi
+else
+    echo "Warning: Not a git repository, skipping branch checkout"
+    if [ -n "$GIT_BRANCH" ]; then
+        echo "Branch '$GIT_BRANCH' was requested but cannot be checked out"
+    fi
+fi
+
+# Clean build
+if [ -d "$BUILD_DIR" ]; then
+    echo "Cleaning previous build..."
+    rm -rf "$BUILD_DIR"
+fi
+
+mkdir -p "$BUILD_DIR"
+cd "$BUILD_DIR"
+
+echo "========================================"
+echo "Configuring ADCAM SDK..."
+echo "NVIDIA_BUILD: $NVIDIA_BUILD"
+echo "========================================"
+
+# Set CMake options based on target platform
+if [ "$NVIDIA_BUILD" = "ON" ]; then
+    # NVIDIA Jetson target build (requires network/protobuf)
+    CMAKE_OPTS="-DCMAKE_BUILD_TYPE=Release \
+        -DNVIDIA=ON \
+        -DWITH_EXAMPLES=ON \
+        -DWITH_PYTHON=OFF \
+        -DWITH_NETWORK=ON \
+        -DWITH_OFFLINE=ON"
+else
+    # Host-only build (no network/protobuf)
+    CMAKE_OPTS="-DCMAKE_BUILD_TYPE=Release \
+        -DNVIDIA=OFF \
+        -DWITH_EXAMPLES=ON \
+        -DWITH_PYTHON=OFF \
+        -DWITH_NETWORK=OFF \
+        -DWITH_OFFLINE=ON"
+fi
+
+if ! cmake $CMAKE_OPTS .. 2>&1 | tee "$LOG_DIR/cmake.log"; then
+    echo "CMAKE FAILED"
+    exit 1
+fi
+
+echo ""
+echo "========================================"
+echo "Building ADCAM SDK and Tests..."
+echo "========================================"
+if ! cmake --build . -j${BUILD_JOBS} 2>&1 | tee "$LOG_DIR/make.log"; then
+    echo "BUILD FAILED"
+    exit 1
+fi
+
+echo ""
+echo "========================================"
+echo "Build successful!"
+echo "========================================"
+echo "Test binaries location: $BUILD_DIR/tests/bin"
+echo "Example binaries location: $BUILD_DIR/examples"
+BUILDEOF
+
+RUN chmod +x /workspace/build_adcam.sh
+
+# Fix Windows line endings if present (CRLF -> LF)
+RUN sed -i 's/\r$//' /workspace/build_adcam.sh || true
+
+# Verify script was created
+RUN ls -lh /workspace/build_adcam.sh && head -5 /workspace/build_adcam.sh
+
+# Build the project
+RUN cd /workspace/project && \
+    (git submodule update --init || echo "Warning: Could not update submodules") && \
+    BUILD_JOBS=${BUILD_JOBS} GIT_BRANCH="${GIT_BRANCH}" NVIDIA_BUILD=${NVIDIA_BUILD} bash /workspace/build_adcam.sh
+
+# Set working directory for tests
+WORKDIR /workspace/project/build/tests
+
+# Default command
+CMD ["/bin/bash"]
