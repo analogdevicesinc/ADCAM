@@ -12,23 +12,41 @@ set(DOXY_WORKING_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen_doc)
 
 ############################# Doc variables ###################################
 set(PROJECT_NAME "Time-of-Flight-SDK")
-set(DOCUMENTED_FILES "${SOURCES_DIR}/frame.h \\
-                      ${SOURCES_DIR}/frame_definitions.h \\
-                      ${SOURCES_DIR}/frame_operations.h \\
-                      ${SOURCES_DIR}/camera.h \\
-                      ${SOURCES_DIR}/camera_definitions.h \\
-                      ${SOURCES_DIR}/system.h \\
-                      ${SOURCES_DIR}/status_definitions.h \\
-                      ${SOURCES_DIR}/connections.h \\
-                      ${SOURCES_DIR}/depth_sensor_interface.h \\
-                      ${SOURCES_DIR}/sensor_definitions.h \\
-                      ${SOURCES_DIR}/sensor_enumerator_interface.h \\
-                      ${SOURCES_DIR}/sensor_enumerator_factory.h \\
-                      ${SOURCES_DIR}/adsd_errs.h \\
-                      ${SOURCES_DIR}/frame_handler.h \\
-                      ${CMAKE_CURRENT_SOURCE_DIR}/mainpage.dox
-                      "
+set(SOURCES_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libaditof/sdk)
+set(DOCUMENTED_FILES_LIST
+    "${SOURCES_SDK_DIR}/src/connections/target/gpio.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/target/adsd3500_interrupt_notifier.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/target/adsd3500_mode_selector.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/target/sensor-tables/device_parameters.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/target/adsd3500_sensor.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/target/buffer_processor.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/offline/offline_depth_sensor.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/offline/offline_sensor_enumerator.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/network/network.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/network/network_sensor_enumerator.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/network/network_depth_sensor.cpp"
+    "${SOURCES_SDK_DIR}/src/sensor_enumerator_factory.cpp"
+    "${SOURCES_SDK_DIR}/src/utils.cpp"
+    "${SOURCES_SDK_DIR}/src/system_impl.cpp"
+    "${SOURCES_SDK_DIR}/src/platform/sensor_enumerator.cpp"
+    "${SOURCES_SDK_DIR}/src/platform/raspberrypi/rpi_media_config.cpp"
+    "${SOURCES_SDK_DIR}/src/platform/platform_impl.cpp"
+    "${SOURCES_SDK_DIR}/src/status_definitions.cpp"
+    "${SOURCES_SDK_DIR}/src/frame_operations.cpp"
+    "${SOURCES_SDK_DIR}/src/frame.cpp"
+    "${SOURCES_SDK_DIR}/src/utils_ini.cpp"
+    "${SOURCES_SDK_DIR}/src/frame_handler.cpp"
+    "${SOURCES_SDK_DIR}/src/cameras/itof-camera/camera_itof.cpp"
+    "${SOURCES_SDK_DIR}/src/cameras/itof-frame/frame_impl.cpp"
+    "${SOURCES_SDK_DIR}/src/cameras/itof-frame/frame_handler_impl.cpp"
+    "${SOURCES_SDK_DIR}/src/system.cpp"
+    "${SOURCES_SDK_DIR}/common/adi/tofi/opencv_undistort.cpp"
+    "${SOURCES_SDK_DIR}/common/adi/tofi/algorithms.cpp"
+    "${SOURCES_SDK_DIR}/common/adi/depth-compute-opensource/src/tofiConfig.cpp"
+    "${SOURCES_SDK_DIR}/common/adi/depth-compute-opensource/src/tofiCompute.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mainpage.dox"
 )
+string(REPLACE ";" " " DOCUMENTED_FILES "${DOCUMENTED_FILES_LIST}")
 
 ################# Generate Doxygen configuration file #########################
 configure_file(
@@ -37,7 +55,7 @@ configure_file(
 )
 
 ################# Custom target to build Doxygen doc ##########################
-add_custom_target(evalkit-doc
+add_custom_target(evalkit-doc ALL
     COMMAND ${DOXYGEN_PATH} sdk-api.doxy
     COMMAND ${CMAKE_COMMAND} -E make_directory ${DOXY_WORKING_DIR}/html
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/img ${DOXY_WORKING_DIR}/html/img
