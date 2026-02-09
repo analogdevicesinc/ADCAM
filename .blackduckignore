@@ -1,0 +1,8 @@
+# BlackDuck Ignore Configuration
+# This file suppresses known false positives detected by BlackDuck scans
+
+# Suppress false v0.12 implot detection
+# The actual version is 0.17, but BlackDuck detects v0.12 from git metadata
+# This is a known issue where git history tags cause version misdetection
+component: epezent/implot/v0.12
+path: dependencies/third-party/imgui/implot
