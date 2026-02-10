@@ -1,10 +1,10 @@
 #!/bin/bash
 
 git config --global --add safe.directory /ToF/libaditof
-git config --global --add safe.directory /ToF/libaditof/dependencies/third-party/protobuf
-git config --global --add safe.directory /ToF/libaditof/dependencies/third-party/libzmq
-git config --global --add safe.directory /ToF/libaditof/dependencies/third-party/cppzmq
-git config --global --add safe.directory /libaditof/dependencies/third-party/gtest
+#git config --global --add safe.directory /ToF/libaditof/dependencies/third-party/protobuf
+#git config --global --add safe.directory /ToF/libaditof/dependencies/third-party/libzmq
+#git config --global --add safe.directory /ToF/libaditof/dependencies/third-party/cppzmq
+#git config --global --add safe.directory /libaditof/dependencies/third-party/gtest
 
 project_dir=$1
 pushd ${project_dir}
@@ -20,7 +20,8 @@ mkdir -p build
 mkdir ../libs
 
 pushd build
-cmake .. ${ARGS} -DCMAKE_PREFIX_PATH="${GLOG_INSTALL_DIR};${PROTOBUF_INSTALL_DIR};${LIBZMQ_INSTALL_DIR};${OPENCV_INSTALL_DIR}" -DWITH_OPENCV=0
+#cmake .. ${ARGS} -DCMAKE_PREFIX_PATH="${GLOG_INSTALL_DIR};${PROTOBUF_INSTALL_DIR};${LIBZMQ_INSTALL_DIR};${OPENCV_INSTALL_DIR}" -DWITH_OPENCV=0
+cmake .. ${ARGS} 
 make -j${NUM_JOBS}
 popd #build
 
