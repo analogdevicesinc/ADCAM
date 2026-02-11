@@ -497,7 +497,8 @@ void ADIMainWindow::Render() {
         }
 
         if (getIsWorking()) {
-            Spinner("Working...", 10.0f, 2.0f, IM_COL32(255, 255, 255, 255));
+            ImGuiExtensions::ADISpinner("Working...", 10.0f, 2.0f,
+                                       IM_COL32(255, 255, 255, 255));
         }
 
         /***************************************************/
@@ -1090,30 +1091,4 @@ void ADIMainWindow::centreWindow(float width, float height) {
     // Set position and size before Begin()
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always);
     ImGui::SetNextWindowSize(window_size, ImGuiCond_Always);
-}
-
-// Minimal spinner function for ImGui (circle dots)
-void ADIMainWindow::Spinner(const char *label, float radius, int thickness,
-                            ImU32 color) {
-    ImGuiWindow *window = ImGui::GetCurrentWindow();
-    if (window->SkipItems)
-        return;
-    ImGuiContext &g = *ImGui::GetCurrentContext();
-
-    ImVec2 pos = ImGui::GetCursorScreenPos();
-    float t = (float)g.Time;
-    int num_segments = 30;
-    float angle_min = IM_PI * 2.0f * (t * 0.8f);
-    float angle_max = IM_PI * 2.0f * ((t * 0.8f) + 1.0f);
-
-    ImDrawList *draw_list = ImGui::GetWindowDrawList();
-    draw_list->PathClear();
-    for (int i = 0; i < num_segments; i++) {
-        float a = angle_min +
-                  ((float)i / (float)num_segments) * (angle_max - angle_min);
-        draw_list->PathLineTo(ImVec2(pos.x + radius + cosf(a) * radius,
-                                     pos.y + radius + sinf(a) * radius));
-    }
-    draw_list->PathStroke(color, 0, thickness);
-    ImGui::Dummy(ImVec2((radius + thickness) * 2, (radius + thickness) * 2));
 }
