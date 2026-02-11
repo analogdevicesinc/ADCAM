@@ -351,6 +351,8 @@ class ADIMainWindow {
 
     void ShowIniWindow(bool showModify = true);
 
+    void ApplyModifiedIniParams();
+
     /**
 		* @brief Will poll the USB interface to look
 		*        for supported devices
@@ -555,6 +557,8 @@ class ADIMainWindow {
     }
     bool m_close_pending = false;
     int m_close_pending_frames = 0;
+    bool m_modify_pending = false;
+    int m_modify_pending_frames = 0;
     std::string m_working_label = "Working...";
     void GetYawPitchRoll(float &yaw, float &pitch, float &roll);
 
