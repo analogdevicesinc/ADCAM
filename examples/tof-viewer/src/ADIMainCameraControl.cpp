@@ -50,6 +50,12 @@ namespace fs = ghc::filesystem;
 using namespace adiMainWindow;
 
 void ADIMainWindow::InitCamera(std::string filePath) {
+    setIsWorking(true);
+    struct WorkingGuard {
+        ADIMainWindow *owner;
+        ~WorkingGuard() { owner->setIsWorking(false); }
+    } working_guard{this};
+
     if (m_view_instance != NULL) { //Reset current imager
         LOG(INFO) << "Imager is reseting.";
         m_view_instance.reset();
@@ -452,6 +458,23 @@ void ADIMainWindow::CameraStop() {
     m_is_playing = false;
     m_fps_frame_received = 0;
     m_off_line_frame_index = 0;
+}
+
+void ADIMainWindow::CloseCamera() {
+    CameraStop();
+    if (initCameraWorker.joinable()) {
+        initCameraWorker.join();
+        m_cameraModes.clear();
+        _cameraModes.clear();
+    }
+    if (m_view_instance) {
+        m_view_instance->cleanUp();
+        m_view_instance.reset();
+    }
+    m_callback_initialized = false;
+    m_cameraWorkerDone = false;
+    m_is_open_device = false;
+    RefreshDevices();
 }
 
 void ADIMainWindow::RefreshDevices() {
