@@ -267,6 +267,10 @@ class ADIController {
     float m_framerate = 0;
     uint32_t m_frame_counter;
     std::chrono::time_point<std::chrono::system_clock> m_fps_startTime;
+    std::chrono::time_point<std::chrono::steady_clock> m_last_frame_time;
+    bool m_fps_ema_initialized = false;
+    float m_fps_ema = 0.0f;
+    float m_fps_ema_alpha = 0.15f;
     uint32_t m_preview_rate;
     uint32_t m_frame_rate;
     uint32_t m_frames_lost = 0;
