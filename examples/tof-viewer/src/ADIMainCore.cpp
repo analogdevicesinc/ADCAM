@@ -832,7 +832,7 @@ void ADIMainWindow::NewLine(float spacing) {
 
 void ADIMainWindow::ShowStartWizard() {
 
-    static float wizard_height = 360.0f;
+    static float wizard_height = 640.0f;
 
     centreWindow(450.0f * m_dpi_scale_factor,
                  wizard_height * m_dpi_scale_factor);
@@ -872,10 +872,6 @@ void ADIMainWindow::ShowStartWizard() {
 
     if (selected == 0) {
 #pragma region WizardOffline
-        if (wizard_height < 300)
-            wizard_height += 20;
-        else if (wizard_height > 300)
-            wizard_height -= 20;
 
         const bool openAvailable = !m_connected_devices.empty();
 
@@ -1020,12 +1016,6 @@ void ADIMainWindow::ShowStartWizard() {
                 DrawBarLabel("Mode Selection");
 
                 NewLine(10.0f);
-
-
-                if (wizard_height < 640)
-                    wizard_height += 20;
-                else if (wizard_height > 640)
-                    wizard_height -= 20;
 
                 if (ImGuiExtensions::ADIComboBox(
                         "select_mode", "Select Mode",
