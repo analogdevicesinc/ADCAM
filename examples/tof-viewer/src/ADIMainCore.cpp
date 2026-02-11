@@ -199,6 +199,9 @@ ADIMainWindow::~ADIMainWindow() {
     if (initCameraWorker.joinable()) {
         initCameraWorker.join();
     }
+    if (m_modifyWorker.joinable()) {
+        m_modifyWorker.join();
+    }
     //fclose(stderr);
 }
 
@@ -491,7 +494,7 @@ void ADIMainWindow::Render() {
                 }
             }
 
-        } else {
+        } else if (!m_modify_in_progress) {
             // Show Start Wizard
             ShowStartWizard();
         }
@@ -608,9 +611,53 @@ void ADIMainWindow::Render() {
                 --m_modify_pending_frames;
                 continue;
             }
-            ApplyModifiedIniParams();
-            m_modify_pending = false;
-            setIsWorking(false);
+
+            if (!m_modify_worker_running) {
+                m_modify_in_progress = true;
+
+                if (m_modifyWorker.joinable()) {
+                    m_modifyWorker.join();
+                }
+
+                m_modify_worker_running = true;
+                m_modify_worker_done = false;
+                m_modifyWorker = std::thread([this]() {
+                    if (m_view_instance && m_view_instance->m_ctrl) {
+                        m_view_instance->m_ctrl->StopCapture();
+                    }
+                    m_modify_worker_done = true;
+                });
+                continue;
+            }
+
+            if (m_modify_worker_done) {
+                if (m_modifyWorker.joinable()) {
+                    m_modifyWorker.join();
+                }
+                
+                // Now stop playback and clean up
+                m_is_playing = false;
+                m_fps_frame_received = 0;
+                
+                if (m_view_instance && m_view_instance->m_ctrl) {
+                    OpenGLCleanUp();
+                    m_view_instance->m_ctrl->panicStop = false;
+                }
+                
+                m_capture_separate_enabled = true;
+                m_set_ab_win_position_once = true;
+                m_set_depth_win_position_once = true;
+                m_set_point_cloud_position_once = true;
+                m_off_line_frame_index = 0;
+                
+                m_use_modified_ini_params = true;
+                m_view_selection_changed = m_view_selection;
+                m_is_playing = true;
+                m_modify_worker_running = false;
+                m_modify_pending = false;
+                m_modify_in_progress = false;
+                setIsWorking(false);
+            }
         }
     }
 }
