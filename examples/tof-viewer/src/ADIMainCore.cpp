@@ -602,6 +602,16 @@ void ADIMainWindow::Render() {
             m_close_pending = false;
             setIsWorking(false);
         }
+
+        if (m_modify_pending) {
+            if (m_modify_pending_frames > 0) {
+                --m_modify_pending_frames;
+                continue;
+            }
+            ApplyModifiedIniParams();
+            m_modify_pending = false;
+            setIsWorking(false);
+        }
     }
 }
 

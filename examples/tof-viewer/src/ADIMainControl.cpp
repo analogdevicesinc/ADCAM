@@ -700,16 +700,23 @@ void ADIMainWindow::ShowIniWindow(bool showModify) {
         }
 
         if (ImGui::Button("Modify")) {
-            // stop streaming
-            m_is_playing = false;
-            m_fps_frame_received = 0;
-            CameraStop();
-
-            m_use_modified_ini_params = true;
-
-            // restart streaming
-            m_view_selection_changed = m_view_selection;
-            m_is_playing = true;
+            setWorkingLabel("Applying parameters...");
+            setIsWorking(true);
+            m_modify_pending = true;
+            m_modify_pending_frames = 1;
         }
     }
+}
+
+void ADIMainWindow::ApplyModifiedIniParams() {
+    // stop streaming
+    m_is_playing = false;
+    m_fps_frame_received = 0;
+    CameraStop();
+
+    m_use_modified_ini_params = true;
+
+    // restart streaming
+    m_view_selection_changed = m_view_selection;
+    m_is_playing = true;
 }
