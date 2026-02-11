@@ -26,6 +26,7 @@
 
 // System headers
 //
+#include <cmath>
 #include <functional>
 #include <sstream>
 
@@ -102,6 +103,40 @@ void ADIShowTooltip(const char *msg, bool show) {
         ImGui::TextUnformatted(msg);
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
+    }
+}
+
+void ADISpinner(const char *label, float radius, int thickness, ImU32 color) {
+    ImGuiWindow *window = ImGui::GetCurrentWindow();
+    if (window->SkipItems) {
+        return;
+    }
+
+    if (label != nullptr && label[0] != '\0') {
+        ImGui::PushID(label);
+    }
+
+    ImGuiContext &g = *ImGui::GetCurrentContext();
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    float t = static_cast<float>(g.Time);
+    int num_segments = 30;
+    float angle_min = IM_PI * 2.0f * (t * 0.8f);
+    float angle_max = IM_PI * 2.0f * ((t * 0.8f) + 1.0f);
+
+    ImDrawList *draw_list = ImGui::GetWindowDrawList();
+    draw_list->PathClear();
+    for (int i = 0; i < num_segments; i++) {
+        float a = angle_min +
+                  (static_cast<float>(i) / static_cast<float>(num_segments)) *
+                      (angle_max - angle_min);
+        draw_list->PathLineTo(ImVec2(pos.x + radius + cosf(a) * radius,
+                                     pos.y + radius + sinf(a) * radius));
+    }
+    draw_list->PathStroke(color, 0, thickness);
+    ImGui::Dummy(ImVec2((radius + thickness) * 2, (radius + thickness) * 2));
+
+    if (label != nullptr && label[0] != '\0') {
+        ImGui::PopID();
     }
 }
 
