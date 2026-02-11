@@ -114,6 +114,9 @@ void ADIController::StartCapture(const uint32_t frameRate) {
     iw.clear();
 
     m_fps_startTime = std::chrono::system_clock::now();
+    m_last_frame_time = std::chrono::steady_clock::time_point();
+    m_fps_ema_initialized = false;
+    m_fps_ema = 0.0f;
     m_frame_counter = 0;
     m_stopFlag = false;
     m_frames_lost = 0;
@@ -218,14 +221,24 @@ void ADIController::captureFrames() {
         }
 
         local_frame_counter++;
-        auto currentTime = std::chrono::system_clock::now();
-        std::chrono::duration<double> elapsed = currentTime - m_fps_startTime;
-        if (elapsed.count() >= 5) {
-            m_framerate = static_cast<float>(local_frame_counter) /
-                          static_cast<float>(elapsed.count());
-            local_frame_counter = 0;
-            m_fps_startTime = currentTime;
+        auto currentTime = std::chrono::steady_clock::now();
+        if (m_last_frame_time.time_since_epoch().count() != 0) {
+            std::chrono::duration<double> elapsed =
+                currentTime - m_last_frame_time;
+            if (elapsed.count() > 0.0) {
+                const float instant_fps =
+                    static_cast<float>(1.0 / elapsed.count());
+                if (!m_fps_ema_initialized) {
+                    m_fps_ema = instant_fps;
+                    m_fps_ema_initialized = true;
+                } else {
+                    m_fps_ema = (m_fps_ema_alpha * instant_fps) +
+                                ((1.0f - m_fps_ema_alpha) * m_fps_ema);
+                }
+                m_framerate = m_fps_ema;
+            }
         }
+        m_last_frame_time = currentTime;
 
         aditof::Metadata *metadata;
         status = frame->getData("metadata", (uint16_t **)&metadata);
