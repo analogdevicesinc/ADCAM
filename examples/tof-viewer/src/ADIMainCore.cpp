@@ -512,8 +512,7 @@ void ADIMainWindow::Render() {
                                 (radius + thickness) * 2.0f);
             float box_width =
                 std::max(text_size.x, spinner_size.x) + (padding * 2.0f);
-            float box_height =
-                text_size.y + spinner_size.y + (padding * 3.0f);
+            float box_height = text_size.y + spinner_size.y + (padding * 3.0f);
 
             ImVec2 display_size = ImGui::GetIO().DisplaySize;
             ImVec2 box_pos((display_size.x - box_width) * 0.5f,
@@ -528,8 +527,8 @@ void ADIMainWindow::Render() {
             ImGuiWindowFlags overlay_flags =
                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
-                ImGuiWindowFlags_NoFocusOnAppearing |
-                ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs;
+                ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
+                ImGuiWindowFlags_NoInputs;
 
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,
                                 ImVec2(0.0f, 0.0f));
@@ -538,7 +537,8 @@ void ADIMainWindow::Render() {
             ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
             ImGui::PushStyleColor(ImGuiCol_WindowBg,
                                   ImVec4(0.05f, 0.05f, 0.05f, 0.98f));
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text,
+                                  ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_Border,
                                   ImVec4(1.0f, 1.0f, 1.0f, 0.2f));
 
@@ -551,7 +551,7 @@ void ADIMainWindow::Render() {
             ImGui::SetCursorPosX((box_width - spinner_size.x) * 0.5f);
             ImGui::SetCursorPosY(padding * 2.0f + text_size.y);
             ImGuiExtensions::ADISpinner(label, radius, thickness,
-                                       IM_COL32(255, 255, 255, 255));
+                                        IM_COL32(255, 255, 255, 255));
 
             ImGui::End();
 
@@ -634,22 +634,22 @@ void ADIMainWindow::Render() {
                 if (m_modifyWorker.joinable()) {
                     m_modifyWorker.join();
                 }
-                
+
                 // Now stop playback and clean up
                 m_is_playing = false;
                 m_fps_frame_received = 0;
-                
+
                 if (m_view_instance && m_view_instance->m_ctrl) {
                     OpenGLCleanUp();
                     m_view_instance->m_ctrl->panicStop = false;
                 }
-                
+
                 m_capture_separate_enabled = true;
                 m_set_ab_win_position_once = true;
                 m_set_depth_win_position_once = true;
                 m_set_point_cloud_position_once = true;
                 m_off_line_frame_index = 0;
-                
+
                 m_use_modified_ini_params = true;
                 m_view_selection_changed = m_view_selection;
                 m_is_playing = true;
@@ -983,9 +983,8 @@ void ADIMainWindow::ShowStartWizard() {
         { // Use block to control the moment when ImGuiExtensions::ButtonColorChanger gets destroyed
             ImGuiExtensions::ButtonColorChanger colorChanger(
                 ImGuiExtensions::ButtonColor::Green, openAvailable);
-            if (ImGuiExtensions::ADIButton("Open",
-                                           !m_is_open_device &&
-                                               !getIsWorking()) &&
+            if (ImGuiExtensions::ADIButton("Open", !m_is_open_device &&
+                                                       !getIsWorking()) &&
                 0 <= m_selected_device_index) {
                 setWorkingLabel("Opening camera...");
                 setIsWorking(true);
@@ -1018,9 +1017,8 @@ void ADIMainWindow::ShowStartWizard() {
                 NewLine(10.0f);
 
                 if (ImGuiExtensions::ADIComboBox(
-                        "select_mode", "Select Mode",
-                        ImGuiSelectableFlags_None, m_cameraModesDropDown,
-                        &m_mode_selection, true)) {
+                        "select_mode", "Select Mode", ImGuiSelectableFlags_None,
+                        m_cameraModesDropDown, &m_mode_selection, true)) {
                     m_ini_params.clear();
                 }
 
@@ -1030,8 +1028,7 @@ void ADIMainWindow::ShowStartWizard() {
 
                 NewLine(5.0f);
 
-                if (ImGuiExtensions::ADIButton("Load Config",
-                                                !m_is_playing)) {
+                if (ImGuiExtensions::ADIButton("Load Config", !m_is_playing)) {
 
                     ShowLoadAdsdParamsMenu();
                 }
@@ -1039,7 +1036,7 @@ void ADIMainWindow::ShowStartWizard() {
                 ImGui::SameLine();
 
                 if (ImGuiExtensions::ADIButton("Reset Parameters",
-                                                m_is_open_device)) {
+                                               m_is_open_device)) {
                     auto camera = GetActiveCamera();
                     if (camera) {
                         camera->resetDepthProcessParams();
@@ -1057,12 +1054,11 @@ void ADIMainWindow::ShowStartWizard() {
                 ImGuiExtensions::ButtonColorChanger colorChangerPlay(
                     m_custom_color_play, !m_is_playing);
 
-                ImGui::Toggle(!m_enable_preview ? "Preview Off"
-                                                : "Preview On",
-                                &m_enable_preview);
+                ImGui::Toggle(!m_enable_preview ? "Preview Off" : "Preview On",
+                              &m_enable_preview);
 
                 if (ImGuiExtensions::ADIButton("Start Streaming",
-                                                !m_is_playing)) {
+                                               !m_is_playing)) {
 
                     // Deallocate frame memory such that it can be reallocated for the
                     //  correct frame size in case there was a change in mode.
@@ -1075,9 +1071,8 @@ void ADIMainWindow::ShowStartWizard() {
                         false) { // TODO: Why is this casusing an exception from the Dual ADSD3500
                         LOG(INFO)
                             << "*** adsd3500setEnableDynamicModeSwitching "
-                                "disabled ***";
-                        camera->adsd3500setEnableDynamicModeSwitching(
-                            false);
+                               "disabled ***";
+                        camera->adsd3500setEnableDynamicModeSwitching(false);
                     }
 
                     m_frame_window_position_state = 0;
