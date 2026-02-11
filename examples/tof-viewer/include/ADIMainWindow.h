@@ -415,6 +415,8 @@ class ADIMainWindow {
 		*/
     void CameraStop();
 
+    void CloseCamera();
+
     int32_t synchronizeVideo(std::shared_ptr<aditof::Frame> &frame);
 
     /**
@@ -544,11 +546,16 @@ class ADIMainWindow {
     float WindowCalcY(Rect w, float buffer = 0.0f) {
         return w.y + w.height + buffer;
     }
-    void Spinner(const char *label, float radius, int thickness, ImU32 color);
-
     bool m_isWorking = false;
     bool getIsWorking() const { return m_isWorking; }
     void setIsWorking(bool isWorking) { m_isWorking = isWorking; }
+    const std::string &getWorkingLabel() const { return m_working_label; }
+    void setWorkingLabel(const std::string &label) {
+      m_working_label = label;
+    }
+    bool m_close_pending = false;
+    int m_close_pending_frames = 0;
+    std::string m_working_label = "Working...";
     void GetYawPitchRoll(float &yaw, float &pitch, float &roll);
 
     // The type of movement that a mouse movement should be interpreted as (if any)
