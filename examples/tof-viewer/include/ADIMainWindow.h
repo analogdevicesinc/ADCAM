@@ -550,9 +550,7 @@ class ADIMainWindow {
     bool getIsWorking() const { return m_isWorking; }
     void setIsWorking(bool isWorking) { m_isWorking = isWorking; }
     const std::string &getWorkingLabel() const { return m_working_label; }
-    void setWorkingLabel(const std::string &label) {
-      m_working_label = label;
-    }
+    void setWorkingLabel(const std::string &label) { m_working_label = label; }
     bool m_close_pending = false;
     int m_close_pending_frames = 0;
     bool m_modify_pending = false;
