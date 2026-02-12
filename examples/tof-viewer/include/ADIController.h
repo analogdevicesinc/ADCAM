@@ -291,8 +291,8 @@ class ADIController {
         std::chrono::steady_clock::time_point timestamp;
     };
     std::deque<FrameSample> m_frame_history;
-    const double m_frame_drop_window_ms = 2000.0;  // 2-second observation window
-    const double m_frame_drop_threshold = 0.10;    // 10% drop triggers alert
+    const double m_frame_drop_window_ms = 2000.0; // 2-second observation window
+    const double m_frame_drop_threshold = 0.10;   // 10% drop triggers alert
 };
 } // namespace adicontroller
 #endif

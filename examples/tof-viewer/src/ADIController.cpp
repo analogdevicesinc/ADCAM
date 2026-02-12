@@ -205,36 +205,40 @@ void ADIController::captureFrames() {
 
 bool ADIController::OutputDeltaTime(uint32_t frameNumber) {
     auto now = std::chrono::steady_clock::now();
-    
+
     // Add current frame to history
     m_frame_history.push_back({frameNumber, now});
-    
+
     // Remove samples older than the observation window
-    auto cutoff_time = now - std::chrono::milliseconds(static_cast<long long>(m_frame_drop_window_ms));
-    while (!m_frame_history.empty() && m_frame_history.front().timestamp < cutoff_time) {
+    auto cutoff_time = now - std::chrono::milliseconds(static_cast<long long>(
+                                 m_frame_drop_window_ms));
+    while (!m_frame_history.empty() &&
+           m_frame_history.front().timestamp < cutoff_time) {
         m_frame_history.pop_front();
     }
-    
+
     // Need at least 2 samples to detect drops
     if (m_frame_history.size() < 2) {
         return false;
     }
-    
+
     // Calculate expected vs. actual frame counts
     uint32_t first_frame = m_frame_history.front().frame_number;
     uint32_t last_frame = m_frame_history.back().frame_number;
-    uint32_t expected_frames = (last_frame - first_frame) + 1;  // +1 includes both endpoints
+    uint32_t expected_frames =
+        (last_frame - first_frame) + 1; // +1 includes both endpoints
     uint32_t actual_frames = static_cast<uint32_t>(m_frame_history.size());
-    
+
     // Avoid division by zero
     if (expected_frames == 0) {
         return false;
     }
-    
+
     // Calculate percentage of dropped frames
     uint32_t dropped_frames = expected_frames - actual_frames;
-    double drop_percentage = static_cast<double>(dropped_frames) / static_cast<double>(expected_frames);
-    
+    double drop_percentage = static_cast<double>(dropped_frames) /
+                             static_cast<double>(expected_frames);
+
     // Return true if drop percentage exceeds threshold
     return drop_percentage > m_frame_drop_threshold;
 }
