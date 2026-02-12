@@ -1,0 +1,200 @@
+TestID,Execute,TestName,TestParameters
+# ============================================================================
+# ADCAM System Tests
+# ============================================================================
+# Test configurations for ADCAM Camera Kit with dual ADSD3500 ISPs
+# 
+# TestID Format:
+#   SY = System tests
+#   UN = Unit tests  
+#   FN = Functional tests
+#   IN = Integration tests
+#
+# Execute: Y/y to run, N/n to skip
+# TestName: Executable name (without path)
+# TestParameters: Command-line arguments (GoogleTest and custom)
+# ============================================================================
+
+# Basic System Tests
+SY000001,Y,system-first_frame_test,
+SY000002,Y,system-first_frame_test,--gtest_filter=SystemBasicTest.*
+SY000003,Y,system-first_frame_test,--gtest_filter=FirstFrameTest.CameraInitialization
+SY000004,Y,system-first_frame_test,--gtest_filter=FirstFrameTest.GetAvailableModes
+
+# Frame Capture Tests
+SY000010,Y,system-first_frame_test,--gtest_filter=FirstFrameTest.CaptureFrame
+SY000011,Y,system-first_frame_test,--gtest_filter=FirstFrameTest.CaptureMultipleFrames
+SY000012,Y,system-first_frame_test,--gtest_filter=FirstFrameTest.FrameDataAccess
+
+# Start/Stop Tests
+SY000020,Y,system-first_frame_test,--gtest_filter=FirstFrameTest.StartStopCamera
+SY000021,Y,system-first_frame_test,--gtest_filter=*StartStop* --gtest_repeat=3
+
+# Frame Mode Tests (MP Mode - 1024x1024)
+SY000030,Y,system-first_frame_test,--gtest_filter=FrameModeTest.TestSpecificMode/0 --mode=0
+SY000031,Y,system-first_frame_test,--gtest_filter=FrameModeTest.TestSpecificMode/1 --mode=1
+
+# Frame Mode Tests (QMP Mode - 512x512)
+SY000032,Y,system-first_frame_test,--gtest_filter=FrameModeTest.TestSpecificMode/2 --mode=2
+SY000033,Y,system-first_frame_test,--gtest_filter=FrameModeTest.TestSpecificMode/3 --mode=3
+SY000034,Y,system-first_frame_test,--gtest_filter=FrameModeTest.TestSpecificMode/4 --mode=4
+SY000035,Y,system-first_frame_test,--gtest_filter=FrameModeTest.TestSpecificMode/5 --mode=5
+SY000036,Y,system-first_frame_test,--gtest_filter=FrameModeTest.TestSpecificMode/6 --mode=6
+
+# All Frame Modes Test
+SY000040,Y,system-first_frame_test,--gtest_filter=FrameModeTest.*
+
+# Stress Tests
+SY000050,Y,system-first_frame_test,--gtest_filter=FirstFrameTest.CaptureMultipleFrames --gtest_repeat=5
+
+# Full Test Suite
+SY999999,Y,system-first_frame_test,
+
+# ============================================================================
+# GoogleTest-based Data Collection Tests
+# ============================================================================
+
+# Basic data collection tests
+DC000001,Y,system-data_collect_test,--gtest_filter=DataCollectTest.CollectSingleFrame
+DC000002,Y,system-data_collect_test,--gtest_filter=DataCollectTest.Collect10Frames
+DC000003,Y,system-data_collect_test,--gtest_filter=DataCollectTest.Collect50Frames
+DC000004,Y,system-data_collect_test,--gtest_filter=DataCollectTest.Collect100Frames
+
+# Mode-specific collection
+DC000010,Y,system-data_collect_test,--gtest_filter=DataCollectTest.CollectFramesAllModes
+
+# Stress tests
+DC000020,Y,system-data_collect_test,--gtest_filter=DataCollectTest.StressTestContinuousCollection
+
+# Data validation
+DC000030,Y,system-data_collect_test,--gtest_filter=DataCollectTest.VerifyFrameDataSize
+DC000031,Y,system-data_collect_test,--gtest_filter=DataCollectTest.VerifyDepthDataRange
+
+# Parameterized frame counts
+DC000040,Y,system-data_collect_test,--gtest_filter=FrameCountTest.*
+
+# All data collect tests
+DC999999,Y,system-data_collect_test,
+
+# ============================================================================
+# GoogleTest-based TOF Viewer / GUI Tests
+# ============================================================================
+
+# GUI initialization
+TV000001,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.CameraInitialization
+TV000002,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.GetCameraInfo
+
+# Streaming sessions (different durations)
+TV000010,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.ShortStreamSession
+TV000011,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.MediumStreamSession
+TV000012,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.LongStreamSession
+TV000013,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.ExtendedStreamSession
+
+# Mode switching
+TV000020,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.ModeSwitchingDuringStream
+TV000021,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.MultipleModeSwitches
+
+# Pause/Resume (viewer playback control)
+TV000030,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.PauseResumeStream
+TV000031,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.MultiplePauseResumeCycles
+
+# Data quality
+TV000040,Y,system-tof_viewer_test,--gtest_filter=TofViewerTest.VerifyFrameDataConsistency
+
+# All modes
+TV000050,Y,system-tof_viewer_test,--gtest_filter=ViewerModeTest.*
+
+# All viewer tests
+TV999999,Y,system-tof_viewer_test,
+
+# ============================================================================
+# ADCAM Example Binary Tests (first-frame, data_collect, etc.)
+# ============================================================================
+# Test the actual example executables built by ADCAM
+
+# first-frame example tests (default mode)
+EX000001,Y,../../examples/first-frame/first-frame,
+
+# first-frame example tests (MP modes - 1024x1024)
+EX000002,Y,../../examples/first-frame/first-frame,-m 0
+EX000003,Y,../../examples/first-frame/first-frame,-m 1
+
+# first-frame example tests (QMP modes - 512x512)
+EX000010,Y,../../examples/first-frame/first-frame,-m 2
+EX000011,Y,../../examples/first-frame/first-frame,-m 3
+EX000012,Y,../../examples/first-frame/first-frame,-m 4
+EX000013,Y,../../examples/first-frame/first-frame,-m 5
+EX000014,Y,../../examples/first-frame/first-frame,-m 6
+
+# data_collect tests - Mode 0 (MP) with varying frame counts
+EX000020,Y,../../examples/data_collect/data_collect,-m 0 -n 1
+EX000021,Y,../../examples/data_collect/data_collect,-m 0 -n 5
+EX000022,Y,../../examples/data_collect/data_collect,-m 0 -n 10
+EX000023,Y,../../examples/data_collect/data_collect,-m 0 -n 25
+EX000024,Y,../../examples/data_collect/data_collect,-m 0 -n 50
+EX000025,Y,../../examples/data_collect/data_collect,-m 0 -n 100
+
+# data_collect tests - Mode 1 (MP) with varying frame counts
+EX000030,Y,../../examples/data_collect/data_collect,-m 1 -n 1
+EX000031,Y,../../examples/data_collect/data_collect,-m 1 -n 10
+EX000032,Y,../../examples/data_collect/data_collect,-m 1 -n 50
+
+# data_collect tests - Mode 2 (QMP) with varying frame counts
+EX000040,Y,../../examples/data_collect/data_collect,-m 2 -n 1
+EX000041,Y,../../examples/data_collect/data_collect,-m 2 -n 5
+EX000042,Y,../../examples/data_collect/data_collect,-m 2 -n 10
+EX000043,Y,../../examples/data_collect/data_collect,-m 2 -n 25
+EX000044,Y,../../examples/data_collect/data_collect,-m 2 -n 50
+EX000045,Y,../../examples/data_collect/data_collect,-m 2 -n 100
+
+# data_collect tests - Mode 3 (QMP) with varying frame counts
+EX000050,Y,../../examples/data_collect/data_collect,-m 3 -n 1
+EX000051,Y,../../examples/data_collect/data_collect,-m 3 -n 10
+EX000052,Y,../../examples/data_collect/data_collect,-m 3 -n 50
+
+# data_collect tests - Mode 4 (QMP) with varying frame counts
+EX000060,Y,../../examples/data_collect/data_collect,-m 4 -n 1
+EX000061,Y,../../examples/data_collect/data_collect,-m 4 -n 10
+EX000062,Y,../../examples/data_collect/data_collect,-m 4 -n 50
+
+# data_collect tests - Mode 5 (QMP) with varying frame counts
+EX000070,Y,../../examples/data_collect/data_collect,-m 5 -n 1
+EX000071,Y,../../examples/data_collect/data_collect,-m 5 -n 10
+EX000072,Y,../../examples/data_collect/data_collect,-m 5 -n 50
+
+# data_collect tests - Mode 6 (QMP) with varying frame counts
+EX000080,Y,../../examples/data_collect/data_collect,-m 6 -n 1
+EX000081,Y,../../examples/data_collect/data_collect,-m 6 -n 10
+EX000082,Y,../../examples/data_collect/data_collect,-m 6 -n 50
+
+# Stress tests - High frame counts across all modes
+EX000090,Y,../../examples/data_collect/data_collect,-m 0 -n 200
+EX000091,Y,../../examples/data_collect/data_collect,-m 2 -n 200
+EX000092,Y,../../examples/data_collect/data_collect,-m 4 -n 200
+EX000093,Y,../../examples/data_collect/data_collect,-m 6 -n 200
+
+# Edge case - Single frame capture per mode
+EX000100,Y,../../examples/data_collect/data_collect,-m 0 -n 1
+EX000101,Y,../../examples/data_collect/data_collect,-m 1 -n 1
+EX000102,Y,../../examples/data_collect/data_collect,-m 2 -n 1
+EX000103,Y,../../examples/data_collect/data_collect,-m 3 -n 1
+EX000104,Y,../../examples/data_collect/data_collect,-m 4 -n 1
+EX000105,Y,../../examples/data_collect/data_collect,-m 5 -n 1
+EX000106,Y,../../examples/data_collect/data_collect,-m 6 -n 1
+
+# ============================================================================
+# Disabled Tests (for debugging - change N to Y to enable)
+# ============================================================================
+# SY900001,N,system-first_frame_test,--gtest_filter=*Performance*
+# EX900001,N,../../examples/first-frame,-m 0 -v  # Verbose mode
+
+# ============================================================================
+# Notes:
+# ============================================================================
+# - MP modes (0-1): Megapixel, 1024×1024, ISP computes depth on-chip
+# - QMP modes (2-6): Quarter Megapixel, 512×512, ISP pre-computed with confidence
+# - GoogleTest binaries (SYxxxx): Use --gtest_filter, --gtest_repeat flags
+# - Example binaries (EXxxxx): Use their native command-line flags (-m, -n, -v, etc.)
+# - Tests can be run individually by changing Execute to N for unwanted tests
+# - Exit code 0 = PASS, non-zero = FAIL for all executables
+# ============================================================================

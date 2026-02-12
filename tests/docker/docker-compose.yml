@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  adcam-test:
+    image: adcam-test:latest
+    container_name: adcam-test-container
+    privileged: true
+    # Hardware access for ADCAM (ADSD3500 Dual Depth ISPs)
+    devices:
+      # V4L2 video devices for dual ADSD3500 ISPs
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
+      # Additional video devices if needed
+      - /dev/video2:/dev/video2
+      - /dev/video3:/dev/video3
+      # I2C devices for sensor control
+      - /dev/i2c-0:/dev/i2c-0
+      - /dev/i2c-1:/dev/i2c-1
+      - /dev/i2c-2:/dev/i2c-2
+    volumes:
+      # Mount test results directory
+      - ./test-results:/workspace/test-results
+      - ./test-logs:/workspace/test-logs
+      # Mount ToFi libs if available at runtime
+      - ../../libs:/workspace/libs:ro
+    working_dir: /workspace/project/build/tests
+    environment:
+      - GTEST_OUTPUT=json:/workspace/test-results/gtest_results.json
+      - GTEST_COLOR=1
+      - LD_LIBRARY_PATH=/workspace/libs:/workspace/project/build/lib
+    command: /bin/bash
+    network_mode: host
