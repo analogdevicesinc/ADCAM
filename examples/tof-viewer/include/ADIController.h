@@ -26,6 +26,7 @@
 #define ADICONTROLLER_H
 
 #include <atomic>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <thread>
@@ -191,7 +192,16 @@ class ADIController {
     /**
      * @brief Output delta time information for frame timing analysis
      * @param[in] frameNumber Frame number to analyze
-     * @return True if delta time was output successfully, false otherwise
+     * @return True if frame drop percentage exceeds threshold over observation window, false otherwise
+     * 
+     * Tracks a rolling window of recent frames with their metadata frame numbers.
+     * Detects frame drops by comparing expected vs. actual frame counts:
+     *   - expected_frames = (last_frame_number - first_frame_number) + 1
+     *   - actual_frames = number of samples in history
+     *   - drop_percentage = (expected - actual) / expected
+     * 
+     * Returns true when drop_percentage > m_frame_drop_threshold over the
+     * m_frame_drop_window_ms time period (default: 10% over 2 seconds)
      */
     bool OutputDeltaTime(uint32_t frameNumber);
 
@@ -251,9 +261,6 @@ class ADIController {
      * @return True if frame should be dropped, false if it should be kept
      */
     bool shouldDropFrame(uint32_t frameNum);
-    std::unordered_map<
-        uint32_t, std::chrono::time_point<std::chrono::high_resolution_clock>>
-        m_rxTimeLookUp;
 
   private:
     std::thread m_workerThread;
@@ -276,6 +283,16 @@ class ADIController {
     uint32_t m_frames_lost = 0;
     uint32_t m_prev_frame_number = -1;
     uint32_t m_current_frame_number = 0;
+
+    // Frame-drop detection state: rolling window tracking
+    // Stores (frame_number, timestamp) pairs for recent frames
+    struct FrameSample {
+        uint32_t frame_number;
+        std::chrono::steady_clock::time_point timestamp;
+    };
+    std::deque<FrameSample> m_frame_history;
+    const double m_frame_drop_window_ms = 2000.0;  // 2-second observation window
+    const double m_frame_drop_threshold = 0.10;    // 10% drop triggers alert
 };
 } // namespace adicontroller
 #endif
