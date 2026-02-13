@@ -371,12 +371,16 @@ void ADIView::normalizeABBuffer_SIMD(uint16_t *abBuffer, uint16_t abWidth,
 
                 // Store back as uint8
                 __m256i vi = _mm256_cvtps_epi32(vf);
-                __m128i out = _mm_packus_epi32(_mm256_castsi256_si128(vi),
-                                               _mm256_extracti128_si256(vi, 1));
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+                __m128i out = _mm_setzero_si128(); // Initialize to silence warning
+                out = _mm_packus_epi32(_mm256_castsi256_si128(vi),
+                                       _mm256_extracti128_si256(vi, 1));
                 for (int j = 0; j < 8; ++j) {
                     abBuffer[row_start + x + j] =
                         uint8_t(((uint16_t *)&out)[j]);
                 }
+#pragma GCC diagnostic pop
             }
             // Remainder for row
             for (; x < abWidth; ++x) {

@@ -48,8 +48,8 @@
 
 #else
 
-#define AB_SIMD    /* Much faster, so leave this active */
-#define DEPTH_SIMD /* Much faster, so leave this active */
+//#define AB_SIMD    /* Much faster, so leave this active */
+//#define DEPTH_SIMD /* Much faster, so leave this active */
 //#define PC_SIMD
 
 #endif // ARM NEON
