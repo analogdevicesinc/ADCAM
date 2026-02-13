@@ -167,6 +167,12 @@ if(USE_CUDA)
     message(STATUS "Linking CUDA libraries")
 endif()
 
+# Add architecture-specific optimizations for x86_64
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+    target_compile_options(ADIToFGUI PRIVATE -mavx2 -mfma)
+    message(STATUS "Enabling AVX2 optimizations for x86_64")
+endif()
+
 if( WIN32 )					 
 	set_target_properties(ADIToFGUI PROPERTIES
 	LINK_FLAGS /SUBSYSTEM:WINDOWS
