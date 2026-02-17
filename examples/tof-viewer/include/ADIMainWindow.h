@@ -563,6 +563,13 @@ class ADIMainWindow {
     bool m_modify_worker_running = false;
     bool m_modify_worker_done = false;
     bool m_modify_in_progress = false;
+    bool m_start_streaming_pending = false;
+    int m_start_streaming_pending_frames = 0;
+    bool m_start_streaming_offline = false;
+    std::string m_offline_filename;
+    bool m_stop_pending = false;
+    int m_stop_pending_frames = 0;
+    std::string m_stop_filepath;
     std::string m_working_label = "Working...";
     void GetYawPitchRoll(float &yaw, float &pitch, float &roll);
 

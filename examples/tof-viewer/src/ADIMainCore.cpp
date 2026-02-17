@@ -713,6 +713,72 @@ void ADIMainWindow::Render() {
             setIsWorking(false);
         }
 
+        if (m_start_streaming_pending) {
+            if (m_start_streaming_pending_frames > 0) {
+                --m_start_streaming_pending_frames;
+                continue;
+            }
+
+            if (m_start_streaming_offline) {
+                // Offline mode: playback from file
+                if (m_view_instance) {
+                    m_view_instance->cleanUp();
+                }
+
+                auto camera = GetActiveCamera();
+                if (camera != nullptr) {
+                    m_offline_change_frame = true;
+                    camera->setPlaybackFile(m_offline_filename);
+                    m_off_line_frame_index = 0;
+                    m_frame_window_position_state = 0;
+                    m_view_selection_changed = m_view_selection;
+                    m_is_playing = true;
+                    m_ini_params.clear();
+                } else {
+                    LOG(ERROR) << "Camera not initialized!";
+                }
+            } else {
+                // Online mode: live camera streaming
+                if (m_view_instance) {
+                    m_view_instance->cleanUp();
+                }
+
+                auto camera = GetActiveCamera();
+                if (camera && false) {
+                    LOG(INFO) << "*** adsd3500setEnableDynamicModeSwitching disabled ***";
+                    camera->adsd3500setEnableDynamicModeSwitching(false);
+                }
+
+                m_frame_window_position_state = 0;
+                m_view_selection_changed = m_view_selection;
+                m_last_mode = m_mode_selection;
+                m_use_modified_ini_params = true;
+                m_is_playing = true;
+                m_ini_params.clear();
+            }
+
+            m_start_streaming_pending = false;
+            setIsWorking(false);
+        }
+
+        if (m_stop_pending) {
+            if (m_stop_pending_frames > 0) {
+                --m_stop_pending_frames;
+                continue;
+            }
+
+            m_is_playing = false;
+            m_fps_frame_received = 0;
+            if (!m_stop_filepath.empty()) {
+                // Online mode - clear recording file path
+                // Note: filePath variable is local to DisplayControlWindow, so we handle this differently
+            }
+            CameraStop();
+
+            m_stop_pending = false;
+            setIsWorking(false);
+        }
+
         if (m_modify_pending) {
             if (m_modify_pending_frames > 0) {
                 --m_modify_pending_frames;
@@ -1017,29 +1083,12 @@ void ADIMainWindow::ShowStartWizard() {
             ImGui::SameLine();
             if (ImGuiExtensions::ADIButton("Start Streaming",
                                            m_is_open_device)) {
-
-                // Deallocate frame memory such that it can be reallocated for the
-                //  correct frame size in case there was a change in mode.
-                m_view_instance->cleanUp();
-
-                // PRB25
-                auto camera =
-                    GetActiveCamera(); //already initialized on constructor
-                if (camera != nullptr) {
-
-                    m_offline_change_frame = true;
-                    camera->setPlaybackFile(fileName);
-
-                    m_off_line_frame_index = 0;
-                    m_frame_window_position_state = 0;
-                    m_view_selection_changed = m_view_selection;
-                    m_is_playing = true;
-                    m_ini_params.clear();
-                } else {
-                    LOG(ERROR) << "Camera not initialized!";
-                    ImGui::End();
-                    return;
-                }
+                setWorkingLabel("Starting playback...");
+                setIsWorking(true);
+                m_offline_filename = fileName;
+                m_start_streaming_offline = true;
+                m_start_streaming_pending = true;
+                m_start_streaming_pending_frames = 1;
             }
             ImGuiExtensions::ADIShowTooltipFor("WizardOfflineStartStreaming");
             ImGui::SameLine();
@@ -1182,30 +1231,11 @@ void ADIMainWindow::ShowStartWizard() {
 
                 if (ImGuiExtensions::ADIButton("Start Streaming",
                                                !m_is_playing)) {
-
-                    // Deallocate frame memory such that it can be reallocated for the
-                    //  correct frame size in case there was a change in mode.
-                    if (m_view_instance) {
-                        m_view_instance->cleanUp();
-                    }
-
-                    auto camera = GetActiveCamera();
-                    if (camera &&
-                        false) { // TODO: Why is this casusing an exception from the Dual ADSD3500
-                        LOG(INFO)
-                            << "*** adsd3500setEnableDynamicModeSwitching "
-                               "disabled ***";
-                        camera->adsd3500setEnableDynamicModeSwitching(false);
-                    }
-
-                    m_frame_window_position_state = 0;
-                    m_view_selection_changed = m_view_selection;
-                    m_last_mode =
-                        m_mode_selection; // Force use of ini parameters
-                    m_use_modified_ini_params =
-                        true; // Force use of ini parameters
-                    m_is_playing = true;
-                    m_ini_params.clear();
+                    setWorkingLabel("Starting streaming...");
+                    setIsWorking(true);
+                    m_start_streaming_offline = false;
+                    m_start_streaming_pending = true;
+                    m_start_streaming_pending_frames = 1;
                 }
                 ImGuiExtensions::ADIShowTooltipFor("WizardOnlineStartStreaming");
             }
