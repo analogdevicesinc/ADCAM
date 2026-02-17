@@ -277,13 +277,11 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                     ImVec2 pMax(center.x + side * 0.5f, center.y + side * 0.5f);
                     dl->AddRectFilled(pMin, pMax, IM_COL32_WHITE);
                 })) {
-                m_is_playing = false;
-                m_fps_frame_received = 0;
-                filePath = "";
-                // QUERY: Is it necessary to stop a recording if one is on going?
-                CameraStop();
-                ImGui::End();
-                return;
+                setWorkingLabel("Stopping camera...");
+                setIsWorking(true);
+                m_stop_filepath = filePath;
+                m_stop_pending = true;
+                m_stop_pending_frames = 1;
             }
             ImGuiExtensions::ADIShowTooltipFor("ControlStop");
 
@@ -488,11 +486,11 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                     ImVec2 pMax(center.x + side * 0.5f, center.y + side * 0.5f);
                     dl->AddRectFilled(pMin, pMax, IM_COL32_WHITE);
                 })) {
-                m_is_playing = false;
-                m_fps_frame_received = 0;
-                CameraStop();
-                ImGui::End();
-                return;
+                setWorkingLabel("Stopping playback...");
+                setIsWorking(true);
+                m_stop_filepath = "";
+                m_stop_pending = true;
+                m_stop_pending_frames = 1;
             }
             ImGuiExtensions::ADIShowTooltipFor("ControlStop");
 
