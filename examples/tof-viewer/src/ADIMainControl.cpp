@@ -294,10 +294,17 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
 
             DrawBarLabel("Control");
 
-            ImGui::Toggle("Save All Frames", &m_offline_save_all_frames);
+            ImGui::Toggle("Export All Frames", &m_offline_save_all_frames);
             ImGuiExtensions::ADIShowTooltipFor("ControlSaveAllFrames");
             ImGui::NewLine();
-            cameraButton(m_base_file_name);
+            if (cameraButton(m_base_file_name)) {
+                if (m_offline_save_all_frames) {
+                    setWorkingLabel("Exporting all frames...");
+                    setIsWorking(true);
+                    m_capture_pending = true;
+                    m_capture_pending_frames = 1;
+                }
+            }
             ImGuiExtensions::ADIShowTooltipFor("ControlCapture");
 
             ImGui::SameLine(0.0f, 10.0f);
