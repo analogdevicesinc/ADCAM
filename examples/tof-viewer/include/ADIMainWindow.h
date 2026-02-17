@@ -415,6 +415,8 @@ class ADIMainWindow {
 		*/
     void CameraStop();
 
+    void CloseCamera();
+
     int32_t synchronizeVideo(std::shared_ptr<aditof::Frame> &frame);
 
     /**
@@ -544,11 +546,19 @@ class ADIMainWindow {
     float WindowCalcY(Rect w, float buffer = 0.0f) {
         return w.y + w.height + buffer;
     }
-    void Spinner(const char *label, float radius, int thickness, ImU32 color);
-
     bool m_isWorking = false;
     bool getIsWorking() const { return m_isWorking; }
     void setIsWorking(bool isWorking) { m_isWorking = isWorking; }
+    const std::string &getWorkingLabel() const { return m_working_label; }
+    void setWorkingLabel(const std::string &label) { m_working_label = label; }
+    bool m_close_pending = false;
+    int m_close_pending_frames = 0;
+    bool m_modify_pending = false;
+    int m_modify_pending_frames = 0;
+    bool m_modify_worker_running = false;
+    bool m_modify_worker_done = false;
+    bool m_modify_in_progress = false;
+    std::string m_working_label = "Working...";
     void GetYawPitchRoll(float &yaw, float &pitch, float &roll);
 
     // The type of movement that a mouse movement should be interpreted as (if any)
@@ -602,6 +612,7 @@ class ADIMainWindow {
     float m_tof_image_pos_y;
     float m_dpi_scale_factor = HIGHDPISCALAR;
     std::thread initCameraWorker;
+    std::thread m_modifyWorker;
     bool m_cameraWorkerDone = false;
     aditof::System m_system;
     std::vector<std::shared_ptr<aditof::Camera>> m_cameras_list;

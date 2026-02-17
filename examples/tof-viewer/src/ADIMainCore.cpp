@@ -199,6 +199,9 @@ ADIMainWindow::~ADIMainWindow() {
     if (initCameraWorker.joinable()) {
         initCameraWorker.join();
     }
+    if (m_modifyWorker.joinable()) {
+        m_modifyWorker.join();
+    }
     //fclose(stderr);
 }
 
@@ -491,13 +494,69 @@ void ADIMainWindow::Render() {
                 }
             }
 
-        } else {
+        } else if (!m_modify_in_progress) {
             // Show Start Wizard
             ShowStartWizard();
         }
 
         if (getIsWorking()) {
-            Spinner("Working...", 10.0f, 2.0f, IM_COL32(255, 255, 255, 255));
+            const float radius = 10.0f;
+            const float thickness = 2.0f;
+            const float padding = 12.0f;
+            const char *label = getWorkingLabel().empty()
+                                    ? "Working..."
+                                    : getWorkingLabel().c_str();
+
+            ImVec2 text_size = ImGui::CalcTextSize(label);
+            ImVec2 spinner_size((radius + thickness) * 2.0f,
+                                (radius + thickness) * 2.0f);
+            float box_width =
+                std::max(text_size.x, spinner_size.x) + (padding * 2.0f);
+            float box_height = text_size.y + spinner_size.y + (padding * 3.0f);
+
+            ImVec2 display_size = ImGui::GetIO().DisplaySize;
+            ImVec2 box_pos((display_size.x - box_width) * 0.5f,
+                           (display_size.y - box_height) * 0.5f);
+
+            ImGui::SetNextWindowPos(box_pos, ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2(box_width, box_height),
+                                     ImGuiCond_Always);
+            ImGui::SetNextWindowFocus();
+            ImGui::SetNextWindowBgAlpha(1.0f);
+
+            ImGuiWindowFlags overlay_flags =
+                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
+                ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
+                ImGuiWindowFlags_NoInputs;
+
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,
+                                ImVec2(0.0f, 0.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+            ImGui::PushStyleColor(ImGuiCol_WindowBg,
+                                  ImVec4(0.05f, 0.05f, 0.05f, 0.98f));
+            ImGui::PushStyleColor(ImGuiCol_Text,
+                                  ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Border,
+                                  ImVec4(1.0f, 1.0f, 1.0f, 0.2f));
+
+            ImGui::Begin("##working_overlay", nullptr, overlay_flags);
+
+            ImGui::SetCursorPosX((box_width - text_size.x) * 0.5f);
+            ImGui::SetCursorPosY(padding);
+            ImGui::TextUnformatted(label);
+
+            ImGui::SetCursorPosX((box_width - spinner_size.x) * 0.5f);
+            ImGui::SetCursorPosY(padding * 2.0f + text_size.y);
+            ImGuiExtensions::ADISpinner(label, radius, thickness,
+                                        IM_COL32(255, 255, 255, 255));
+
+            ImGui::End();
+
+            ImGui::PopStyleColor(3);
+            ImGui::PopStyleVar(4);
         }
 
         /***************************************************/
@@ -536,6 +595,70 @@ void ADIMainWindow::Render() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
+
+        if (m_close_pending) {
+            if (m_close_pending_frames > 0) {
+                --m_close_pending_frames;
+                continue;
+            }
+            CloseCamera();
+            m_close_pending = false;
+            setIsWorking(false);
+        }
+
+        if (m_modify_pending) {
+            if (m_modify_pending_frames > 0) {
+                --m_modify_pending_frames;
+                continue;
+            }
+
+            if (!m_modify_worker_running) {
+                m_modify_in_progress = true;
+
+                if (m_modifyWorker.joinable()) {
+                    m_modifyWorker.join();
+                }
+
+                m_modify_worker_running = true;
+                m_modify_worker_done = false;
+                m_modifyWorker = std::thread([this]() {
+                    if (m_view_instance && m_view_instance->m_ctrl) {
+                        m_view_instance->m_ctrl->StopCapture();
+                    }
+                    m_modify_worker_done = true;
+                });
+                continue;
+            }
+
+            if (m_modify_worker_done) {
+                if (m_modifyWorker.joinable()) {
+                    m_modifyWorker.join();
+                }
+
+                // Now stop playback and clean up
+                m_is_playing = false;
+                m_fps_frame_received = 0;
+
+                if (m_view_instance && m_view_instance->m_ctrl) {
+                    OpenGLCleanUp();
+                    m_view_instance->m_ctrl->panicStop = false;
+                }
+
+                m_capture_separate_enabled = true;
+                m_set_ab_win_position_once = true;
+                m_set_depth_win_position_once = true;
+                m_set_point_cloud_position_once = true;
+                m_off_line_frame_index = 0;
+
+                m_use_modified_ini_params = true;
+                m_view_selection_changed = m_view_selection;
+                m_is_playing = true;
+                m_modify_worker_running = false;
+                m_modify_pending = false;
+                m_modify_in_progress = false;
+                setIsWorking(false);
+            }
+        }
     }
 }
 
@@ -709,7 +832,7 @@ void ADIMainWindow::NewLine(float spacing) {
 
 void ADIMainWindow::ShowStartWizard() {
 
-    static float wizard_height = 360.0f;
+    static float wizard_height = 640.0f;
 
     centreWindow(450.0f * m_dpi_scale_factor,
                  wizard_height * m_dpi_scale_factor);
@@ -749,10 +872,6 @@ void ADIMainWindow::ShowStartWizard() {
 
     if (selected == 0) {
 #pragma region WizardOffline
-        if (wizard_height < 300)
-            wizard_height += 20;
-        else if (wizard_height > 300)
-            wizard_height -= 20;
 
         const bool openAvailable = !m_connected_devices.empty();
 
@@ -761,6 +880,8 @@ void ADIMainWindow::ShowStartWizard() {
             ImGuiExtensions::ButtonColorChanger colorChanger(
                 ImGuiExtensions::ButtonColor::Green, openAvailable);
             if (ImGuiExtensions::ADIButton("Open")) {
+                setWorkingLabel("Opening file...");
+                setIsWorking(true);
 
                 int FilterIndex = 0;
                 std::string fs = openADIFileName(
@@ -779,6 +900,8 @@ void ADIMainWindow::ShowStartWizard() {
                     m_off_line_frame_index = 0;
                     initCameraWorker =
                         std::thread([this, fs]() { InitCamera(fs); });
+                } else {
+                    setIsWorking(false);
                 }
             }
             ImGui::SameLine();
@@ -810,6 +933,8 @@ void ADIMainWindow::ShowStartWizard() {
             }
             ImGui::SameLine();
             if (ImGuiExtensions::ADIButton("Close", m_is_open_device)) {
+                setWorkingLabel("Closing file...");
+                setIsWorking(true);
                 CameraStop();
                 if (initCameraWorker.joinable()) {
                     initCameraWorker.join();
@@ -821,6 +946,7 @@ void ADIMainWindow::ShowStartWizard() {
 
                 m_is_open_device = false;
                 m_cameraWorkerDone = false;
+                setIsWorking(false);
             }
             if (m_is_open_device) {
                 NewLine(5.0f);
@@ -857,9 +983,11 @@ void ADIMainWindow::ShowStartWizard() {
         { // Use block to control the moment when ImGuiExtensions::ButtonColorChanger gets destroyed
             ImGuiExtensions::ButtonColorChanger colorChanger(
                 ImGuiExtensions::ButtonColor::Green, openAvailable);
-            if (ImGuiExtensions::ADIButton("Open", !m_is_open_device) &&
+            if (ImGuiExtensions::ADIButton("Open", !m_is_open_device &&
+                                                       !getIsWorking()) &&
                 0 <= m_selected_device_index) {
-
+                setWorkingLabel("Opening camera...");
+                setIsWorking(true);
                 m_is_open_device = true;
                 std::string fs;
                 initCameraWorker =
@@ -868,19 +996,13 @@ void ADIMainWindow::ShowStartWizard() {
         }
 
         ImGui::SameLine();
-        if (ImGuiExtensions::ADIButton("Close", m_is_open_device)) {
-            CameraStop();
-            if (initCameraWorker.joinable()) {
-                initCameraWorker.join();
-                m_cameraModes.clear();
-                _cameraModes.clear();
-            }
-            m_view_instance->cleanUp();
-            m_view_instance.reset();
-            m_callback_initialized = false;
+        if (ImGuiExtensions::ADIButton("Close",
+                                       m_is_open_device && !getIsWorking())) {
+            setWorkingLabel("Closing camera...");
+            setIsWorking(true);
             m_cameraWorkerDone = false;
-            m_is_open_device = false;
-            RefreshDevices();
+            m_close_pending = true;
+            m_close_pending_frames = 1;
         }
         NewLine(5.0f);
 
@@ -894,182 +1016,74 @@ void ADIMainWindow::ShowStartWizard() {
 
                 NewLine(10.0f);
 
-                static bool show_dynamic_mode_switch = false;
-#ifdef ENABLE_DYNAMIC_MODE_SWITCHING
-                ImGui::Toggle(!show_dynamic_mode_switch
-                                  ? "Switch to Dynamic Mode"
-                                  : "Switch to Standard Mode",
-                              &show_dynamic_mode_switch);
-#endif //ENABLE_DYNAMIC_MODE_SWITCHING
+                if (ImGuiExtensions::ADIComboBox(
+                        "select_mode", "Select Mode", ImGuiSelectableFlags_None,
+                        m_cameraModesDropDown, &m_mode_selection, true)) {
+                    m_ini_params.clear();
+                }
 
-                if (show_dynamic_mode_switch) {
-#ifdef ENABLE_DYNAMIC_MODE_SWITCHING
-#pragma region WizardOnlineDynamicMode
-                    if (wizard_height < 540)
-                        wizard_height += 20;
-                    else if (wizard_height > 540)
-                        wizard_height -= 20;
+                NewLine(5.0f);
 
-                    // TODO: Add non-Crosby repeat count
+                DrawBarLabel("Configuration");
 
-                    static int32_t mode_selections[] = {1, 1, 1, 1, 1, 1, 1, 1};
-                    static int32_t mode_repeat[] = {1, 1, 1, 1, 1, 1, 1, 1};
+                NewLine(5.0f);
 
-                    for (int32_t idx = 0; idx < 8; idx++) {
-                        ImGui::SetNextItemWidth(180 * m_dpi_scale_factor);
+                if (ImGuiExtensions::ADIButton("Load Config", !m_is_playing)) {
 
-                        std::string slot =
-                            "Slot " + std::to_string(idx + 1) + " mode";
+                    ShowLoadAdsdParamsMenu();
+                }
 
-                        ImGuiExtensions::ADIComboBox(
-                            slot.c_str(), "Select Mode",
-                            ImGuiSelectableFlags_None, m_cameraModesDropDown,
-                            &mode_selections[idx], true);
+                ImGui::SameLine();
 
-                        ImGui::SameLine();
-
-                        std::string repeat =
-                            "Repeat " + std::to_string(idx + 1);
-                        ImGui::SetNextItemWidth(60 * m_dpi_scale_factor);
-                        if (ImGui::BeginCombo(
-                                repeat.c_str(),
-                                std::to_string(mode_repeat[idx]).c_str())) {
-                            for (int i = 0; i <= 15; ++i) {
-                                bool isSelected = (mode_repeat[idx] == i);
-                                if (ImGui::Selectable(std::to_string(i).c_str(),
-                                                      isSelected))
-                                    mode_repeat[idx] = i;
-
-                                if (isSelected)
-                                    ImGui::SetItemDefaultFocus();
-                            }
-                            ImGui::EndCombo();
-                        }
-                    }
-
-                    ImGuiExtensions::ButtonColorChanger colorChangerPlay(
-                        m_custom_color_play, !m_is_playing);
-
-                    NewLine(5.0f);
-                    if (ImGuiExtensions::ADIButton("Start Streaming",
-                                                   !m_is_playing)) {
-
-                        std::vector<std::pair<uint8_t, uint8_t>> seqence;
-
-                        seqence.push_back(
-                            std::make_pair(mode_selections[0], mode_repeat[0]));
-                        seqence.push_back(
-                            std::make_pair(mode_selections[1], mode_repeat[1]));
-                        seqence.push_back(
-                            std::make_pair(mode_selections[2], mode_repeat[2]));
-                        seqence.push_back(
-                            std::make_pair(mode_selections[3], mode_repeat[3]));
-                        seqence.push_back(
-                            std::make_pair(mode_selections[4], mode_repeat[4]));
-                        seqence.push_back(
-                            std::make_pair(mode_selections[5], mode_repeat[5]));
-                        seqence.push_back(
-                            std::make_pair(mode_selections[6], mode_repeat[6]));
-                        seqence.push_back(
-                            std::make_pair(mode_selections[7], mode_repeat[7]));
-
-                        // Deallocate frame memory such that it can be reallocated for the
-                        //  correct frame size in case there was a change in mode.
-                        m_view_instance->cleanUp();
-                        auto camera = GetActiveCamera();
-
-                        camera->adsd3500setEnableDynamicModeSwitching(true);
-                        camera->adsds3500setDynamicModeSwitchingSequence(
-                            seqence);
-
-                        m_frame_window_position_state = 0;
-                        m_view_selection_changed = m_view_selection;
-                        m_is_playing = true;
-                        m_ini_params.clear();
-                    }
-#pragma endregion // WizardOnlineDynamicMode
-#endif            //ENABLE_DYNAMIC_MODE_SWITCHING
-                } else {
-#pragma region WizardOnlineStandardMode
-                    if (wizard_height < 640)
-                        wizard_height += 20;
-                    else if (wizard_height > 640)
-                        wizard_height -= 20;
-
-                    if (ImGuiExtensions::ADIComboBox(
-                            "select_mode", "Select Mode",
-                            ImGuiSelectableFlags_None, m_cameraModesDropDown,
-                            &m_mode_selection, true)) {
-                        m_ini_params.clear();
-                    }
-
-                    NewLine(5.0f);
-
-                    DrawBarLabel("Configuration");
-
-                    NewLine(5.0f);
-
-                    if (ImGuiExtensions::ADIButton("Load Config",
-                                                   !m_is_playing)) {
-
-                        ShowLoadAdsdParamsMenu();
-                    }
-
-                    ImGui::SameLine();
-
-                    if (ImGuiExtensions::ADIButton("Reset Parameters",
-                                                   m_is_open_device)) {
-                        auto camera = GetActiveCamera();
-                        if (camera) {
-                            camera->resetDepthProcessParams();
-                            m_ini_params.clear();
-                        }
-                    }
-
-                    NewLine(5.0f);
-
-                    ShowIniWindow(false);
-
-                    NewLine(15.0f);
-
-                    //Change colour to green
-                    ImGuiExtensions::ButtonColorChanger colorChangerPlay(
-                        m_custom_color_play, !m_is_playing);
-
-                    ImGui::Toggle(!m_enable_preview ? "Preview Off"
-                                                    : "Preview On",
-                                  &m_enable_preview);
-
-                    if (ImGuiExtensions::ADIButton("Start Streaming",
-                                                   !m_is_playing)) {
-
-                        // Deallocate frame memory such that it can be reallocated for the
-                        //  correct frame size in case there was a change in mode.
-                        if (m_view_instance) {
-                            m_view_instance->cleanUp();
-                        }
-
-                        auto camera = GetActiveCamera();
-                        if (camera &&
-                            false) { // TODO: Why is this casusing an exception from the Dual ADSD3500
-                            LOG(INFO)
-                                << "*** adsd3500setEnableDynamicModeSwitching "
-                                   "disabled ***";
-                            camera->adsd3500setEnableDynamicModeSwitching(
-                                false);
-                        }
-
-                        m_frame_window_position_state = 0;
-                        m_view_selection_changed = m_view_selection;
-                        m_last_mode =
-                            m_mode_selection; // Force use of ini parameters
-                        m_use_modified_ini_params =
-                            true; // Force use of ini parameters
-                        m_is_playing = true;
+                if (ImGuiExtensions::ADIButton("Reset Parameters",
+                                               m_is_open_device)) {
+                    auto camera = GetActiveCamera();
+                    if (camera) {
+                        camera->resetDepthProcessParams();
                         m_ini_params.clear();
                     }
                 }
-#pragma endregion // WizardOnlineStandardMode
+
+                NewLine(5.0f);
+
+                ShowIniWindow(false);
+
+                NewLine(15.0f);
+
+                //Change colour to green
+                ImGuiExtensions::ButtonColorChanger colorChangerPlay(
+                    m_custom_color_play, !m_is_playing);
+
+                ImGui::Toggle(!m_enable_preview ? "Preview Off" : "Preview On",
+                              &m_enable_preview);
+
+                if (ImGuiExtensions::ADIButton("Start Streaming",
+                                               !m_is_playing)) {
+
+                    // Deallocate frame memory such that it can be reallocated for the
+                    //  correct frame size in case there was a change in mode.
+                    if (m_view_instance) {
+                        m_view_instance->cleanUp();
+                    }
+
+                    auto camera = GetActiveCamera();
+                    if (camera &&
+                        false) { // TODO: Why is this casusing an exception from the Dual ADSD3500
+                        LOG(INFO)
+                            << "*** adsd3500setEnableDynamicModeSwitching "
+                               "disabled ***";
+                        camera->adsd3500setEnableDynamicModeSwitching(false);
+                    }
+
+                    m_frame_window_position_state = 0;
+                    m_view_selection_changed = m_view_selection;
+                    m_last_mode =
+                        m_mode_selection; // Force use of ini parameters
+                    m_use_modified_ini_params =
+                        true; // Force use of ini parameters
+                    m_is_playing = true;
+                    m_ini_params.clear();
+                }
             }
         }
 #pragma endregion // WizardOnline
@@ -1090,30 +1104,4 @@ void ADIMainWindow::centreWindow(float width, float height) {
     // Set position and size before Begin()
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always);
     ImGui::SetNextWindowSize(window_size, ImGuiCond_Always);
-}
-
-// Minimal spinner function for ImGui (circle dots)
-void ADIMainWindow::Spinner(const char *label, float radius, int thickness,
-                            ImU32 color) {
-    ImGuiWindow *window = ImGui::GetCurrentWindow();
-    if (window->SkipItems)
-        return;
-    ImGuiContext &g = *ImGui::GetCurrentContext();
-
-    ImVec2 pos = ImGui::GetCursorScreenPos();
-    float t = (float)g.Time;
-    int num_segments = 30;
-    float angle_min = IM_PI * 2.0f * (t * 0.8f);
-    float angle_max = IM_PI * 2.0f * ((t * 0.8f) + 1.0f);
-
-    ImDrawList *draw_list = ImGui::GetWindowDrawList();
-    draw_list->PathClear();
-    for (int i = 0; i < num_segments; i++) {
-        float a = angle_min +
-                  ((float)i / (float)num_segments) * (angle_max - angle_min);
-        draw_list->PathLineTo(ImVec2(pos.x + radius + cosf(a) * radius,
-                                     pos.y + radius + sinf(a) * radius));
-    }
-    draw_list->PathStroke(color, 0, thickness);
-    ImGui::Dummy(ImVec2((radius + thickness) * 2, (radius + thickness) * 2));
 }

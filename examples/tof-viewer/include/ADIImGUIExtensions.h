@@ -264,6 +264,9 @@ void ADIVText(const char *str);
 //
 void ADIShowTooltip(const char *msg, bool show = true);
 
+// Draws a lightweight wait spinner at the current cursor position
+void ADISpinner(const char *label, float radius, int thickness, ImU32 color);
+
 } // namespace ImGuiExtensions
 
 } // namespace adiMainWindow

@@ -32,56 +32,6 @@
 
 using namespace adicontroller;
 
-#include <cstddef>
-#include <deque>
-class TrendWindow {
-  public:
-    TrendWindow(size_t windowSize = 20) : maxSize(windowSize) {}
-
-    void add(double value) {
-        if (window.size() == maxSize) {
-            window.pop_front();
-        }
-        window.push_back(value);
-    }
-
-    // Computes the slope of best-fit line (linear regression)
-    // Returns 0 if not enough points
-    double calculate_slope() const {
-        if (window.size() < maxSize)
-            return 0.0;
-
-        size_t n = window.size();
-        double sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumXX = 0.0;
-        for (size_t i = 0; i < n; ++i) {
-            sumX += i;
-            sumY += window[i];
-            sumXY += i * window[i];
-            sumXX += i * i;
-        }
-        double denom = n * sumXX - sumX * sumX;
-        if (denom == 0.0)
-            return 0.0; // Avoid division by zero
-
-        double m = (n * sumXY - sumX * sumY) / denom;
-        return m;
-    }
-
-    // Helper to check if the trend is increasing
-    bool isIncreasing(double threshold, double &slope) const {
-        slope = calculate_slope();
-        return slope > threshold;
-    }
-
-    void clear() { window.clear(); }
-
-  private:
-    size_t maxSize;
-    std::deque<double> window;
-};
-
-static TrendWindow iw(100);
-
 ADIController::ADIController(
     std::vector<std::shared_ptr<aditof::Camera>> camerasList)
     : m_cameraInUse(-1), m_frameRequested(false) {
@@ -110,15 +60,16 @@ void ADIController::StartCapture(const uint32_t frameRate) {
         return;
     }
 
-    m_rxTimeLookUp.clear();
-    iw.clear();
-
     m_fps_startTime = std::chrono::system_clock::now();
+    m_last_frame_time = std::chrono::steady_clock::time_point();
+    m_fps_ema_initialized = false;
+    m_fps_ema = 0.0f;
     m_frame_counter = 0;
     m_stopFlag = false;
     m_frames_lost = 0;
     m_prev_frame_number = -1;
     m_current_frame_number = 0;
+    m_frame_history.clear();
     m_workerThread = std::thread([this]() { captureFrames(); });
 }
 
@@ -218,20 +169,28 @@ void ADIController::captureFrames() {
         }
 
         local_frame_counter++;
-        auto currentTime = std::chrono::system_clock::now();
-        std::chrono::duration<double> elapsed = currentTime - m_fps_startTime;
-        if (elapsed.count() >= 5) {
-            m_framerate = static_cast<float>(local_frame_counter) /
-                          static_cast<float>(elapsed.count());
-            local_frame_counter = 0;
-            m_fps_startTime = currentTime;
+        auto currentTime = std::chrono::steady_clock::now();
+        if (m_last_frame_time.time_since_epoch().count() != 0) {
+            std::chrono::duration<double> elapsed =
+                currentTime - m_last_frame_time;
+            if (elapsed.count() > 0.0) {
+                const float instant_fps =
+                    static_cast<float>(1.0 / elapsed.count());
+                if (!m_fps_ema_initialized) {
+                    m_fps_ema = instant_fps;
+                    m_fps_ema_initialized = true;
+                } else {
+                    m_fps_ema = (m_fps_ema_alpha * instant_fps) +
+                                ((1.0f - m_fps_ema_alpha) * m_fps_ema);
+                }
+                m_framerate = m_fps_ema;
+            }
         }
+        m_last_frame_time = currentTime;
 
         aditof::Metadata *metadata;
         status = frame->getData("metadata", (uint16_t **)&metadata);
         if (status == aditof::Status::OK && metadata != nullptr) {
-            m_rxTimeLookUp[metadata->frameNumber] =
-                std::chrono::high_resolution_clock::now();
             calculateFrameLoss(metadata->frameNumber, m_prev_frame_number,
                                m_current_frame_number);
         }
@@ -245,24 +204,43 @@ void ADIController::captureFrames() {
 }
 
 bool ADIController::OutputDeltaTime(uint32_t frameNumber) {
-    auto it = m_rxTimeLookUp.find(frameNumber);
-    if (it != m_rxTimeLookUp.end()) {
-        long long duration;
+    auto now = std::chrono::steady_clock::now();
 
-        duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                       std::chrono::high_resolution_clock::now() -
-                       m_rxTimeLookUp[frameNumber])
-                       .count();
-        m_rxTimeLookUp.erase(frameNumber);
-        iw.add(duration);
+    // Add current frame to history
+    m_frame_history.push_back({frameNumber, now});
 
-        double slope;
-
-        bool ret = iw.isIncreasing(0.1, slope);
-
-        return ret;
+    // Remove samples older than the observation window
+    auto cutoff_time = now - std::chrono::milliseconds(static_cast<long long>(
+                                 m_frame_drop_window_ms));
+    while (!m_frame_history.empty() &&
+           m_frame_history.front().timestamp < cutoff_time) {
+        m_frame_history.pop_front();
     }
-    return false;
+
+    // Need at least 2 samples to detect drops
+    if (m_frame_history.size() < 2) {
+        return false;
+    }
+
+    // Calculate expected vs. actual frame counts
+    uint32_t first_frame = m_frame_history.front().frame_number;
+    uint32_t last_frame = m_frame_history.back().frame_number;
+    uint32_t expected_frames =
+        (last_frame - first_frame) + 1; // +1 includes both endpoints
+    uint32_t actual_frames = static_cast<uint32_t>(m_frame_history.size());
+
+    // Avoid division by zero
+    if (expected_frames == 0) {
+        return false;
+    }
+
+    // Calculate percentage of dropped frames
+    uint32_t dropped_frames = expected_frames - actual_frames;
+    double drop_percentage = static_cast<double>(dropped_frames) /
+                             static_cast<double>(expected_frames);
+
+    // Return true if drop percentage exceeds threshold
+    return drop_percentage > m_frame_drop_threshold;
 }
 
 bool ADIController::shouldDropFrame(uint32_t frameNum) {
