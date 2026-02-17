@@ -29,8 +29,16 @@
 #include <cmath>
 #include <functional>
 #include <sstream>
+#include <unordered_map>
+#include <string>
 
 #include "imgui.h"
+
+// Tooltip registry for centralized tooltip management
+static std::unordered_map<std::string, std::string> g_tooltipRegistry;
+
+// Tooltip delay in seconds (configurable)
+static float g_tooltipDelaySeconds = 3.0f;
 
 namespace {
 std::string ConvertToVerticalText(const char *str) {
@@ -98,12 +106,42 @@ void ADIVText(const char *s) {
 
 void ADIShowTooltip(const char *msg, bool show) {
     if (show && ImGui::IsItemHovered()) {
-        ImGui::BeginTooltip();
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(msg);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
+        // Check if item has been hovered for the required delay time
+        if (ImGui::GetCurrentContext()->HoveredIdTimer >= g_tooltipDelaySeconds) {
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+            ImGui::TextUnformatted(msg);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        }
     }
+}
+
+void ADIRegisterTooltip(const char *controlName, const char *tooltipText) {
+    if (controlName && tooltipText) {
+        g_tooltipRegistry[controlName] = tooltipText;
+    }
+}
+
+bool ADIShowTooltipFor(const char *controlName) {
+    if (!controlName) {
+        return false;
+    }
+    
+    auto it = g_tooltipRegistry.find(controlName);
+    if (it != g_tooltipRegistry.end()) {
+        ADIShowTooltip(it->second.c_str());
+        return true;
+    }
+    return false;
+}
+
+void ADIClearTooltips() {
+    g_tooltipRegistry.clear();
+}
+
+void ADISetTooltipDelay(float delaySeconds) {
+    g_tooltipDelaySeconds = delaySeconds;
 }
 
 void ADISpinner(const char *label, float radius, int thickness, ImU32 color) {

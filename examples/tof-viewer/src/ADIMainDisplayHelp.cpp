@@ -23,6 +23,7 @@
  */
 
 #include "ADIMainWindow.h"
+#include "ADIImGUIExtensions.h"
 #include "imgui_md.h"
 #include <aditof/log.h>
 
@@ -102,6 +103,7 @@ void ADIMainWindow::DisplayHelp() {
 
         if (ImGui::Button("Close"))
             ImGui::CloseCurrentPopup();
+        ImGuiExtensions::ADIShowTooltipFor("HelpClose");
 
         static help_markdown s_printer;
         s_printer.print(help_content.c_str(),
