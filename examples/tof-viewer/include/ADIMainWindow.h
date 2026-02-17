@@ -570,6 +570,8 @@ class ADIMainWindow {
     bool m_stop_pending = false;
     int m_stop_pending_frames = 0;
     std::string m_stop_filepath;
+    bool m_capture_pending = false;
+    int m_capture_pending_frames = 0;
     std::string m_working_label = "Working...";
     void GetYawPitchRoll(float &yaw, float &pitch, float &roll);
 

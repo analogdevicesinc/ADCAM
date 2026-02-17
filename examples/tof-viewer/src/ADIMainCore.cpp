@@ -648,8 +648,8 @@ void ADIMainWindow::Render() {
         }
 
         if (getIsWorking()) {
-            const float radius = 10.0f;
-            const float thickness = 2.0f;
+            const float radius = 20.0f;
+            const float thickness = 4.0f;
             const float padding = 12.0f;
             const char *label = getWorkingLabel().empty()
                                     ? "Working..."
@@ -817,6 +817,22 @@ void ADIMainWindow::Render() {
             CameraStop();
 
             m_stop_pending = false;
+            setIsWorking(false);
+        }
+
+        if (m_capture_pending) {
+            if (m_capture_pending_frames > 0) {
+                --m_capture_pending_frames;
+                continue;
+            }
+
+            // Keep spinner active while saving all frames
+            // SaveAllFramesUpdate() will clear m_base_file_name when done
+            if (!m_base_file_name.empty()) {
+                continue;
+            }
+
+            m_capture_pending = false;
             setIsWorking(false);
         }
 
