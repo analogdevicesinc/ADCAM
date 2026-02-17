@@ -204,12 +204,14 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             if (ImGuiExtensions::ADIButton("Load Config", true)) {
                 ShowLoadAdsdParamsMenu();
             }
+            ImGuiExtensions::ADIShowTooltipFor("ControlLoadConfig");
 
             ImGui::SameLine(0.0f, 10.0f);
 
             if (ImGuiExtensions::ADIButton("Save Config", true)) {
                 ShowSaveAdsdParamsMenu();
             }
+            ImGuiExtensions::ADIShowTooltipFor("ControlSaveConfig");
             NewLine(5.0f);
             NewLine(5.0f);
 
@@ -263,6 +265,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                     }
                 }
             }
+            ImGuiExtensions::ADIShowTooltipFor("ControlRecord");
 
             ImGui::SameLine(0.0f, 10.0f);
 
@@ -282,6 +285,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                 ImGui::End();
                 return;
             }
+            ImGuiExtensions::ADIShowTooltipFor("ControlStop");
 
             ImGui::SameLine(0.0f, 10.0f);
 
@@ -293,8 +297,10 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             DrawBarLabel("Control");
 
             ImGui::Toggle("Save All Frames", &m_offline_save_all_frames);
+            ImGuiExtensions::ADIShowTooltipFor("ControlSaveAllFrames");
             ImGui::NewLine();
             cameraButton(m_base_file_name);
+            ImGuiExtensions::ADIShowTooltipFor("ControlCapture");
 
             ImGui::SameLine(0.0f, 10.0f);
 
@@ -330,6 +336,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                 m_offline_change_frame = true;
                 m_off_line_frame_index = 0;
             }
+            ImGuiExtensions::ADIShowTooltipFor("ControlJumpToStart");
 
             ImGui::SameLine(0.0f, 10.0f);
 
@@ -469,6 +476,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                 m_off_line_frame_index = max_frame_count - 1;
                 m_offline_change_frame = true;
             }
+            ImGuiExtensions::ADIShowTooltipFor("ControlJumpToEnd");
 
             ImGui::SameLine(0.0f, 10.0f);
 
@@ -486,12 +494,14 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                 ImGui::End();
                 return;
             }
+            ImGuiExtensions::ADIShowTooltipFor("ControlStop");
 
             NewLine(5.0f);
             if (ImGui::SliderInt("Frame #", (int *)&m_off_line_frame_index, 0,
                                  max_frame_count - 1, "#: %d")) {
                 m_offline_change_frame = true;
             }
+            ImGuiExtensions::ADIShowTooltipFor("ControlFrameSlider");
         }
 
         NewLine(5.0f);
@@ -499,6 +509,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
         DrawBarLabel("Rotate");
         NewLine(5.0f);
         bool rotate = ImGui::Button("+");
+        ImGuiExtensions::ADIShowTooltipFor("ControlRotatePlus");
         ImGui::SameLine();
         if (rotate) {
             rotationangleradians += M_PI / 2;
@@ -509,6 +520,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             }
         }
         ImGui::Text("%i", rotationangledegrees);
+        ImGuiExtensions::ADIShowTooltipFor("ControlRotationAngle");
         NewLine(5.0f);
 
         if (haveXYZ) {
@@ -517,6 +529,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             if (ImGuiExtensions::ADIButton("Reset", true)) {
                 PointCloudReset();
             }
+            ImGuiExtensions::ADIShowTooltipFor("ControlPCReset");
 
             // Temporarily disable point size adjustment given that
             //  point size can impact performance negatively on some systems
@@ -534,14 +547,17 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             ImGui::RadioButton("Depth Colour", selected == 0);
             if (ImGui::IsItemClicked())
                 selected = 0;
+            ImGuiExtensions::ADIShowTooltipFor("ControlPCDepthColor");
             if (haveAB) {
                 ImGui::RadioButton("AB Colour", selected == 1);
                 if (ImGui::IsItemClicked())
                     selected = 1;
+                ImGuiExtensions::ADIShowTooltipFor("ControlPCABColor");
             }
             ImGui::RadioButton("Solid Colour", selected == 2);
             if (ImGui::IsItemClicked())
                 selected = 2;
+            ImGuiExtensions::ADIShowTooltipFor("ControlPCSolidColor");
 
             m_view_instance->setPointCloudColour(selected);
 
@@ -555,6 +571,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             bool autoScale = m_view_instance->getAutoScale();
 
             ImGui::Checkbox("Auto-scale", &autoScale);
+            ImGuiExtensions::ADIShowTooltipFor("ControlABAutoScale");
             if (autoScale == false) {
                 logImage = false;
             }
@@ -564,6 +581,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                 ImGui::BeginDisabled();
             }
             ImGui::Checkbox("Log Image", &logImage);
+            ImGuiExtensions::ADIShowTooltipFor("ControlABLogImage");
             if (autoScale == false) {
                 ImGui::EndDisabled();
             }
@@ -594,6 +612,7 @@ void ADIMainWindow::IniParamWarn(std::string variable, std::string validVal) {
         if (ImGui::Button("OK")) {
             ImGui::CloseCurrentPopup();
         }
+        ImGuiExtensions::ADIShowTooltipFor("ModalOK");
 
         ImGui::EndPopup(); // Required
     }
@@ -656,18 +675,29 @@ void ADIMainWindow::ShowIniWindow(bool showModify) {
     ImGui::PushItemWidth(140 * m_dpi_scale_factor);
 
     EntryInt32_t("abThreshMin", abThreshMin, 0, 65535);
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniAbThreshMin");
     EntryInt32_t("confThresh", confThresh, 0, 255);
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniConfThresh");
     EntryInt32_t("radialThreshMin", radialThreshMin, 0,
                  65535); // TODO: compare min and max relative sizes
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniRadialThreshMin");
     EntryInt32_t("radialThreshMax", radialThreshMax, 0, 65535);
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniRadialThreshMax");
     ImGui::Checkbox("jblfApplyFlag", &jblfApplyFlag);
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfApplyFlag");
     EntryInt32_t("jblfWindowSize", jblfWindowSize, 3,
                  7); // TODO: Make this a drop down
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfWindowSize");
     EntryInt32_t("jblfGaussianSigma", jblfGaussianSigma, 0, 65535);
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfGaussianSigma");
     EntryInt32_t("jblfExponentialTerm", jblfExponentialTerm, 0, 255);
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfExponentialTerm");
     EntryInt32_t("jblfMaxEdge", jblfMaxEdge, 0, 64);
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfMaxEdge");
     EntryInt32_t("jblfABThreshold", jblfABThreshold, 0, 131071);
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfABThreshold");
     EntryInt32_t("fps", fps, 0, 60);
+    ImGuiExtensions::ADIShowTooltipFor("ControlIniFps");
 
     // modify ini params
     m_modified_ini_params["abSumThresh"] =
@@ -698,6 +728,7 @@ void ADIMainWindow::ShowIniWindow(bool showModify) {
                 m_ini_params.clear();
             }
         }
+        ImGuiExtensions::ADIShowTooltipFor("ControlIniResetParameters");
 
         if (ImGui::Button("Modify") && !getIsWorking()) {
             setWorkingLabel("Applying parameters...");
@@ -705,5 +736,6 @@ void ADIMainWindow::ShowIniWindow(bool showModify) {
             m_modify_pending = true;
             m_modify_pending_frames = 1;
         }
+        ImGuiExtensions::ADIShowTooltipFor("ControlIniModify");
     }
 }

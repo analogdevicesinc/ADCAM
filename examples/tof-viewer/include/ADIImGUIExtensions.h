@@ -264,6 +264,20 @@ void ADIVText(const char *str);
 //
 void ADIShowTooltip(const char *msg, bool show = true);
 
+// Register a tooltip for a specific control name
+// This allows centralized tooltip management
+void ADIRegisterTooltip(const char *controlName, const char *tooltipText);
+
+// Show tooltip for the last drawn item by looking up the control name
+// Returns true if a tooltip was found and displayed
+bool ADIShowTooltipFor(const char *controlName);
+
+// Clear all registered tooltips
+void ADIClearTooltips();
+
+// Set the delay (in seconds) before tooltips appear when hovering
+void ADISetTooltipDelay(float delaySeconds);
+
 // Draws a lightweight wait spinner at the current cursor position
 void ADISpinner(const char *label, float radius, int thickness, ImU32 color);
 
