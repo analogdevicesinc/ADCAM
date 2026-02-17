@@ -28,12 +28,90 @@ const char filter[] = "Bin Files (*.bin)\0*.bin*\0All Files (*.*)\0*.*\0";
 std::string customFilter(filter, sizeof(filter));
 std::vector<std::string> customFilters = {"bin"};
 
+// Include necessary headers for path resolution
 #ifdef _WIN32
-
 #include <codecvt>
 #include <windows.h>
-
 #include <Commdlg.h>
+#define PATH_MAX MAX_PATH
+#elif defined(__APPLE__) && defined(__MACH__)
+#include <mach-o/dyld.h>
+#include <sys/syslimits.h>
+#include <climits>
+#elif defined(linux) || defined(__linux) || defined(__linux__)
+#include <climits>
+#include <unistd.h>
+#endif
+
+// Shared static variable for dialog path tracking
+static std::string& getLastUsedPathRef() {
+    static std::string lastUsedPath;
+    return lastUsedPath;
+}
+
+// Helper function to get and remember the dialog starting path
+static std::string getDialogStartPath() {
+    static bool isFirstCall = true;
+    std::string& lastUsedPath = getLastUsedPathRef();
+    
+    if (isFirstCall) {
+        isFirstCall = false;
+        // Get executable directory on first call
+#ifdef _WIN32
+        char exePath[PATH_MAX];
+        if (GetModuleFileNameA(NULL, exePath, PATH_MAX)) {
+            std::string fullPath(exePath);
+            size_t pos = fullPath.find_last_of("\\\\");
+            if (pos != std::string::npos) {
+                lastUsedPath = fullPath.substr(0, pos);
+            }
+        }
+#elif defined(__APPLE__) && defined(__MACH__)
+        char exePath[PATH_MAX];
+        uint32_t size = sizeof(exePath);
+        if (_NSGetExecutablePath(exePath, &size) == 0) {
+            char realPath[PATH_MAX];
+            if (realpath(exePath, realPath)) {
+                std::string fullPath(realPath);
+                size_t pos = fullPath.find_last_of("/");
+                if (pos != std::string::npos) {
+                    lastUsedPath = fullPath.substr(0, pos);
+                }
+            }
+        }
+#elif defined(linux) || defined(__linux) || defined(__linux__)
+        char exePath[PATH_MAX];
+        ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+        if (len != -1) {
+            exePath[len] = '\0';
+            std::string fullPath(exePath);
+            size_t pos = fullPath.find_last_of("/");
+            if (pos != std::string::npos) {
+                lastUsedPath = fullPath.substr(0, pos);
+            }
+        }
+#endif
+    }
+    
+    return lastUsedPath;
+}
+
+// Helper function to update the last used path from a file path
+static void updateLastUsedPath(const std::string& filePath) {
+    std::string& lastUsedPath = getLastUsedPathRef();
+    if (!filePath.empty()) {
+#ifdef _WIN32
+        size_t pos = filePath.find_last_of("\\\\");
+#else
+        size_t pos = filePath.find_last_of("/");
+#endif
+        if (pos != std::string::npos) {
+            lastUsedPath = filePath.substr(0, pos);
+        }
+    }
+}
+
+#ifdef _WIN32
 
 using namespace std;
 
@@ -50,12 +128,13 @@ using namespace std;
 #include <iostream>
 #include <string>
 #include <vector>
-#include <windows.h>
 
 std::string openADIFileName(const char *filter, void *owner, int &FilterIndex) {
     // Initialize variables
     OPENFILENAME ofn = {0};
     char fileName[MAX_PATH] = "";
+    std::string startPath = getDialogStartPath();
+    
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = reinterpret_cast<HWND>(owner);
     ofn.lpstrFilter = filter; // Filter string
@@ -63,11 +142,18 @@ std::string openADIFileName(const char *filter, void *owner, int &FilterIndex) {
     ofn.nMaxFile = MAX_PATH;
     ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
     ofn.lpstrDefExt = "json"; // Default extension
+    
+    // Set initial directory if we have one
+    if (!startPath.empty()) {
+        ofn.lpstrInitialDir = startPath.c_str();
+    }
 
     // Display the dialog and get the result
     if (GetOpenFileName(&ofn)) {
         FilterIndex = ofn.nFilterIndex; // Get the selected filter index
-        return std::string(fileName);   // Return the selected file path
+        std::string result(fileName);
+        updateLastUsedPath(result);
+        return result;   // Return the selected file path
     }
 
     // If the user cancels or an error occurs
@@ -184,7 +270,6 @@ bool deleteFile(const std::string &path) {
 #include <dirent.h>
 
 namespace fs = ghc::filesystem;
-#include <sys/syslimits.h>
 #define MAX_PATH PATH_MAX
 
 extern std::vector<std::string>
@@ -231,9 +316,15 @@ std::string openADIFileName(const char *filter, void *owner, int &FilterIndex) {
     std::vector<std::string> filters;
     std::copy(std::begin(customFilters), std::end(customFilters),
               std::back_inserter(filters));
-    fs::path curPath = fs::current_path();
+    
+    // Use remembered path instead of current working directory
+    std::string startPath = getDialogStartPath();
+    if (startPath.empty()) {
+        startPath = fs::current_path().string();
+    }
+    
     std::vector<std::string> files =
-        openFileDialog("Select filename", curPath.c_str(), filters);
+        openFileDialog("Select filename", startPath.c_str(), filters);
 
     if (files.size() == 0) {
         return "";
@@ -246,6 +337,7 @@ std::string openADIFileName(const char *filter, void *owner, int &FilterIndex) {
         }
     }
     FilterIndex = 0;
+    updateLastUsedPath(files[0]);
     return files[0].substr(0,
                            files[0].find_last_of(".")); //strip file extension
 
@@ -437,14 +529,26 @@ std::string getADIFileName(void *hwndOwner, const char *customFilter,
 std::string openADIFileName(const char *filter, void *owner, int &FilterIndex) {
     FilterIndex = 0;
     const char zenityP[] = "/usr/bin/zenity";
+    
+    // Get the starting path (executable directory on first call, last used path subsequently)
+    std::string startPath = getDialogStartPath();
+    
     std::string command =
         std::string(zenityP) +
         " --file-selection --modal --title=\"Select filename\"";
+    
+    // Add filename hint with starting directory if available
+    if (!startPath.empty()) {
+        command += " --filename=\"" + startPath + "/\"";
+    }
 
     std::string filename = runZenityCommand(command);
     if (filename.empty()) {
         return "";
     }
+
+    // Update the last used path for next time
+    updateLastUsedPath(filename);
 
     // Assuming custom filter handling if necessary
     std::vector<std::string> filters(customFilters);
