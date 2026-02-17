@@ -322,6 +322,11 @@ class ADIMainWindow {
     void HandleInterruptCallback();
 
     /**
+		* @brief Initialize tooltip registry for UI controls
+		*/
+    void InitializeTooltips();
+
+    /**
 		* @brief Main Menu
 		*/
     void ShowMainMenu();
