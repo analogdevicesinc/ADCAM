@@ -139,7 +139,7 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
             }
 
             ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
+            /*ImGui::TableSetColumnIndex(0);
             ImGui::Text("Frame Rate Warning");
             ImGui::TableSetColumnIndex(1);
             if (diverging) {
@@ -151,6 +151,7 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
             }
             ImGui::Text("%s", diverging ? "Too High" : "Good");
             ImGui::PopStyleColor();
+            */
 
             if (camera_mode != 4) { // 4 - pcm-native
                 Metadata metadata;
