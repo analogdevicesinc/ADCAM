@@ -246,61 +246,6 @@ if int(isdisplay)==1:
     ax4.text(0.1, 0.5, metadata_text, fontsize=12, verticalalignment='center')
     subplot_idx += 1
 
-    # Point cloud visualization if XYZ is available
-    if image_xyz is not None:
-        ax5 = fig.add_subplot(2, 3, (5, 6), projection='3d')
-        
-        # Reshape XYZ data - assuming it's in format [x, y, z, x, y, z, ...]
-        # XYZ data is int16 (signed 16-bit), with each coordinate being one int16 value
-        print(f"XYZ data shape: {image_xyz.shape}, dtype: {image_xyz.dtype}")
-        
-        # Ensure data is interpreted as signed int16
-        if image_xyz.dtype != np.int16:
-            image_xyz = image_xyz.view(np.int16)
-        
-        xyz_reshaped = image_xyz.reshape(-1, 3)
-        
-        # Extract X, Y, Z coordinates
-        x = xyz_reshaped[:, 0].astype(np.int16)
-        y = xyz_reshaped[:, 1].astype(np.int16)
-        z = xyz_reshaped[:, 2].astype(np.int16)
-        
-        print(f"X range: [{x.min()}, {x.max()}], Y range: [{y.min()}, {y.max()}], Z range: [{z.min()}, {z.max()}]")
-        
-        # Filter out invalid points (z == 0)
-        valid_mask = z != 0
-        x_valid = x[valid_mask]
-        y_valid = y[valid_mask]
-        z_valid = z[valid_mask]
-        
-        # Downsample for better performance (every 10th point)
-        downsample_factor = 10
-        x_display = x_valid[::downsample_factor]
-        y_display = y_valid[::downsample_factor]
-        z_display = z_valid[::downsample_factor]
-        
-        # Create point cloud scatter plot colored by depth (Z)
-        scatter = ax5.scatter(x_display, y_display, z_display, 
-                             c=z_display, cmap='jet', 
-                             s=1, marker='.')
-        
-        ax5.set_xlabel('X')
-        ax5.set_ylabel('Y')
-        ax5.set_zlabel('Z (Depth)')
-        ax5.set_title("Point Cloud")
-        fig.colorbar(scatter, ax=ax5, shrink=0.5)
-        
-        # Set equal aspect ratio for better visualization
-        max_range = np.array([x_display.max()-x_display.min(), 
-                             y_display.max()-y_display.min(), 
-                             z_display.max()-z_display.min()]).max() / 2.0
-        mid_x = (x_display.max()+x_display.min()) * 0.5
-        mid_y = (y_display.max()+y_display.min()) * 0.5
-        mid_z = (z_display.max()+z_display.min()) * 0.5
-        ax5.set_xlim(mid_x - max_range, mid_x + max_range)
-        ax5.set_ylim(mid_y - max_range, mid_y + max_range)
-        ax5.set_zlim(mid_z - max_range, mid_z + max_range)
-
     plt.tight_layout()
     plt.show()
 else:
