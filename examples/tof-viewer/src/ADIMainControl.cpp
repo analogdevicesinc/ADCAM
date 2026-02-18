@@ -220,6 +220,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             static std::string filePath = "";
 
             cameraButton(m_base_file_name);
+            ImGuiExtensions::ADIShowTooltipFor("ControlCapture");
 
             ImGui::SameLine(0.0f, 10.0f);
 
