@@ -38,7 +38,7 @@
 static std::unordered_map<std::string, std::string> g_tooltipRegistry;
 
 // Tooltip delay in seconds (configurable)
-static float g_tooltipDelaySeconds = 3.0f;
+static float g_tooltipDelaySeconds = 1.5f;
 
 namespace {
 std::string ConvertToVerticalText(const char *str) {
