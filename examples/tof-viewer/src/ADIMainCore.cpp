@@ -227,13 +227,20 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
         return false;
     }
 
-    // Decide GL+GLSL versions
+    // Decide GL+GLSL versions based on platform
+    #ifdef NVIDIA
+    // Jetson Orin Nano supports OpenGL 3.3+, request 3.3 core profile
+    const char *glsl_version = "#version 330 core";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    #else
     // Raspberry Pi 5 doesn't support OpenGL 3.3 Core Profile, use OpenGL 3.0 with compatibility profile
     const char *glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
     // Don't request Core Profile on Raspberry Pi - use default (compatibility) profile
-    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    #endif
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
     std::string version = aditof::getKitVersion();
@@ -287,6 +294,15 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
         glfwTerminate();
         return false;
     }
+    
+    // Log actual OpenGL version that was created
+    const GLubyte *glVersion = glGetString(GL_VERSION);
+    const GLubyte *glslVersion = glGetString(GL_SHADING_LANGUAGE_VERSION);
+    fprintf(stderr, "=== OpenGL Context Information ===\n");
+    fprintf(stderr, "OpenGL version: %s\n", glVersion ? (const char *)glVersion : "Unknown");
+    fprintf(stderr, "GLSL version: %s\n", glslVersion ? (const char *)glslVersion : "Unknown");
+    fprintf(stderr, "===================================\n");
+    fflush(stderr);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
