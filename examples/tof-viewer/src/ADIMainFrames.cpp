@@ -24,6 +24,7 @@
 
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
+#include "ADIPointCloudShaders.h"
 #include "imoguizmo.hpp"
 #include "implot.h"
 #include <GLFW/glfw3.h>
@@ -591,82 +592,11 @@ void ADIMainWindow::DisplayDepthWindow(ImGuiWindowFlags overlayFlags) {
 void ADIMainWindow::InitOpenGLPointCloudTexture() {
     glEnable(GL_PROGRAM_POINT_SIZE);
 
-    // Shader with platform-specific OpenGL version support
-    // For Jetson Orin Nano: uses #version 330 core (3.3 context with core profile)
-    // For Raspberry Pi 5: uses #version 130 (3.0 context with compatibility profile - max supported by RPi GPU)
-    #ifdef NVIDIA
-    constexpr char const pointCloudVertexShader[] =
-        R"(
-                #version 330 core
-                layout (location = 0) in vec3 aPos;
-                layout (location = 1) in vec3 hsvColor;
-
-                uniform mat4 mvp; // Combined model-view-projection
-                uniform float uPointSize;
-
-                out vec4 vColor;
-
-                void main()
-                {
-                    // Flip horizontally and compute position in one step
-                    vec3 pos = vec3(-aPos.x, aPos.y, aPos.z);
-                    gl_Position = mvp * vec4(pos, 1.0);
-                    
-                    // Avoid branching - use smooth step for point size
-                    float isOrigin = step(length(pos), 0.0001);
-                    gl_PointSize = mix(uPointSize, 10.0, isOrigin);
-                    vColor = mix(vec4(hsvColor, 1.0), vec4(1.0, 1.0, 1.0, 1.0), isOrigin);
-                }
-                )";
-
-    constexpr char const pointCloudFragmentShader[] =
-        R"(
-                #version 330 core
-                in vec4 vColor;
-                out vec4 FragColor;
-                void main()
-                {
-                    FragColor = vColor;
-                }
-                )";
-    #else
-    // Raspberry Pi 5 with OpenGL 3.0 compatibility profile
-    // Use GLSL 1.30 (max supported by RPi GPU - NOT 1.50!)
-    // Legacy attribute/varying syntax for maximum compatibility
-    constexpr char const pointCloudVertexShader[] =
-        R"(
-                #version 130
-                attribute vec3 aPos;
-                attribute vec3 hsvColor;
-
-                uniform mat4 mvp; // Combined model-view-projection
-                uniform float uPointSize;
-
-                varying vec4 vColor;
-
-                void main()
-                {
-                    // Flip horizontally and compute position in one step
-                    vec3 pos = vec3(-aPos.x, aPos.y, aPos.z);
-                    gl_Position = mvp * vec4(pos, 1.0);
-                    
-                    // Avoid branching - use smooth step for point size
-                    float isOrigin = step(length(pos), 0.0001);
-                    gl_PointSize = mix(uPointSize, 10.0, isOrigin);
-                    vColor = mix(vec4(hsvColor, 1.0), vec4(1.0, 1.0, 1.0, 1.0), isOrigin);
-                }
-                )";
-
-    constexpr char const pointCloudFragmentShader[] =
-        R"(
-                #version 130
-                varying vec4 vColor;
-                void main()
-                {
-                    gl_FragColor = vColor;
-                }
-                )";
-    #endif
+    // Get platform-specific shader source code
+    // Shaders are selected based on platform (NVIDIA vs RPi) in ADIPointCloudShaders.h
+    // This keeps shader platform differences isolated in a single place
+    const char *pointCloudVertexShader = adiviewer::GetPointCloudVertexShader();
+    const char *pointCloudFragmentShader = adiviewer::GetPointCloudFragmentShader();
 
     //Build and compile our shaders with error handling
     try {

@@ -25,6 +25,7 @@
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
 #include "ADIOpenFile.h"
+#include "ADIPlatformConfig.h"
 #include "aditof/status_definitions.h"
 #include "aditof/version-kit.h"
 #include "aditof/version.h"
@@ -227,20 +228,19 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
         return false;
     }
 
-    // Decide GL+GLSL versions based on platform
-    #ifdef NVIDIA
-    // Jetson Orin Nano supports OpenGL 3.3+, request 3.3 core profile
-    const char *glsl_version = "#version 330 core";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    #else
-    // Raspberry Pi 5 doesn't support OpenGL 3.3 Core Profile, use OpenGL 3.0 with compatibility profile
-    const char *glsl_version = "#version 130";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    // Don't request Core Profile on Raspberry Pi - use default (compatibility) profile
-    #endif
+    // Get platform-specific OpenGL configuration
+    // This centralizes all platform-specific settings in one place
+    adiviewer::PlatformConfig platformConfig = adiviewer::GetCurrentPlatformConfig();
+
+    // Request appropriate OpenGL version based on platform
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, platformConfig.glVersionMajor);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, platformConfig.glVersionMinor);
+    if (platformConfig.usesCoreProfile) {
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    }
+    // Note: Not setting GLFW_OPENGL_PROFILE means compatibility profile (default)
+    
+    const char *glsl_version = platformConfig.glslVersionString;
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
     std::string version = aditof::getKitVersion();
@@ -295,12 +295,17 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
         return false;
     }
     
-    // Log actual OpenGL version that was created
+    // Log platform configuration and actual OpenGL version that was created
     const GLubyte *glVersion = glGetString(GL_VERSION);
     const GLubyte *glslVersion = glGetString(GL_SHADING_LANGUAGE_VERSION);
-    fprintf(stderr, "=== OpenGL Context Information ===\n");
-    fprintf(stderr, "OpenGL version: %s\n", glVersion ? (const char *)glVersion : "Unknown");
-    fprintf(stderr, "GLSL version: %s\n", glslVersion ? (const char *)glslVersion : "Unknown");
+    fprintf(stderr, "\n=== OpenGL Context Information ===\n");
+    fprintf(stderr, "Platform: %s\n", platformConfig.name);
+    fprintf(stderr, "Requested: OpenGL %d.%d %s\n", 
+            platformConfig.glVersionMajor, platformConfig.glVersionMinor,
+            platformConfig.usesCoreProfile ? "core" : "compatibility");
+    fprintf(stderr, "Requested GLSL: %s\n", platformConfig.glslVersionString);
+    fprintf(stderr, "Actual OpenGL version: %s\n", glVersion ? (const char *)glVersion : "Unknown");
+    fprintf(stderr, "Actual GLSL version: %s\n", glslVersion ? (const char *)glslVersion : "Unknown");
     fprintf(stderr, "===================================\n");
     fflush(stderr);
 
