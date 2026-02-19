@@ -29,11 +29,13 @@
 
 // Compile-time validation: Ensure exactly one platform is defined
 #if !defined(NVIDIA) && !defined(RPI)
-    #error "No valid platform defined! CMAKE must define either -DNVIDIA=ON or -DRPI=ON"
+#error                                                                         \
+    "No valid platform defined! CMAKE must define either -DNVIDIA=ON or -DRPI=ON"
 #endif
 
 #if defined(NVIDIA) && defined(RPI)
-    #error "Multiple platforms defined! CMAKE should only define one: -DNVIDIA=ON or -DRPI=ON (not both)"
+#error                                                                         \
+    "Multiple platforms defined! CMAKE should only define one: -DNVIDIA=ON or -DRPI=ON (not both)"
 #endif
 
 namespace adiviewer {
@@ -42,8 +44,8 @@ namespace adiviewer {
  * @brief Enum of supported platforms for OpenGL/GLSL configuration
  */
 enum class Platform {
-    JETSON_ORIN_NANO,  /**< NVIDIA Jetson Orin Nano (OpenGL 3.3+ core profile) */
-    RASPBERRY_PI_5,    /**< Raspberry Pi 5 (OpenGL 3.0 compatibility profile) */
+    JETSON_ORIN_NANO, /**< NVIDIA Jetson Orin Nano (OpenGL 3.3+ core profile) */
+    RASPBERRY_PI_5,   /**< Raspberry Pi 5 (OpenGL 3.0 compatibility profile) */
 };
 
 /**
@@ -53,12 +55,15 @@ struct PlatformConfig {
     Platform platform;
     int glVersionMajor;
     int glVersionMinor;
-    bool usesCoreProfile;           /**< true = core profile, false = compatibility profile */
+    bool
+        usesCoreProfile; /**< true = core profile, false = compatibility profile */
     int glslVersionMajor;
     int glslVersionMinor;
-    bool supportsLayoutLocation;    /**< true = supports layout(location = N) in shaders */
-    const char* glslVersionString;  /**< e.g., "#version 330 core" or "#version 130" */
-    const char* name;               /**< Human-readable platform name */
+    bool
+        supportsLayoutLocation; /**< true = supports layout(location = N) in shaders */
+    const char
+        *glslVersionString; /**< e.g., "#version 330 core" or "#version 130" */
+    const char *name;       /**< Human-readable platform name */
 };
 
 /**
@@ -71,31 +76,27 @@ struct PlatformConfig {
 inline PlatformConfig GetCurrentPlatformConfig() {
 #ifdef NVIDIA
     // Jetson Orin Nano: Modern OpenGL 3.3+ core profile
-    return PlatformConfig{
-        Platform::JETSON_ORIN_NANO,
-        3,                          // OpenGL major version
-        3,                          // OpenGL minor version
-        true,                       // uses core profile
-        3,                          // GLSL major version
-        30,                         // GLSL minor version (330 = version 3.30)
-        true,                       // supports layout(location = N)
-        "#version 330 core",
-        "Jetson Orin Nano (OpenGL 3.3 core, GLSL 330)"
-    };
+    return PlatformConfig{Platform::JETSON_ORIN_NANO,
+                          3,    // OpenGL major version
+                          3,    // OpenGL minor version
+                          true, // uses core profile
+                          3,    // GLSL major version
+                          30,   // GLSL minor version (330 = version 3.30)
+                          true, // supports layout(location = N)
+                          "#version 330 core",
+                          "Jetson Orin Nano (OpenGL 3.3 core, GLSL 330)"};
 #else // RPI
     // Raspberry Pi 5: Limited to OpenGL 3.0 compatibility profile
     // GLSL max is 1.30 (GLSL 1.50 is NOT supported by RPi GPU)
-    return PlatformConfig{
-        Platform::RASPBERRY_PI_5,
-        3,                          // OpenGL major version
-        0,                          // OpenGL minor version
-        false,                      // uses compatibility profile
-        1,                          // GLSL major version
-        30,                         // GLSL minor version (130 = version 1.30)
-        false,                      // does NOT support layout(location = N)
-        "#version 130",
-        "Raspberry Pi 5 (OpenGL 3.0 compat, GLSL 130)"
-    };
+    return PlatformConfig{Platform::RASPBERRY_PI_5,
+                          3,     // OpenGL major version
+                          0,     // OpenGL minor version
+                          false, // uses compatibility profile
+                          1,     // GLSL major version
+                          30,    // GLSL minor version (130 = version 1.30)
+                          false, // does NOT support layout(location = N)
+                          "#version 130",
+                          "Raspberry Pi 5 (OpenGL 3.0 compat, GLSL 130)"};
 #endif
 }
 
@@ -106,28 +107,37 @@ inline PlatformConfig GetCurrentPlatformConfig() {
  */
 inline PlatformConfig GetPlatformConfig(Platform platform) {
     switch (platform) {
-        case Platform::JETSON_ORIN_NANO:
-            return PlatformConfig{
-                Platform::JETSON_ORIN_NANO,
-                3, 3, true, 3, 30, true,
-                "#version 330 core",
-                "Jetson Orin Nano (OpenGL 3.3 core, GLSL 330)"
-            };
-        case Platform::RASPBERRY_PI_5:
-            return PlatformConfig{
-                Platform::RASPBERRY_PI_5,
-                3, 0, false, 1, 30, false,
-                "#version 130",
-                "Raspberry Pi 5 (OpenGL 3.0 compat, GLSL 130)"
-            };
-        default:
-            // Fallback to most conservative settings
-            return PlatformConfig{
-                Platform::RASPBERRY_PI_5,
-                3, 0, false, 1, 30, false,
-                "#version 130",
-                "Unknown/Default (OpenGL 3.0 compat, GLSL 130)"
-            };
+    case Platform::JETSON_ORIN_NANO:
+        return PlatformConfig{Platform::JETSON_ORIN_NANO,
+                              3,
+                              3,
+                              true,
+                              3,
+                              30,
+                              true,
+                              "#version 330 core",
+                              "Jetson Orin Nano (OpenGL 3.3 core, GLSL 330)"};
+    case Platform::RASPBERRY_PI_5:
+        return PlatformConfig{Platform::RASPBERRY_PI_5,
+                              3,
+                              0,
+                              false,
+                              1,
+                              30,
+                              false,
+                              "#version 130",
+                              "Raspberry Pi 5 (OpenGL 3.0 compat, GLSL 130)"};
+    default:
+        // Fallback to most conservative settings
+        return PlatformConfig{Platform::RASPBERRY_PI_5,
+                              3,
+                              0,
+                              false,
+                              1,
+                              30,
+                              false,
+                              "#version 130",
+                              "Unknown/Default (OpenGL 3.0 compat, GLSL 130)"};
     }
 }
 

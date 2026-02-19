@@ -30,21 +30,21 @@ std::vector<std::string> customFilters = {"bin"};
 
 // Include necessary headers for path resolution
 #ifdef _WIN32
+#include <Commdlg.h>
 #include <codecvt>
 #include <windows.h>
-#include <Commdlg.h>
 #define PATH_MAX MAX_PATH
 #elif defined(__APPLE__) && defined(__MACH__)
+#include <climits>
 #include <mach-o/dyld.h>
 #include <sys/syslimits.h>
-#include <climits>
 #elif defined(linux) || defined(__linux) || defined(__linux__)
 #include <climits>
 #include <unistd.h>
 #endif
 
 // Shared static variable for dialog path tracking
-static std::string& getLastUsedPathRef() {
+static std::string &getLastUsedPathRef() {
     static std::string lastUsedPath;
     return lastUsedPath;
 }
@@ -52,8 +52,8 @@ static std::string& getLastUsedPathRef() {
 // Helper function to get and remember the dialog starting path
 static std::string getDialogStartPath() {
     static bool isFirstCall = true;
-    std::string& lastUsedPath = getLastUsedPathRef();
-    
+    std::string &lastUsedPath = getLastUsedPathRef();
+
     if (isFirstCall) {
         isFirstCall = false;
         // Get executable directory on first call
@@ -92,13 +92,13 @@ static std::string getDialogStartPath() {
         }
 #endif
     }
-    
+
     return lastUsedPath;
 }
 
 // Helper function to update the last used path from a file path
-static void updateLastUsedPath(const std::string& filePath) {
-    std::string& lastUsedPath = getLastUsedPathRef();
+static void updateLastUsedPath(const std::string &filePath) {
+    std::string &lastUsedPath = getLastUsedPathRef();
     if (!filePath.empty()) {
 #ifdef _WIN32
         size_t pos = filePath.find_last_of("\\\\");
@@ -134,7 +134,7 @@ std::string openADIFileName(const char *filter, void *owner, int &FilterIndex) {
     OPENFILENAME ofn = {0};
     char fileName[MAX_PATH] = "";
     std::string startPath = getDialogStartPath();
-    
+
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = reinterpret_cast<HWND>(owner);
     ofn.lpstrFilter = filter; // Filter string
@@ -142,7 +142,7 @@ std::string openADIFileName(const char *filter, void *owner, int &FilterIndex) {
     ofn.nMaxFile = MAX_PATH;
     ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
     ofn.lpstrDefExt = "json"; // Default extension
-    
+
     // Set initial directory if we have one
     if (!startPath.empty()) {
         ofn.lpstrInitialDir = startPath.c_str();
@@ -153,7 +153,7 @@ std::string openADIFileName(const char *filter, void *owner, int &FilterIndex) {
         FilterIndex = ofn.nFilterIndex; // Get the selected filter index
         std::string result(fileName);
         updateLastUsedPath(result);
-        return result;   // Return the selected file path
+        return result; // Return the selected file path
     }
 
     // If the user cancels or an error occurs
@@ -316,13 +316,13 @@ std::string openADIFileName(const char *filter, void *owner, int &FilterIndex) {
     std::vector<std::string> filters;
     std::copy(std::begin(customFilters), std::end(customFilters),
               std::back_inserter(filters));
-    
+
     // Use remembered path instead of current working directory
     std::string startPath = getDialogStartPath();
     if (startPath.empty()) {
         startPath = fs::current_path().string();
     }
-    
+
     std::vector<std::string> files =
         openFileDialog("Select filename", startPath.c_str(), filters);
 
@@ -529,14 +529,14 @@ std::string getADIFileName(void *hwndOwner, const char *customFilter,
 std::string openADIFileName(const char *filter, void *owner, int &FilterIndex) {
     FilterIndex = 0;
     const char zenityP[] = "/usr/bin/zenity";
-    
+
     // Get the starting path (executable directory on first call, last used path subsequently)
     std::string startPath = getDialogStartPath();
-    
+
     std::string command =
         std::string(zenityP) +
         " --file-selection --modal --title=\"Select filename\"";
-    
+
     // Add filename hint with starting directory if available
     if (!startPath.empty()) {
         command += " --filename=\"" + startPath + "/\"";

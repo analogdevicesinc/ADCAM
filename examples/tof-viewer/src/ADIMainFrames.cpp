@@ -596,15 +596,17 @@ void ADIMainWindow::InitOpenGLPointCloudTexture() {
     // Shaders are selected based on platform (NVIDIA vs RPi) in ADIPointCloudShaders.h
     // This keeps shader platform differences isolated in a single place
     const char *pointCloudVertexShader = adiviewer::GetPointCloudVertexShader();
-    const char *pointCloudFragmentShader = adiviewer::GetPointCloudFragmentShader();
+    const char *pointCloudFragmentShader =
+        adiviewer::GetPointCloudFragmentShader();
 
     //Build and compile our shaders with error handling
     try {
         adiviewer::ADIShader vertexShader(
             GL_VERTEX_SHADER,
             pointCloudVertexShader); //Our vertices (whole image)
-        adiviewer::ADIShader fragmentShader(GL_FRAGMENT_SHADER,
-                                            pointCloudFragmentShader); //Color map
+        adiviewer::ADIShader fragmentShader(
+            GL_FRAGMENT_SHADER,
+            pointCloudFragmentShader); //Color map
         m_view_instance->pcShader.CreateProgram();
         m_view_instance->pcShader.AttachShader(std::move(vertexShader));
         m_view_instance->pcShader.AttachShader(std::move(fragmentShader));

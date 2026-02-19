@@ -511,18 +511,16 @@ void ADIMainWindow::RefreshDevices() {
         if (!m_skip_network_cameras) {
             // Add network camera - reuse the same list instead of calling getCameraList again
             std::vector<std::shared_ptr<aditof::Camera>> networkCameras;
-            m_system.getCameraList(networkCameras,
-                                    m_cameraIp + m_ip_suffix);
+            m_system.getCameraList(networkCameras, m_cameraIp + m_ip_suffix);
             // Append network cameras to the existing list
-            m_cameras_list.insert(m_cameras_list.end(),
-                                    networkCameras.begin(),
-                                    networkCameras.end());
+            m_cameras_list.insert(m_cameras_list.end(), networkCameras.begin(),
+                                  networkCameras.end());
         }
 
         // Build the connected devices list once after collecting all cameras
         for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
             m_connected_devices.emplace_back(ix, "ToF Camera " +
-                                                        std::to_string(ix));
+                                                     std::to_string(ix));
         }
     }
 

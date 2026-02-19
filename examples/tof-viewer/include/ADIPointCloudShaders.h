@@ -125,7 +125,7 @@ constexpr char const POINT_CLOUD_FRAGMENT_SHADER_RPI[] = R"(
  * @note Platform validation is done at compile-time in ADIPlatformConfig.h
  *       This function is guaranteed to return a valid shader for the configured platform.
  */
-inline const char* GetPointCloudVertexShader() {
+inline const char *GetPointCloudVertexShader() {
 #ifdef NVIDIA
     return POINT_CLOUD_VERTEX_SHADER_JETSON;
 #else // RPI
@@ -140,7 +140,7 @@ inline const char* GetPointCloudVertexShader() {
  * @note Platform validation is done at compile-time in ADIPlatformConfig.h
  *       This function is guaranteed to return a valid shader for the configured platform.
  */
-inline const char* GetPointCloudFragmentShader() {
+inline const char *GetPointCloudFragmentShader() {
 #ifdef NVIDIA
     return POINT_CLOUD_FRAGMENT_SHADER_JETSON;
 #else // RPI
@@ -153,7 +153,8 @@ inline const char* GetPointCloudFragmentShader() {
  * @param vertexShader Output pointer to vertex shader source
  * @param fragmentShader Output pointer to fragment shader source
  */
-inline void GetPointCloudShaders(const char*& vertexShader, const char*& fragmentShader) {
+inline void GetPointCloudShaders(const char *&vertexShader,
+                                 const char *&fragmentShader) {
     vertexShader = GetPointCloudVertexShader();
     fragmentShader = GetPointCloudFragmentShader();
 }
