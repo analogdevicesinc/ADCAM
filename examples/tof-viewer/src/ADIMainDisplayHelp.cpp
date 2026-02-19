@@ -24,6 +24,7 @@
 
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
+#include "ADIImGUIExtensions.h"
 #include "imgui_md.h"
 #include <aditof/log.h>
 
