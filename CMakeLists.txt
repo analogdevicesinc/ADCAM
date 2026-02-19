@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 project(adi_tof_project)
 
 ####################### Disable In-source builds ##############################
