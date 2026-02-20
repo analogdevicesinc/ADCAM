@@ -29,8 +29,8 @@
 #include <cmath>
 #include <functional>
 #include <sstream>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 #include "imgui.h"
 
@@ -107,7 +107,8 @@ void ADIVText(const char *s) {
 void ADIShowTooltip(const char *msg, bool show) {
     if (show && ImGui::IsItemHovered()) {
         // Check if item has been hovered for the required delay time
-        if (ImGui::GetCurrentContext()->HoveredIdTimer >= g_tooltipDelaySeconds) {
+        if (ImGui::GetCurrentContext()->HoveredIdTimer >=
+            g_tooltipDelaySeconds) {
             ImGui::BeginTooltip();
             ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
             ImGui::TextUnformatted(msg);
@@ -127,7 +128,7 @@ bool ADIShowTooltipFor(const char *controlName) {
     if (!controlName) {
         return false;
     }
-    
+
     auto it = g_tooltipRegistry.find(controlName);
     if (it != g_tooltipRegistry.end()) {
         ADIShowTooltip(it->second.c_str());
@@ -136,9 +137,7 @@ bool ADIShowTooltipFor(const char *controlName) {
     return false;
 }
 
-void ADIClearTooltips() {
-    g_tooltipRegistry.clear();
-}
+void ADIClearTooltips() { g_tooltipRegistry.clear(); }
 
 void ADISetTooltipDelay(float delaySeconds) {
     g_tooltipDelaySeconds = delaySeconds;

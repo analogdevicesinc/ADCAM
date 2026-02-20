@@ -24,6 +24,7 @@
 
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
+#include "ADIPointCloudShaders.h"
 #include "imoguizmo.hpp"
 #include "implot.h"
 #include <GLFW/glfw3.h>
@@ -591,52 +592,47 @@ void ADIMainWindow::DisplayDepthWindow(ImGuiWindowFlags overlayFlags) {
 void ADIMainWindow::InitOpenGLPointCloudTexture() {
     glEnable(GL_PROGRAM_POINT_SIZE);
 
-    // Optimized shader for Jetson Orin Nano - reduced branching and operations
-    constexpr char const pointCloudVertexShader[] =
-        R"(
-				#version 330 core
-				layout (location = 0) in vec3 aPos;
-				layout (location = 1) in vec3 hsvColor;
+    // Get platform-specific shader source code
+    // Shaders are selected based on platform (NVIDIA vs RPi) in ADIPointCloudShaders.h
+    // This keeps shader platform differences isolated in a single place
+    const char *pointCloudVertexShader = adiviewer::GetPointCloudVertexShader();
+    const char *pointCloudFragmentShader =
+        adiviewer::GetPointCloudFragmentShader();
 
-				uniform mat4 mvp; // Combined model-view-projection
-                uniform float uPointSize;
-
-				out vec4 vColor;
-
-				void main()
-				{
-                    // Flip horizontally and compute position in one step
-                    vec3 pos = vec3(-aPos.x, aPos.y, aPos.z);
-                    gl_Position = mvp * vec4(pos, 1.0);
-                    
-                    // Avoid branching - use smooth step for point size
-                    float isOrigin = step(length(pos), 0.0001);
-                    gl_PointSize = mix(uPointSize, 10.0, isOrigin);
-                    vColor = mix(vec4(hsvColor, 1.0), vec4(1.0, 1.0, 1.0, 1.0), isOrigin);
-				}
-				)";
-
-    constexpr char const pointCloudFragmentShader[] =
-        R"(
-				#version 330 core
-				out vec4 FragColor;
-				in vec4 vColor;
-				void main()
-				{
-					FragColor = vColor;
-				}
-				)";
-
-    //Build and compile our shaders
-    adiviewer::ADIShader vertexShader(
-        GL_VERTEX_SHADER,
-        pointCloudVertexShader); //Our vertices (whole image)
-    adiviewer::ADIShader fragmentShader(GL_FRAGMENT_SHADER,
-                                        pointCloudFragmentShader); //Color map
-    m_view_instance->pcShader.CreateProgram();
-    m_view_instance->pcShader.AttachShader(std::move(vertexShader));
-    m_view_instance->pcShader.AttachShader(std::move(fragmentShader));
-    m_view_instance->pcShader.Link();
+    //Build and compile our shaders with error handling
+    try {
+        adiviewer::ADIShader vertexShader(
+            GL_VERTEX_SHADER,
+            pointCloudVertexShader); //Our vertices (whole image)
+        adiviewer::ADIShader fragmentShader(
+            GL_FRAGMENT_SHADER,
+            pointCloudFragmentShader); //Color map
+        m_view_instance->pcShader.CreateProgram();
+        m_view_instance->pcShader.AttachShader(std::move(vertexShader));
+        m_view_instance->pcShader.AttachShader(std::move(fragmentShader));
+        m_view_instance->pcShader.Link();
+    } catch (const std::logic_error &e) {
+        LOG(ERROR) << "Point cloud shader compilation failed: " << e.what();
+        fprintf(stderr, "\n===== CRITICAL ERROR =====\n");
+        fprintf(stderr, "Point cloud shader compilation FAILED!\n");
+        fprintf(stderr, "Shader error details:\n%s\n", e.what());
+        fprintf(stderr, "This may indicate:\n");
+        fprintf(stderr, "  - Incompatible OpenGL version\n");
+        fprintf(stderr, "  - Missing or outdated graphics drivers\n");
+        fprintf(stderr, "  - Insufficient GPU capabilities\n");
+        fprintf(stderr, "Point cloud will NOT be visible\n");
+        fprintf(stderr, "=========================\n\n");
+        fflush(stderr);
+        return; // Return gracefully on shader compilation failure
+    } catch (const std::exception &e) {
+        LOG(ERROR) << "Unexpected shader compilation error: " << e.what();
+        fprintf(stderr, "\n===== CRITICAL ERROR =====\n");
+        fprintf(stderr, "Unexpected shader compilation error: %s\n", e.what());
+        fprintf(stderr, "Point cloud will NOT be visible\n");
+        fprintf(stderr, "=========================\n\n");
+        fflush(stderr);
+        return; // Return gracefully on unexpected error
+    }
 
     //Get uniform locations - use combined MVP for better performance
     m_view_instance->modelIndex =

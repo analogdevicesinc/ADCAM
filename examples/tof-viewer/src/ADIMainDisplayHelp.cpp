@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+#include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
 #include "ADIImGUIExtensions.h"
 #include "imgui_md.h"

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 project(adi_tof_project)
 
 ####################### Disable In-source builds ##############################
@@ -21,11 +21,20 @@ option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
 option(WITH_NETWORK "Build network interface?" OFF)
+set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO", "NVIDIA", "RPI" or "HOST"
 
-################################# FIXED #######################################
+################################# PLATFORM DETECTION ###############################
 
-### Note: Turn the following off when building on the host
-option(NVIDIA "Set to ON when building on NVIDIA" ON)
+set_property(CACHE WITH_PLATFORM PROPERTY STRINGS "AUTO" "NVIDIA" "RPI" "HOST")
+# Map WITH_PLATFORM to PLATFORM_CHOICE for platform detection
+set(PLATFORM_CHOICE "${WITH_PLATFORM}")
+
+# Initialize platform variables as cache to prevent libaditof from overriding
+set(NVIDIA OFF CACHE BOOL "Set to ON when building on NVIDIA" FORCE)
+set(RPI OFF CACHE BOOL "Set to ON when building on Raspberry Pi" FORCE)
+
+# Include platform detection
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/platform_detection.cmake)
 
 if (WITH_NETWORK)
         option(WITH_SUBMODULES "Use submodules to build the library" ON)
@@ -34,11 +43,12 @@ else()
         option(WITH_SUBMODULES "Use submodules to build the library" OFF)
         option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" OFF)
 endif()
-option(WITH_OFFLINE "Build offline interface?" ON)
-option(WITH_COMMAND_LINE_TOOLS "Build with command line tools?" ON)
 option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" OFF)
 option(CI_BUILD "Build for CI" OFF)
+option(WITH_OFFLINE "Build offline interface?" ON)
+option(WITH_COMMAND_LINE_TOOLS "Build with command line tools?" ON)
 set(SOM_TYPE "Dual" CACHE STRING "Which SoM SDK is building for?")
+
 ################################## Git ########################################
 include(FindGit OPTIONAL)
 if (GIT_FOUND)
@@ -90,7 +100,7 @@ set(LIBADITOF_SUBMODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libaditof)
 
 # Check whether we configure thgs for remote or we're on target
 set(SELECTED_PLATFORMS 0)
-set(ALL_PLATFORMS NVIDIA)
+set(ALL_PLATFORMS NVIDIA RPI)
 foreach(platform IN LISTS ALL_PLATFORMS)
     if(${platform})
         math(EXPR SELECTED_PLATFORMS "${SELECTED_PLATFORMS}+1")
@@ -128,6 +138,8 @@ endif()
 # Add the device definition
 if(NVIDIA)
      add_definitions(-DNVIDIA)
+elseif(RPI)
+     add_definitions(-DRPI)
 endif()
 
 set(RESOURCES_DIR "${CMAKE_BINARY_DIR}/resources")
