@@ -217,7 +217,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
 
             DrawBarLabel("Control");
 
-            static std::string filePath = "";
+            static std::string filePath = m_recording_path;
 
             cameraButton(m_base_file_name);
             ImGuiExtensions::ADIShowTooltipFor("ControlCapture");
