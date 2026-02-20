@@ -8,12 +8,10 @@
 
 This repository contains the source code for the ADI **ADCAM Camera Kit**, which is built around the **ADTF3175D Time-of-Flight (ToF) Mega-Pixel imager** and the **ADSD3500 Depth ISP**.  
 
-The ADCAM hardware interfaces with the **NVIDIA Jetson Orin Nano Developer Kit** over **MIPI CSI-2** for image data, and uses **USB-C** solely for power. Unlike the earlier **ADTF3175D Evaluation Kit**, the ADCAM introduces two key improvements:
+The ADCAM hardware interfaces with the **NVIDIA Jetson Orin Nano Developer Kit** or the **Raspberry Pi 5** over **MIPI CSI-2** for image data, and uses **USB-C** solely for power. Unlike the earlier **ADTF3175D Evaluation Kit**, the ADCAM introduces two key improvements:
 
 * **Dual ADSD3500 Depth ISPs**  
   Depth computation is fully handled by hardware, eliminating the need for proprietary SoC-based depth processing libraries. The only exception is the radial-to-XYZ (point cloud generation) step, which is implemented in the open-source [`libaditof`](https://github.com/analogdevicesinc/libaditof/tree/main) library.
-* **Optimized for Jetson Orin Nano**  
-  Designed specifically to operate on the NVIDIA Jetson Orin Nano Developer Kit platform.
 
 This repository depends on the following components:
 
