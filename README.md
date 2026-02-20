@@ -31,6 +31,10 @@ This repository depends on the following components:
 
 ---
 
+## Quick Start Guide
+
+See the latest **Quick Start Guide** for details on getting the system and hardware ready for any development use.
+
 ## Supported Platforms
 
 * [NVIDIA Jetson Orin Nano Developer Kit](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit)
@@ -40,7 +44,6 @@ This repository depends on the following components:
 
 * NVIDIA Jetson Orin Nano Developer Kit: JetPack 6.2.1
 * Raspberry Pi 5: Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
-
 
 ## Examples
 | Example | Language | Description |
