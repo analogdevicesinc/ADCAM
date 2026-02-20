@@ -32,6 +32,7 @@ if (NOT WIN32)
         foreach(ex ${PY_EXAMPLES})
             add_custom_command(
                 TARGET copy_so_to_python_examples
+                POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E make_directory
                         "${CMAKE_CURRENT_BINARY_DIR}/${ex}"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different

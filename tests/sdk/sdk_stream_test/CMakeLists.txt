@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.10)
 project(sdk_stream_test)
 
 add_executable(${PROJECT_NAME} main.cpp)

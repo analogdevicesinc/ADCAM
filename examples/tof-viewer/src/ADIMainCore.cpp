@@ -25,6 +25,7 @@
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
 #include "ADIOpenFile.h"
+#include "ADIPlatformConfig.h"
 #include "aditof/status_definitions.h"
 #include "aditof/version-kit.h"
 #include "aditof/version.h"
@@ -110,7 +111,7 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
 #ifdef _WIN32
     wholeLogPath += "\\"; // Ensure the path ends with a slash
 #elif __linux__
-    wholeLogPath += "/";   // Ensure the path ends with a slash
+    wholeLogPath += "/"; // Ensure the path ends with a slash
 #endif
     wholeLogPath += "log_" + std::string(timebuff) + ".txt";
 
@@ -363,14 +364,17 @@ ADIMainWindow::~ADIMainWindow() {
         m_buffers_initialized = false;
     }
 
-    // imGUI disposing
-    //ImGui::GetIO().IniFilename = NULL;
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImPlot::DestroyContext();
-    ImGui::DestroyContext();
+    // imGUI disposing - only if successfully initialized
+    if (m_imgui_initialized) {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImPlot::DestroyContext();
+        ImGui::DestroyContext();
+    }
 
-    glfwDestroyWindow(window);
+    if (window) {
+        glfwDestroyWindow(window);
+    }
     glfwTerminate();
     if (initCameraWorker.joinable()) {
         initCameraWorker.join();
@@ -400,13 +404,20 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
         return false;
     }
 
-    // Decide GL+GLSL versions
-    // GL 3.0 + GLSL 130
-    const char *glsl_version = "#version 130";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 3.2+
-    // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
+    // Get platform-specific OpenGL configuration
+    // This centralizes all platform-specific settings in one place
+    adiviewer::PlatformConfig platformConfig =
+        adiviewer::GetCurrentPlatformConfig();
+
+    // Request appropriate OpenGL version based on platform
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, platformConfig.glVersionMajor);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, platformConfig.glVersionMinor);
+    if (platformConfig.usesCoreProfile) {
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    }
+    // Note: Not setting GLFW_OPENGL_PROFILE means compatibility profile (default)
+
+    const char *glsl_version = platformConfig.glslVersionString;
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
     std::string version = aditof::getKitVersion();
@@ -424,6 +435,11 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
                               _title.c_str(), NULL, NULL);
 
     if (window == NULL) {
+        // On Raspberry Pi, if window creation fails, it's likely due to OpenGL version mismatch
+        fprintf(stderr, "Failed to create GLFW window. This may indicate:\n");
+        fprintf(stderr, "  - Missing or incompatible OpenGL drivers\n");
+        fprintf(stderr, "  - X11/Wayland display server not running\n");
+        fprintf(stderr, "  - Insufficient GPU capabilities\n");
         return false;
     }
 
@@ -437,15 +453,40 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
     bool err = glewInit() != GLEW_OK;
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-    bool err = gladLoadGL((GLADloadfunc)glfwGetProcAddress) == 0;
+    int glad_result = gladLoadGL(glfwGetProcAddress);
+    bool err = (glad_result == 0);
+    if (err) {
+        fprintf(stderr, "Failed to initialize GLAD OpenGL loader! Result: %d\n",
+                glad_result);
+        fprintf(stderr, "This may indicate missing OpenGL drivers or "
+                        "incompatible graphics hardware.\n");
+    }
 #else
     bool err = false; // If you use IMGUI_IMPL_OPENGL_LOADER_CUSTOM, your loader
                       // is likely to requires some form of initialization.
 #endif
     if (err) {
         fprintf(stderr, "Failed to initialize OpenGL loader!\n");
+        glfwDestroyWindow(window);
+        glfwTerminate();
         return false;
     }
+
+    // Log platform configuration and actual OpenGL version that was created
+    const GLubyte *glVersion = glGetString(GL_VERSION);
+    const GLubyte *glslVersion = glGetString(GL_SHADING_LANGUAGE_VERSION);
+    fprintf(stderr, "\n=== OpenGL Context Information ===\n");
+    fprintf(stderr, "Platform: %s\n", platformConfig.name);
+    fprintf(stderr, "Requested: OpenGL %d.%d %s\n",
+            platformConfig.glVersionMajor, platformConfig.glVersionMinor,
+            platformConfig.usesCoreProfile ? "core" : "compatibility");
+    fprintf(stderr, "Requested GLSL: %s\n", platformConfig.glslVersionString);
+    fprintf(stderr, "Actual OpenGL version: %s\n",
+            glVersion ? (const char *)glVersion : "Unknown");
+    fprintf(stderr, "Actual GLSL version: %s\n",
+            glslVersion ? (const char *)glslVersion : "Unknown");
+    fprintf(stderr, "===================================\n");
+    fflush(stderr);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -514,6 +555,9 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
     // Setup Platform/Renderer bindings
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+
+    // Mark ImGui as successfully initialized
+    m_imgui_initialized = true;
 
     RefreshDevices();
 
