@@ -715,6 +715,8 @@ class ADIMainWindow {
     bool m_enable_ab_display = true;
     bool m_enable_depth_display = true;
     bool m_enable_xyz_display = true;
+
+    std::string m_recording_path = ".";
 };
 } // namespace adiMainWindow
 #endif //ADIMAINWINDOW_H
