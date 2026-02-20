@@ -191,11 +191,24 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
                     if (delay >= 0.0) {
                         ImGuiExtensions::ADISetTooltipDelay(
                             static_cast<float>(delay));
-                        LOG(INFO)
-                            << "Tooltip delay set to " << delay << " seconds";
                     }
                 }
             }
+
+            json_object *json_save_folder = NULL;
+            if (json_object_object_get_ex(config_json, "recordings_folder",
+                                          &json_save_folder)) {
+                if (json_object_is_type(json_save_folder, json_type_string)) {
+                    const char *recording_folder =
+                        json_object_get_string(json_save_folder);
+                    if (recording_folder != NULL) {
+                        m_recording_path = recording_folder;
+                    } else {
+                        m_recording_path = ".";
+                    }
+                }
+            }
+
             json_object_put(config_json);
         }
         ifs.close();
