@@ -2,7 +2,7 @@
 
 ## Latest Release
 
-* [ADCAM Release 0.1.0-a.1](https://github.com/analogdevicesinc/ADCAM/releases/tag/v0.1.0-a.1)
+* [ADCAM Release 0.2.0-a.1](https://github.com/analogdevicesinc/ADCAM/releases/tag/v0.2.0-a.1)
 
 ## Overview
 
