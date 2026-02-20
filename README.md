@@ -33,12 +33,13 @@ This repository depends on the following components:
 
 ## Supported Platforms
 
-* [NVIDIA Jetson Orin Nano Developer Kit](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit/)
+* [NVIDIA Jetson Orin Nano Developer Kit](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit)
+* [Raspberry Pi 5](https://www.raspberrypi.com/products/raspberry-pi-5/)
 
 ### Requirements
 
-* **JetPack 6.2.1** installed on a microSD card  
-  (Support for SSD installation is planned and will be available in a future release.)
+* NVIDIA Jetson Orin Nano Developer Kit: JetPack 6.2.1
+* Raspberry Pi 5: Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
 
 
 ## Examples
@@ -86,6 +87,8 @@ Note, prior to committing to the repo it is important to format the source code,
 * Graphviz - for documentation generation
 
 #### Installing the pre-requisites
+
+#### NVIDIA Jeston Orin Nano Dev Kit with JetPack 6.2.1
 ```console
 sudo apt update
 sudo apt install cmake g++ \
@@ -95,12 +98,22 @@ sudo apt install cmake g++ \
      libxinerama-dev \
      libxcursor-dev \
      libxi-dev \
-     libxrandr-dev
+     libxrandr-dev \
+     python3.10-dev
 ```
 
-For Linux builds install the necessary version of Python dev libraries. For example for Ubuntu 22.04 with Python 3.10 as the default Python:
+#### Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
 ```console
-sudo apt install python3.10-dev
+sudo apt update
+sudo apt install cmake g++ \
+     libopencv-dev \
+     libgl1-mesa-dev libglfw3-dev \
+     doxygen graphviz \
+     libxinerama-dev \
+     libxcursor-dev \
+     libxi-dev \
+     libxrandr-dev \
+     python3.13-dev
 ```
 
 In addition the depth compute libraries are required. 
@@ -120,7 +133,9 @@ These libraries must be in a folder called **libs** that in one level below the 
 ```
 
 ### Building the SDK
-```
+
+Let's start with a standard build.
+```console
 git clone https://github.com/analogdevicesinc/ADCAM.git
 cd ADCAM
 git submodule update --init
@@ -129,5 +144,23 @@ mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j 6
 ```
+
+There are a number of build options available via the root CMakeLists.txt file: https://github.com/analogdevicesinc/ADCAM/blob/6e5b722b5c36923065c4a3be96ad0553d387e699/CMakeLists.txt#L20C1-L24C109
+```
+option(WITH_EXAMPLES "Build examples?" ON)
+option(WITH_DOC "Build documentation?" OFF)
+option(WITH_PYTHON "Build python bindings?" ON)
+option(WITH_NETWORK "Build network interface?" OFF)
+set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO", "NVIDIA", "RPI" or "HOST"
+```
+
+* WITH_EXAMPLES: Builds all examples that are in the _examples_ folder.
+* WITH_DOC: Builds the _doxygen_ documentation.
+* WITH_PYTHON: Builds the Python bindings library, which is required for the Python examples (see: examples/bindings/python)
+* WITH_NETWORK: Its complicated, ignore for now.
+* WITH_PLATFORM: Sets the target platform for the build
+  * AUTO: Auto detect between the NVIDIA, Raspberry or Host device
+  * NVIDIA: Forces a build for NVIDIA Jetson Orin Nano Dev Kit
+  * RPI: Forces a build for the Raspberry Pi 5
 
 ---
