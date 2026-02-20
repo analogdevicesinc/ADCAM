@@ -155,11 +155,11 @@ option(WITH_NETWORK "Build network interface?" OFF)
 set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO", "NVIDIA", "RPI" or "HOST"
 ```
 
-* WITH_EXAMPLES: Builds all examples that are in the _examples_ folder.
-* WITH_DOC: Builds the _doxygen_ documentation.
-* WITH_PYTHON: Builds the Python bindings library, which is required for the Python examples (see: examples/bindings/python)
-* WITH_NETWORK: Its complicated, ignore for now.
-* WITH_PLATFORM: Sets the target platform for the build
+* WITH_EXAMPLES: Builds all examples that are in the _examples_ folder. Default: ON - ie, build examples.
+* WITH_DOC: Builds the _doxygen_ documentation. Default: OFF - ie, do not build documentation.
+* WITH_PYTHON: Builds the Python bindings library, which is required for the Python examples (see: examples/bindings/python). Default: OB - ie, build Python bindings.
+* WITH_NETWORK: Its complicated, ignore for now. Default: OFF - ie, do not build with network functionality enabled.
+* WITH_PLATFORM: Sets the target platform for the build. Default: AUTO - ie, attempt to auto detect the platform.
   * AUTO: Auto detect between the NVIDIA, Raspberry or Host device
   * NVIDIA: Forces a build for NVIDIA Jetson Orin Nano Dev Kit
   * RPI: Forces a build for the Raspberry Pi 5
