@@ -135,13 +135,22 @@ These libraries must be in a folder called **libs** that in one level below the 
 
 ### Building the SDK
 
-Let's start with a standard build.
+Let's start with a standard build. Where we need:
+1. Clone the repo.
+2. Update the required submodules.
+3. Check out the requried branch.
+4. Build the code.
+
 ```console
 git clone https://github.com/analogdevicesinc/ADCAM.git
 cd ADCAM
 git submodule update --init
 git checkout <branch or tag>
-mkdir build && cd build
+cd libaditof
+git checkout <branch or tag>
+cd ..
+mkdir build
+cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j 6
 ```
@@ -164,4 +173,16 @@ set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO
   * NVIDIA: Forces a build for NVIDIA Jetson Orin Nano Dev Kit
   * RPI: Forces a build for the Raspberry Pi 5
 
+An example build showing how to change an option during the build process. For this we will disable building the Python bindings.
+
+```console
+git checkout rel-0.2.0-a.1
+cd libaditof
+git checkout rel-7.0.0-a.1
+cd ..
+mkdir build
+cd build
+cmake -DWITH_PYTHON=OFF -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . -j 6
+```
 ---
