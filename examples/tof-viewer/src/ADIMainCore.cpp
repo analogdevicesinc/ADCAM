@@ -201,7 +201,8 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
             if (json_object_object_get_ex(config_json, "recordings_folder",
                                           &json_save_folder)) {
                 if (json_object_is_type(json_save_folder, json_type_string)) {
-                    const char *recording_folder = json_object_get_string(json_save_folder);
+                    const char *recording_folder =
+                        json_object_get_string(json_save_folder);
                     if (recording_folder != NULL) {
                         m_recording_path = recording_folder;
                     } else {
