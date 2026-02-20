@@ -172,14 +172,14 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
     if (!ifs.fail()) {
         ifs.close();
     }
-    
+
     // Read tooltip delay from config
     ifs.open(DEFAULT_TOOLS_CONFIG_FILENAME);
     if (ifs.good()) {
         content.assign((std::istreambuf_iterator<char>(ifs)),
                        (std::istreambuf_iterator<char>()));
         config_json = json_tokener_parse(content.c_str());
-        
+
         if (config_json != NULL) {
             json_object *json_tooltip_delay = NULL;
             if (json_object_object_get_ex(config_json, "tooltip_delay_seconds",
@@ -188,7 +188,8 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
                     json_object_is_type(json_tooltip_delay, json_type_int)) {
                     double delay = json_object_get_double(json_tooltip_delay);
                     if (delay >= 0.0) {
-                        ImGuiExtensions::ADISetTooltipDelay(static_cast<float>(delay));
+                        ImGuiExtensions::ADISetTooltipDelay(
+                            static_cast<float>(delay));
                     }
                 }
             }
@@ -197,7 +198,8 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
             if (json_object_object_get_ex(config_json, "recordings_folder",
                                           &json_save_folder)) {
                 if (json_object_is_type(json_save_folder, json_type_string)) {
-                    const char *recording_folder = json_object_get_string(json_save_folder);
+                    const char *recording_folder =
+                        json_object_get_string(json_save_folder);
                     if (recording_folder != NULL) {
                         m_recording_path = recording_folder;
                     } else {
@@ -210,84 +212,138 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
         }
         ifs.close();
     }
-    
+
     // Initialize UI tooltips
     InitializeTooltips();
 }
 
 void ADIMainWindow::InitializeTooltips() {
     using namespace ImGuiExtensions;
-    
+
     // ============ Wizard: Camera Selection ============
-    ADIRegisterTooltip("WizardSavedStream", "Use a saved stream file (.adcam) for playback");
-    ADIRegisterTooltip("WizardLiveCamera", "Use a live camera device for real-time capture");
-    
+    ADIRegisterTooltip("WizardSavedStream",
+                       "Use a saved stream file (.adcam) for playback");
+    ADIRegisterTooltip("WizardLiveCamera",
+                       "Use a live camera device for real-time capture");
+
     // ============ Wizard: Offline Mode ============
-    ADIRegisterTooltip("WizardOfflineOpen", "Open a saved stream file (.adcam) for playback");
-    ADIRegisterTooltip("WizardOfflineStartStreaming", "Start playback of the loaded stream file");
+    ADIRegisterTooltip("WizardOfflineOpen",
+                       "Open a saved stream file (.adcam) for playback");
+    ADIRegisterTooltip("WizardOfflineStartStreaming",
+                       "Start playback of the loaded stream file");
     ADIRegisterTooltip("WizardOfflineClose", "Close the current playback file");
-    ADIRegisterTooltip("WizardOfflineSaveAllFrames", "When enabled, all frames in the file will be saved when capturing");
+    ADIRegisterTooltip(
+        "WizardOfflineSaveAllFrames",
+        "When enabled, all frames in the file will be saved when capturing");
 
     // ============ Wizard: Online Mode ============
-    ADIRegisterTooltip("WizardOnlineCamera", "Select which camera device to use");
-    ADIRegisterTooltip("WizardOnlineRefresh", "Refresh the list of available camera devices");
-    ADIRegisterTooltip("WizardOnlineOpen", "Initialize and open the selected camera device");
+    ADIRegisterTooltip("WizardOnlineCamera",
+                       "Select which camera device to use");
+    ADIRegisterTooltip("WizardOnlineRefresh",
+                       "Refresh the list of available camera devices");
+    ADIRegisterTooltip("WizardOnlineOpen",
+                       "Initialize and open the selected camera device");
     ADIRegisterTooltip("WizardOnlineClose", "Close the current camera device");
-    ADIRegisterTooltip("WizardOnlineSelectMode", "Select camera operating mode (resolution and frame format)");
-    ADIRegisterTooltip("WizardOnlineLoadConfig", "Load depth processing configuration from JSON file");
-    ADIRegisterTooltip("WizardOnlineResetParameters", "Reset all depth processing parameters to factory defaults");
-    ADIRegisterTooltip("WizardOnlinePreviewOn", "Enable live preview - reduces frame rate during parameter adjustment");
-    ADIRegisterTooltip("WizardOnlinePreviewOff", "Disable preview - full frame rate, but no display during parameter changes");
-    ADIRegisterTooltip("WizardOnlineStartStreaming", "Begin capturing and displaying frames from the camera");
+    ADIRegisterTooltip(
+        "WizardOnlineSelectMode",
+        "Select camera operating mode (resolution and frame format)");
+    ADIRegisterTooltip("WizardOnlineLoadConfig",
+                       "Load depth processing configuration from JSON file");
+    ADIRegisterTooltip(
+        "WizardOnlineResetParameters",
+        "Reset all depth processing parameters to factory defaults");
+    ADIRegisterTooltip(
+        "WizardOnlinePreviewOn",
+        "Enable live preview - reduces frame rate during parameter adjustment");
+    ADIRegisterTooltip("WizardOnlinePreviewOff",
+                       "Disable preview - full frame rate, but no display "
+                       "during parameter changes");
+    ADIRegisterTooltip("WizardOnlineStartStreaming",
+                       "Begin capturing and displaying frames from the camera");
 
     // ============ Control Window: Configuration ============
-    ADIRegisterTooltip("ControlLoadConfig", "Load camera depth processing configuration from JSON file");
-    ADIRegisterTooltip("ControlSaveConfig", "Save current depth processing configuration to JSON file");
-    
+    ADIRegisterTooltip(
+        "ControlLoadConfig",
+        "Load camera depth processing configuration from JSON file");
+    ADIRegisterTooltip(
+        "ControlSaveConfig",
+        "Save current depth processing configuration to JSON file");
+
     // ============ Control Window: Playback Controls ============
-    ADIRegisterTooltip("ControlCapture", "Capture and save the current frame or stream to disk");
-    ADIRegisterTooltip("ControlRecord", "Start/stop recording frames to an .adcam file");
-    ADIRegisterTooltip("ControlStop", "Stop camera capture and return to wizard");
-    ADIRegisterTooltip("ControlJumpToStart", "Jump to the first frame in the recording");
+    ADIRegisterTooltip("ControlCapture",
+                       "Capture and save the current frame or stream to disk");
+    ADIRegisterTooltip("ControlRecord",
+                       "Start/stop recording frames to an .adcam file");
+    ADIRegisterTooltip("ControlStop",
+                       "Stop camera capture and return to wizard");
+    ADIRegisterTooltip("ControlJumpToStart",
+                       "Jump to the first frame in the recording");
     ADIRegisterTooltip("ControlStepBackward", "Go to the previous frame");
     ADIRegisterTooltip("ControlStepForward", "Go to the next frame");
-    ADIRegisterTooltip("ControlJumpToEnd", "Jump to the last frame in the recording");
+    ADIRegisterTooltip("ControlJumpToEnd",
+                       "Jump to the last frame in the recording");
     ADIRegisterTooltip("ControlFrameSlider", "Seek to a specific frame number");
-    ADIRegisterTooltip("ControlSaveAllFrames", "Save all frames when capturing (offline mode only)");
-    
+    ADIRegisterTooltip("ControlSaveAllFrames",
+                       "Save all frames when capturing (offline mode only)");
+
     // ============ Control Window: Point Cloud ============
-    ADIRegisterTooltip("ControlRotatePlus", "Rotate the point cloud view by 90 degrees clockwise");
-    ADIRegisterTooltip("ControlRotationAngle", "Current rotation angle in degrees");
-    ADIRegisterTooltip("ControlPCReset", "Reset point cloud view to default position and orientation");
-    ADIRegisterTooltip("ControlPCDepthColor", "Color point cloud based on depth values");
-    ADIRegisterTooltip("ControlPCABColor", "Color point cloud based on active brightness (AB) values");
-    ADIRegisterTooltip("ControlPCSolidColor", "Display point cloud in solid white color");
-    
+    ADIRegisterTooltip("ControlRotatePlus",
+                       "Rotate the point cloud view by 90 degrees clockwise");
+    ADIRegisterTooltip("ControlRotationAngle",
+                       "Current rotation angle in degrees");
+    ADIRegisterTooltip(
+        "ControlPCReset",
+        "Reset point cloud view to default position and orientation");
+    ADIRegisterTooltip("ControlPCDepthColor",
+                       "Color point cloud based on depth values");
+    ADIRegisterTooltip(
+        "ControlPCABColor",
+        "Color point cloud based on active brightness (AB) values");
+    ADIRegisterTooltip("ControlPCSolidColor",
+                       "Display point cloud in solid white color");
+
     // ============ Control Window: Active Brightness (AB) ============
-    ADIRegisterTooltip("ControlABAutoScale", "Automatically scale AB image brightness based on frame content");
-    ADIRegisterTooltip("ControlABLogImage", "Apply logarithmic scaling to AB image (requires auto-scale)");
-    
+    ADIRegisterTooltip(
+        "ControlABAutoScale",
+        "Automatically scale AB image brightness based on frame content");
+    ADIRegisterTooltip(
+        "ControlABLogImage",
+        "Apply logarithmic scaling to AB image (requires auto-scale)");
+
     // ============ Control Window: Configuration Parameters ============
-    ADIRegisterTooltip("ControlIniAbThreshMin", "Minimum active brightness threshold (0-65535)");
-    ADIRegisterTooltip("ControlIniConfThresh", "Confidence threshold for valid depth measurements (0-255)");
-    ADIRegisterTooltip("ControlIniRadialThreshMin", "Minimum radial distance threshold in mm (0-65535)");
-    ADIRegisterTooltip("ControlIniRadialThreshMax", "Maximum radial distance threshold in mm (0-65535)");
-    ADIRegisterTooltip("ControlIniJblfApplyFlag", "Enable Joint Bilateral Filter for noise reduction");
-    ADIRegisterTooltip("ControlIniJblfWindowSize", "Joint Bilateral Filter window size: 3, 5, or 7 pixels");
-    ADIRegisterTooltip("ControlIniJblfGaussianSigma", "Gaussian sigma for spatial filtering (0-65535)");
-    ADIRegisterTooltip("ControlIniJblfExponentialTerm", "Exponential term for range filtering (0-255)");
-    ADIRegisterTooltip("ControlIniJblfMaxEdge", "Maximum edge threshold for filtering (0-64)");
-    ADIRegisterTooltip("ControlIniJblfABThreshold", "Active brightness threshold for JBLF (0-131071)");
+    ADIRegisterTooltip("ControlIniAbThreshMin",
+                       "Minimum active brightness threshold (0-65535)");
+    ADIRegisterTooltip(
+        "ControlIniConfThresh",
+        "Confidence threshold for valid depth measurements (0-255)");
+    ADIRegisterTooltip("ControlIniRadialThreshMin",
+                       "Minimum radial distance threshold in mm (0-65535)");
+    ADIRegisterTooltip("ControlIniRadialThreshMax",
+                       "Maximum radial distance threshold in mm (0-65535)");
+    ADIRegisterTooltip("ControlIniJblfApplyFlag",
+                       "Enable Joint Bilateral Filter for noise reduction");
+    ADIRegisterTooltip("ControlIniJblfWindowSize",
+                       "Joint Bilateral Filter window size: 3, 5, or 7 pixels");
+    ADIRegisterTooltip("ControlIniJblfGaussianSigma",
+                       "Gaussian sigma for spatial filtering (0-65535)");
+    ADIRegisterTooltip("ControlIniJblfExponentialTerm",
+                       "Exponential term for range filtering (0-255)");
+    ADIRegisterTooltip("ControlIniJblfMaxEdge",
+                       "Maximum edge threshold for filtering (0-64)");
+    ADIRegisterTooltip("ControlIniJblfABThreshold",
+                       "Active brightness threshold for JBLF (0-131071)");
     ADIRegisterTooltip("ControlIniFps", "Target frames per second (0-60)");
-    ADIRegisterTooltip("ControlIniResetParameters", "Reset all depth processing parameters to defaults");
-    ADIRegisterTooltip("ControlIniModify", "Apply modified parameters and restart capture");
-    
+    ADIRegisterTooltip("ControlIniResetParameters",
+                       "Reset all depth processing parameters to defaults");
+    ADIRegisterTooltip("ControlIniModify",
+                       "Apply modified parameters and restart capture");
+
     // ============ Help Window ============
     ADIRegisterTooltip("HelpClose", "Close the help window");
-    
+
     // ============ Modal Dialogs ============
     ADIRegisterTooltip("ModalOK", "Acknowledge and close this message");
-    
+
     // ============ Info Window ============
     ADIRegisterTooltip("InfoDisplayMode", "Current camera mode and resolution");
     ADIRegisterTooltip("InfoFPS", "Actual frames per second being captured");
@@ -758,7 +814,8 @@ void ADIMainWindow::Render() {
 
                 auto camera = GetActiveCamera();
                 if (camera && false) {
-                    LOG(INFO) << "*** adsd3500setEnableDynamicModeSwitching disabled ***";
+                    LOG(INFO) << "*** adsd3500setEnableDynamicModeSwitching "
+                                 "disabled ***";
                     camera->adsd3500setEnableDynamicModeSwitching(false);
                 }
 
@@ -1238,7 +1295,8 @@ void ADIMainWindow::ShowStartWizard() {
                         m_ini_params.clear();
                     }
                 }
-                ImGuiExtensions::ADIShowTooltipFor("WizardOnlineResetParameters");
+                ImGuiExtensions::ADIShowTooltipFor(
+                    "WizardOnlineResetParameters");
 
                 NewLine(5.0f);
 
@@ -1255,7 +1313,8 @@ void ADIMainWindow::ShowStartWizard() {
                 if (m_enable_preview) {
                     ImGuiExtensions::ADIShowTooltipFor("WizardOnlinePreviewOn");
                 } else {
-                    ImGuiExtensions::ADIShowTooltipFor("WizardOnlinePreviewOff");
+                    ImGuiExtensions::ADIShowTooltipFor(
+                        "WizardOnlinePreviewOff");
                 }
 
                 if (ImGuiExtensions::ADIButton("Start Streaming",
@@ -1266,7 +1325,8 @@ void ADIMainWindow::ShowStartWizard() {
                     m_start_streaming_pending = true;
                     m_start_streaming_pending_frames = 1;
                 }
-                ImGuiExtensions::ADIShowTooltipFor("WizardOnlineStartStreaming");
+                ImGuiExtensions::ADIShowTooltipFor(
+                    "WizardOnlineStartStreaming");
             }
         }
 #pragma endregion // WizardOnline
