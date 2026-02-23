@@ -111,7 +111,7 @@ ADIMainWindow::ADIMainWindow() : m_skip_network_cameras(true) {
 #ifdef _WIN32
     wholeLogPath += "\\"; // Ensure the path ends with a slash
 #elif __linux__
-    wholeLogPath += "/"; // Ensure the path ends with a slash
+    wholeLogPath += "/";   // Ensure the path ends with a slash
 #endif
     wholeLogPath += "log_" + std::string(timebuff) + ".txt";
 
