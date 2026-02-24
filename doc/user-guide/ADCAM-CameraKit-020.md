@@ -936,7 +936,7 @@ Expand the images below to see the data views of the *Live Camera* and *Saved St
 
 This section covers modification of ToF parameters per mode. To accomplish this the user needs to:
 
-1. Save the configuration file, via *Tools->Save Configuration*.
+1. Save the configuration file, via *Control Window->Configuration->Save Config*.
 
 [<img src="images/aditofgui_control_save_or_load_configuration.png" width="25%">](images/aditofgui_control_save_or_load_configuration.png)
 
@@ -944,7 +944,7 @@ This section covers modification of ToF parameters per mode. To accomplish this 
    
 [<img src="images/data_collect_example_3_fps_change.png" width="25%">](images/data_collect_example_3_fps_change.png)
 
-3. Load the configuration file, via *Tools->Load Configuration*.
+3. Load the configuration file, via *Control Window->Configuration->Load Config*.
 
 [<img src="images/aditofgui_control_save_or_load_configuration.png" width="25%">](images/aditofgui_control_save_or_load_configuration.png)
 
@@ -952,7 +952,7 @@ This section covers modification of ToF parameters per mode. To accomplish this 
 
 From the screen capture below you can see the frame rate for mode 1 is now 5fps.
 
-[<img src="images/aditofgui_8.png" width="25%">](images/aditofgui_8.png)
+[<img src="images/aditofgui_control_modify_fps.png" width="50%">](images/aditofgui_control_modify_fps.png)
 
 # Appendix
 
