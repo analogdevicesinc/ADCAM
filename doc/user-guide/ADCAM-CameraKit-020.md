@@ -879,6 +879,8 @@ Expand the images below to see the data views of the *Live Camera* and *Saved St
 
 ##### Information Window
 
+[<img src="images/aditofgui_live_stream_control.png" width="20%">](images/aditofgui_live_stream_control.png)
+
 |Type|Definition|
 |----|---------|
 |Camera|This defines is your are using an online (aka Live Camera) or offline (aka Saved Stream) camera.|
@@ -896,6 +898,8 @@ Expand the images below to see the data views of the *Live Camera* and *Saved St
 
 ##### Control Window: Live Camera View
 
+[<img src="images/aditofgui_saved_stream_control.png" width="20%">](images/aditofgui_saved_stream_control.png)
+
 |Type|Definition|
 |----|----------|
 |Configuration: Load Config|Allows the user to load a configuration JSON file. Device and software parameters are loaded and applied,|
@@ -903,17 +907,38 @@ Expand the images below to see the data views of the *Live Camera* and *Saved St
 |Control: Camera Icon|Save a snapshot of the current frame set. This is covered in more detail later.|
 |Control: Record Icon|Start recording the stream. Green: the user can start recording. Yellow: the recording is in active. This is covered in more detail later.|
 |Control: Stop Icon|Stop the active stream, returning to the *Selection Wizard*.|
+|Rotate: +|This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.|
+|Point Cloud: Reset|If the user rotates or translates the point cloud *Reset* goes back to the default translation and rotation values.|
+|Point Cloud: Colour Option|Depth Colour, AB Colour and Solid Color for the point cloud window.|
+|Active Brigthtness: Auto-scale|Improves AB image to make it less dark.|
+|Active Brigthtness: Log Image|Improves AB image to make it less dark, but depends on Auto-scale being |
+|Configuration Parameters: Reset Parameters|Reset the parameters shown to the defaults. This does not write back to the Time of Flight hardawre.|
+|Configuration Parameters: Modify Parameters|Write the configuration parameters to the Time of Flight hardware.|
 
 ##### Control Window: Saved Stream View
-TODO
 
-##### ADIToFGUI and Configuration Parameters
+|Type|Definition|
+|----|----------|
+|Control: Export All Frames|Export all frames in the record to png, text and ply files when the *Camera* icon is pressed.|
+|Control: Camera Icon|Save a snapshot of the current frame set; if *Export All Fames* is selected then all frames are saved. This is covered in more detail later.|
+|Control: \|< Icon|Goto the first frame in the recording.|
+|Control:  < Icon|Step back one frame in the recording.|
+|Control: >\| Icon|Goto the last frame in the recording.|
+|Control:  > Icon|Step forward one frame in the recording.|
+|Control: Stop Icon|Stop and return to the *Selection Wizard*.|
+|Rotate: +|This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.|
+|Point Cloud: Reset|If the user rotates or translates the point cloud *Reset* goes back to the default translation and rotation values.|
+|Point Cloud: Colour Option|Depth Colour, AB Colour and Solid Color for the point cloud window.|
+|Active Brigthtness: Auto-scale|Improves AB image to make it less dark.|
+|Active Brigthtness: Log Image|Improves AB image to make it less dark, but depends on Auto-scale being |
+
+#### ADIToFGUI and Configuration Parameters
 
 This section covers modification of ToF parameters per mode. To accomplish this the user needs to:
 
 1. Save the configuration file, via *Tools->Save Configuration*.
 
-[<img src="images/aditofgui_6.png" width="25%">](images/aditofgui_6.png)
+[<img src="images/aditofgui_control_save_or_load_configuration.png" width="25%">](images/aditofgui_control_save_or_load_configuration.png)
 
 2. Modify the saved configuration file outside of ADIToFGUI using a text editor.
    
@@ -921,7 +946,7 @@ This section covers modification of ToF parameters per mode. To accomplish this 
 
 3. Load the configuration file, via *Tools->Load Configuration*.
 
-[<img src="images/aditofgui_7.png" width="25%">](images/aditofgui_7.png)
+[<img src="images/aditofgui_control_save_or_load_configuration.png" width="25%">](images/aditofgui_control_save_or_load_configuration.png)
 
 4. Observing the result.
 
