@@ -837,7 +837,7 @@ Let's take a look at the other generated frame data, we will consider the output
 $ ADIToFGUI
 ```
 
-#### Camera Selection Wizard
+#### Selection Wizard
 
 ##### Live Camera
 [<img src="images/aditofgui_wizard_live_stream.png" width="100%">](images/aditofgui_wizard_live_stream.png)
@@ -846,8 +846,8 @@ This option is used to stream frames from a live ADCAM Time of Flight camera.
 
 1. Select *Live Camera*. Please note, this is only possible if the *Saved Stream* or *Live Camera* is closed.
 2. Select *Open*.
-3. Select the mode from the dropdown list, where each mode is unique option of size, range and binning.
-4. Conigure the device, where the parameters can be loaded from a JSON configuration file via *Load Config* or modified via the *Configurable Parameters* controls.
+3. Select the mode from the dropdown list, where each mode is unique option of size, range and binning. If no mode is chosen, the mode shown is used.
+4. (Optional) Configure the device, where the parameters can be loaded from a JSON configuration file via *Load Config* or modified via the *Configurable Parameters* controls.
 5. *Start Streaming*, where *Preview* mode allows a reduced frame rate - this is good for streaming  and saving, a recording, at a desired frame without displaying every frame.
 
 ##### Saved Stream
@@ -861,14 +861,50 @@ This option is used to stream save recordings.
 
 #### Data View
 
-##### Live Camera
-[<img src="images/aditofgui_live_stream.png" width="100%">](images/aditofgui_live_stream.png)
+The *Live Camera* and *Saved Stream* views each contains several windows. The windows are the same between the views, where the *Control Window* controls differ slightly between the two views. In the two sub-sections below we will cover the differences. 
 
-TODO
+Expand the images below to see the data views of the *Live Camera* and *Saved Stream*.
 
-##### Saved Stream
-[<img src="images/aditofgui_saved_stream.png" width="100%">](images/aditofgui_saved_stream.png)
+| Live Camera | Saved Stream |
+|-------------|--------------|
+|[<img src="images/aditofgui_live_stream.png" width="100%">](images/aditofgui_live_stream.png)|[<img src="images/aditofgui_saved_stream.png" width="100%">](images/aditofgui_saved_stream.png)|
 
+| Window | Definition |
+|--------|---------|
+|Information Window|This window shows metrics, telemetry and parameters.|
+|Control Windows|This window allows the user to configure and control the stream. This is the only window that differs between the two views.|
+|Absolute Brightness Window|This window show AB frames. In real time in the Live view and non-realtime in the Saved view.|
+|Depth Window|This window shows Depth frames. In real time in the Live view and non-realtime in the Saved view.|
+|Point Cloud Window|This window shows point cloud frames. In real time in the Live view and non-realtime in the Saved view.|
+
+##### Information Window
+
+|Type|Definition|
+|----|---------|
+|Camera|This defines is your are using an online (aka Live Camera) or offline (aka Saved Stream) camera.|
+|Preview Mode|Shows if *Preview Mode* is on or off|
+|Mode|The current mode as selected by the user for the *Live Camera* view or as saved in the recording for the *Saved Stream* view.|
+|Expected fps|The set and expected frame rate.|
+|Current fps|The actual frame rate as calculated in real-time.|
+|Frames Recevied|Frames received in a session, so far, in real-time.|
+|Frames Lost|Frames lost in a session, so far, in real-time.|
+|Laser Temp|The current laser temperature as sent via metadata from the imager module.|
+|Sensor Temp|The current laser temperature as sent via metadata from the imager module.|
+|Point Cloud FoV|The field of view in the point cloud window.|
+|Point Cloud Camera|The location of the camera in the point cloud window.|
+|Camera (Y, P, R)|The Yaw, Pitch and Rotation of the scene in the point cloud window.|
+
+##### Control Window: Live Camera View
+
+|Type|Definition|
+|----|----------|
+|Configuration: Load Config|Allows the user to load a configuration JSON file. Device and software parameters are loaded and applied,|
+|Configuration: Save Config|Allows the user to save a configuration JSON file. Device and software parameters are stored.|
+|Control: Camera Icon|Save a snapshot of the current frame set. This is covered in more detail later.|
+|Control: Record Icon|Start recording the stream. Green: the user can start recording. Yellow: the recording is in active. This is covered in more detail later.|
+|Control: Stop Icon|Stop the active stream, returning to the *Selection Wizard*.|
+
+##### Control Window: Saved Stream View
 TODO
 
 ##### ADIToFGUI and Configuration Parameters
@@ -879,7 +915,7 @@ This section covers modification of ToF parameters per mode. To accomplish this 
 
 [<img src="images/aditofgui_6.png" width="25%">](images/aditofgui_6.png)
 
-2. Mody the saved configuration file outside of ADIToFGUI using a text editor.
+2. Modify the saved configuration file outside of ADIToFGUI using a text editor.
    
 [<img src="images/data_collect_example_3_fps_change.png" width="25%">](images/data_collect_example_3_fps_change.png)
 
