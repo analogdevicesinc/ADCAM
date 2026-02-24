@@ -954,6 +954,43 @@ From the screen capture below you can see the frame rate for mode 1 is now 5fps.
 
 [<img src="images/aditofgui_control_modify_fps.png" width="50%">](images/aditofgui_control_modify_fps.png)
 
+#### Point Cloud, AB and Depth Windows
+
+##### Point Cloud Controls
+
+While hovering over the point cloud window with the mouse pointer, the point cloud translation and rotation can be control by the user.
+
+* Translation is possible in the X, Y and Z planes.
+* Yaw, pitch and roll rotations are possible.
+
+|Mouse Combo|Defintion|
+|-----------|---------|
+|Left Mouse Button + Mouse|Freeform control.|
+|Right Mouse Button + Mouse Up/Down |Translate on the y-axis.|
+|Right Mouse Button + Mouse Left/Right |Translate on the x-axis.|
+|Mouse Wheel |Translate on the z-axis.|
+|CTRL + Mouse Wheel|Pitch control.|
+|ALT + Mouse Wheel|Yaw control.|
+|CTRL + ALT + Mouse Wheel|Roll control|
+
+##### AB Window
+
+Hovering the mouse pointer over the AB image shows the AB intensity for a given pixel.
+
+[<img src="images/aditofgui_ab_window.png" width="25%">](images/aditofgui_ab_window.png)
+
+##### Depth Window
+
+Hovering the mouse pointer over the depth image shows the depth/distance for a given pixel.
+
+[<img src="images/aditofgui_depth_window.png" width="25%">](images/aditofgui_depth_window.png)
+
+It is also possible to mointor the depth across a given line drawn on the depth image by the user.
+
+To do so, right click in the depth window, once the red line appears move the mouse to the next point and press the right mouse button again. A graph will appear with the length of the line (in pixels) on the x-axis and depth (in mm) on the y-axis. Press the right mouse button in the depth window to remove the line.
+
+[<img src="images/aditofgui_depth_distance_windows.png" width="40%">](images/aditofgui_depth_distance_windows.png)
+
 # Appendix
 
 ## Configuration JSON File
