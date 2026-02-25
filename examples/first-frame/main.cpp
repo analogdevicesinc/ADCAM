@@ -234,7 +234,7 @@ int main(int argc, char *argv[]) {
         LOG(ERROR) << "Could not request frame!";
         return 0;
     } else {
-        LOG(INFO) << "succesfully requested frame!";
+        LOG(INFO) << "Successfully requested frame!";
     }
 
     save_frame(frame, "ab", mode);
