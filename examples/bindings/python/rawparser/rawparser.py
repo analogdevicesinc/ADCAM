@@ -57,7 +57,7 @@ def parse_frame_range(range_str):
     if not match:
         raise ValueError(f"Invalid frame range: {range_str}")
     start = int(match.group(1))
-    end = match.group(2)
+    end = int(match.group(2)) if match.group(2) else None
     return start, end
 
 def generate_metadata(metadata, directory, base_filename, index):
@@ -160,6 +160,8 @@ def main():
     if args.frames:
         try:
             start_frame, end_frame = parse_frame_range(args.frames)
+            if end_frame is None:
+                end_frame = sys.maxsize
         except Exception as e:
             sys.exit(f"Invalid --frames argument: {e}")
 
@@ -247,7 +249,7 @@ def main():
             break
 
     frame_idx = frame_idx - 1  # Adjust for last increment
-    print(f"Processed {frame_idx} frames.")
+    print(f"\nProcessed frames.")
 
     camera1.stop()
 
