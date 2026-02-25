@@ -211,17 +211,42 @@ def main():
         if not os.path.exists(frame_dir):
             os.makedirs(frame_dir)
     
+        # Get frame details to check which data types are available
+        frameDetails = tof.FrameDetails()
+        status = frame.getDetails(frameDetails)
+
         str_frame_idx = str(frame_idx).zfill(6)
         generate_metadata(metadata, frame_dir, base_filename, str_frame_idx)
-        generate_depth(np.asarray(frame.getData("depth")), frame_dir, base_filename, str_frame_idx)
-        generate_ab(np.asarray(frame.getData("ab")), frame_dir, base_filename, str_frame_idx, log_image = False)
-        generate_confidence(np.asarray(frame.getData("conf")), frame_dir, base_filename, str_frame_idx)
-        generate_pcloud(np.asarray(frame.getData("xyz")), frame_dir, base_filename, str_frame_idx, height, width)
+
+        # Build a list of available frame types
+        available_types = [detail.type for detail in frameDetails.dataDetails]
+
+        # Get the depth frame
+        if "depth" in available_types:
+            image_depth = np.asarray(frame.getData("depth"))
+            generate_depth(image_depth, frame_dir, base_filename, str_frame_idx)
+
+        # Get the AB frame
+        if "ab" in available_types:
+            image_ab = np.asarray(frame.getData("ab"))
+            generate_ab(image_ab, frame_dir, base_filename, str_frame_idx, log_image = False)
+
+        # Get the confidence frame
+        if "conf" in available_types:
+            image_conf = np.asarray(frame.getData("conf"))
+            image_conf2 = image_conf.flatten()
+            generate_confidence(image_conf2, frame_dir, base_filename, str_frame_idx)
+
+        # Get the confidence frame
+        if "xyz" in available_types:
+            image_xyz = np.asarray(frame.getData("xyz"))
+            generate_pcloud(image_xyz, frame_dir, base_filename, str_frame_idx, height, width)
 
         frame_idx += 1
         if frame_idx > end_frame:
             break
 
+    frame_idx = frame_idx - 1  # Adjust for last increment
     print(f"Processed {frame_idx} frames.")
 
     camera1.stop()
