@@ -49,8 +49,8 @@
 #include <aditof/log.h>
 #include <cstring>
 #define __STDC_FORMAT_MACROS 1
-#include <inttypes.h>
 #include <algorithm>
+#include <inttypes.h>
 #include <iostream>
 #include <map>
 #include <string>
@@ -337,8 +337,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    camera->adsd3500GetFrameRate(fps);
-
     // Get modes
     std::vector<uint8_t> availableModes;
     status = camera->getAvailableModes(availableModes);
@@ -357,9 +355,18 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    status = camera->adsd3500SetFrameRate(fps);
+    if (json_file_path.empty()) {
+        status = camera->adsd3500SetFrameRate(fps);
+        if (status != Status::OK) {
+            LOG(ERROR) << "Could not set frame rate on camera!";
+            return -1;
+        }
+    }
+
+    // Get frame rate set to inform user
+    status = camera->adsd3500GetFrameRate(fps);
     if (status != Status::OK) {
-        LOG(ERROR) << "Error setting camera FPS to " << fps;
+        LOG(ERROR) << "Could not get frame rate from camera!";
         return -1;
     }
 
