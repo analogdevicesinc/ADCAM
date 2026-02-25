@@ -292,6 +292,7 @@ def visualize_directory(directory, view_mode='metadata'):
                 
                 # Display combined image
                 window_name = "Combined View: AB | Depth | Confidence"
+                cv.namedWindow(window_name, cv.WINDOW_NORMAL)
                 cv.imshow(window_name, combined_image)
                 cv.waitKey(1)  # Force the window to render
                 print(f"\nDisplaying combined image ({combined_image.shape[1]}x{combined_image.shape[0]})")
