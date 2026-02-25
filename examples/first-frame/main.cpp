@@ -170,11 +170,11 @@ int main(int argc, char *argv[]) {
 
     std::vector<std::shared_ptr<Camera>> cameras;
     if (!ip.empty()) {
-        system.getCameraList(cameras, ip);
+        status = system.getCameraList(cameras, ip);
     } else {
-        system.getCameraList(cameras);
+        status = system.getCameraList(cameras);
     }
-    if (cameras.empty()) {
+    if (status != Status::OK || cameras.empty()) {
         LOG(WARNING) << "No cameras found";
         return 0;
     }
@@ -208,13 +208,6 @@ int main(int argc, char *argv[]) {
 
     aditof::CameraDetails cameraDetails;
     camera->getDetails(cameraDetails);
-
-#ifdef NXP
-
-    LOG(INFO) << "SD card image version: " << cameraDetails.sdCardImageVersion;
-    LOG(INFO) << "Kernel version: " << cameraDetails.kernelVersion;
-    LOG(INFO) << "U-Boot version: " << cameraDetails.uBootVersion;
-#endif
 
     std::vector<uint8_t> availableModes;
     camera->getAvailableModes(availableModes);
