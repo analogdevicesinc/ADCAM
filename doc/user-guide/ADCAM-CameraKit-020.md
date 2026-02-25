@@ -67,8 +67,6 @@ The Python virtual environment step was done during the setup phase.
 If you have not setup the virtual environment,
 
 ```
-~$ python --version
-Python 3.10.12
 ~$ cd ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1
 ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1$ source activate_env.sh
 Attempting to setup the Python environment.
@@ -250,91 +248,88 @@ python depth-image-animation-pygame.py 0 192.168.56.1
 (aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/Python$ python depth-image-animation-pygame.py 3
 pygame 2.6.1 (SDL 2.28.4, Python 3.10.12)
 Hello from the pygame community. https://www.pygame.org/contribute.html
-SDK version:  6.2.0  | branch:  main  | commit:  4960f2fb
+SDK version:  7.0.0 a-1  | branch:  main  | commit:  91b46285
 Looking for camera on Target.
-I20251104 10:37:52.586744 3693 sensor_enumerator_nvidia.cpp:109] Looking for sensors on the target
-I20251104 10:37:52.590295 3693 buffer_processor.cpp:87] BufferProcessor initialized
-I20251104 10:37:52.590429 3693 camera_itof.cpp:105] Sensor name = adsd3500
+I20260225 13:52:27.214903 267320 platform_impl.cpp:53] Initializing platform: NVIDIA Jetson Orin Nano
+I20260225 13:52:27.215024 267320 sensor_enumerator.cpp:51] Initialized platform: NVIDIA Jetson Orin Nano (aarch64)
+I20260225 13:52:27.218850 267320 platform_impl.cpp:338] Found ADSD3500: video=/dev/video0 subdev=/dev/v4l-subdev1
+I20260225 13:52:27.218910 267320 sensor_enumerator.cpp:88] Found 1 ToF sensor(s)
+I20260225 13:52:27.218961 267320 platform_impl.cpp:53] Initializing platform: NVIDIA Jetson Orin Nano
+I20260225 13:52:27.218998 267320 buffer_processor.cpp:110] BufferProcessor initialized
+I20260225 13:52:27.219053 267320 sensor_enumerator.cpp:133] Created ADSD3500 sensor at /dev/video0
+I20260225 13:52:27.219121 267320 camera_itof.cpp:115] Sensor name = adsd3500
 system.getCameraList() Status.Ok
-I20251104 10:37:52.590552 3693 camera_itof.cpp:125] Initializing camera
-I20251104 10:37:52.590586 3693 adsd3500_sensor.cpp:243] Opening device
-I20251104 10:37:52.590607 3693 adsd3500_sensor.cpp:261] Looking for the following cards:
-I20251104 10:37:52.590623 3693 adsd3500_sensor.cpp:263] vi-output, adsd3500
-I20251104 10:37:52.590640 3693 adsd3500_sensor.cpp:275] device: /dev/video0     subdevice: /dev/v4l-subdev1
-I20251104 10:37:52.591670 3693 adsd3500_sensor.cpp:2039] first reset interrupt. No need to check status register.
-I20251104 10:37:52.693371 3693 adsd3500_sensor.cpp:1477] Waiting for ADSD3500 to reset.
-I20251104 10:37:52.693451 3693 adsd3500_sensor.cpp:1482] .
-I20251104 10:37:53.693589 3693 adsd3500_sensor.cpp:1482] .
-I20251104 10:37:54.693815 3693 adsd3500_sensor.cpp:1482] .
-I20251104 10:37:55.694236 3693 adsd3500_sensor.cpp:1482] .
-I20251104 10:37:56.694677 3693 adsd3500_sensor.cpp:1482] .
-I20251104 10:37:57.694916 3693 adsd3500_sensor.cpp:1482] .
-I20251104 10:37:58.695155 3693 adsd3500_sensor.cpp:1482] .
-I20251104 10:37:59.701553 3693 adsd3500_sensor.cpp:1487] Waited: 7 seconds
-I20251104 10:37:59.814133 3693 adsd3500_sensor.cpp:397] ADSD3500 is ready to communicate with.
-I20251104 10:37:59.816371 3693 adsd3500_sensor.cpp:1951] CCB master not supported. Using sdk defined modes.
-I20251104 10:37:59.834287 3693 camera_itof.cpp:222] Current adsd3500 firmware version is: 7.0.0.0
-I20251104 10:37:59.834374 3693 camera_itof.cpp:224] Current adsd3500 firmware git hash is: 140fe63206d9435f2f3c7a050606477e05b70e00
-W20251104 10:37:59.834606 3693 camera_itof.cpp:252] fsyncMode is not being set by SDK.
-W20251104 10:37:59.834780 3693 camera_itof.cpp:267] mipiSpeed is not being set by SDK.Setting default 2.5Gbps
-W20251104 10:37:59.834942 3693 camera_itof.cpp:283] deskew is not being set by SDK, Setting it by default.
-W20251104 10:37:59.834964 3693 camera_itof.cpp:295] enableTempCompenstation is not being set by SDK.
-W20251104 10:37:59.834978 3693 camera_itof.cpp:305] enableEdgeConfidence is not being set by SDK.
-I20251104 10:37:59.841280 3693 camera_itof.cpp:311] Module serial number: 026ao173007q0q4f14
-I20251104 10:37:59.841335 3693 camera_itof.cpp:319] Camera initialized
+I20260225 13:52:27.219242 267320 camera_itof.cpp:165] Initializing camera: Online
+I20260225 13:52:27.219271 267320 adsd3500_sensor.cpp:336] Opening device
+I20260225 13:52:27.219286 267320 adsd3500_sensor.cpp:354] Looking for the following cards:
+I20260225 13:52:27.219297 267320 adsd3500_sensor.cpp:356] vi-output, adsd3500
+I20260225 13:52:27.219308 267320 adsd3500_sensor.cpp:418] device: /dev/video0   subdevice: /dev/v4l-subdev1
+I20260225 13:52:27.219361 267320 adsd3500_sensor.cpp:513] ADSD3500 initialization attempt 1 of 3
+I20260225 13:52:27.219377 267320 platform_impl.cpp:550] Resetting sensor via GPIO
+W20260225 13:52:27.223001 267320 adsd3500_sensor.cpp:189] xioctl failed: fd=5 request=0xc0205648 errno=5 (Input/output error) after 2 attempts
+W20260225 13:52:27.223037 267320 adsd3500_sensor.cpp:1423] Could not set control: 0x9819d1 with command: 0x20. Reason: Input/output error(5)
+E20260225 13:52:27.223052 267320 adsd3500_sensor.cpp:2672] Failed to read status register!
+I20260225 13:52:27.324308 267320 platform_impl.cpp:648] Waiting for sensor to reset
+I20260225 13:52:27.324361 267320 platform_impl.cpp:651] .
+^FI20260225 13:52:28.324681 267320 platform_impl.cpp:651] .
+streamI20260225 13:52:29.330079 267320 platform_impl.cpp:655] Waited: 2 seconds
+I20260225 13:52:29.330190 267320 platform_impl.cpp:667] Sensor reset complete
+I20260225 13:52:29.443282 267320 adsd3500_sensor.cpp:550] ADSD3500 is ready to communicate with after 1 attempt(s)
+I20260225 13:52:29.445325 267320 adsd3500_sensor.cpp:2407] CCB master is supported. Reading mode details from nvm.
+I20260225 13:52:29.463962 267320 camera_itof.cpp:263] Current adsd3500 firmware version is: 7.0.2.0
+I20260225 13:52:29.464020 267320 camera_itof.cpp:265] Current adsd3500 firmware git hash is: d340af8bfad4f13980f4d9a9e166ee20f2358fd5
+W20260225 13:52:29.464239 267320 camera_itof.cpp:286] fsyncMode is not being set by SDK.
+I20260225 13:52:29.464278 267320 camera_itof.cpp:298] Using platform MIPI output speed: 1
+I20260225 13:52:29.464306 267320 camera_itof.cpp:303] Using platform deskew setting: 1
+I20260225 13:52:29.464557 267320 camera_itof.cpp:324] MIPI output speed set to 1
+I20260225 13:52:29.464796 267320 camera_itof.cpp:334] Deskew enabled at stream on
+W20260225 13:52:29.464837 267320 camera_itof.cpp:345] enableTempCompenstation is not being set by SDK.
+W20260225 13:52:29.464865 267320 camera_itof.cpp:355] enableEdgeConfidence is not being set by SDK.
+I20260225 13:52:29.471118 267320 camera_itof.cpp:361] Module serial number: 026AM313018F0N6JAL
+I20260225 13:52:29.471145 267320 camera_itof.cpp:369] Camera initialized
 camera1.initialize() Status.Ok
 camera1.getAvailableModes() Status.Ok
-[0, 1, 2, 3, 6, 5]
+[0, 1, 2, 3]
 camera1.getDetails() Status.Ok
 camera1 details: id: /dev/video0 connection: ConnectionType.OnTarget
-I20251104 10:37:59.841793 3693 adsd3500_sensor.cpp:243] Opening device
-I20251104 10:37:59.841832 3693 adsd3500_sensor.cpp:261] Looking for the following cards:
-I20251104 10:37:59.841855 3693 adsd3500_sensor.cpp:263] vi-output, adsd3500
-I20251104 10:37:59.841875 3693 adsd3500_sensor.cpp:275] device: /dev/video0     subdevice: /dev/v4l-subdev1
-I20251104 10:37:59.846298 3693 buffer_processor.cpp:192] setVideoProperties: Allocating 3 raw frame buffers, each of size 1313280 bytes (total: 3.75732 MB)
-I20251104 10:37:59.846467 3693 buffer_processor.cpp:220] setVideoProperties: Allocating 3 ToFi buffers, each of size 4194304 bytes (total: 12 MB)
-I20251104 10:38:00.048049 3693 camera_itof.cpp:1845] Camera FPS set from parameter list at: 25
-W20251104 10:38:00.048145 3693 camera_itof.cpp:2065] vcselDelay was not found in parameter list, not setting.
-W20251104 10:38:00.048696 3693 camera_itof.cpp:2117] enablePhaseInvalidation was not found in parameter list, not setting.
-I20251104 10:38:00.048763 3693 camera_itof.cpp:401] Using the following configuration parameters for mode 3
-I20251104 10:38:00.048783 3693 camera_itof.cpp:404] abThreshMin : 3.0
-I20251104 10:38:00.048798 3693 camera_itof.cpp:404] bitsInAB : 16
-I20251104 10:38:00.048811 3693 camera_itof.cpp:404] bitsInConf : 8
-I20251104 10:38:00.048824 3693 camera_itof.cpp:404] bitsInPhaseOrDepth : 16
-I20251104 10:38:00.048837 3693 camera_itof.cpp:404] confThresh : 25.0
-I20251104 10:38:00.048849 3693 camera_itof.cpp:404] depthComputeIspEnable : 1
-I20251104 10:38:00.048862 3693 camera_itof.cpp:404] fps : 25
-I20251104 10:38:00.048874 3693 camera_itof.cpp:404] headerSize : 128
-I20251104 10:38:00.048886 3693 camera_itof.cpp:404] inputFormat : raw8
-I20251104 10:38:00.048899 3693 camera_itof.cpp:404] interleavingEnable : 1
-I20251104 10:38:00.048912 3693 camera_itof.cpp:404] jblfABThreshold : 10.0
-I20251104 10:38:00.048924 3693 camera_itof.cpp:404] jblfApplyFlag : 1
-I20251104 10:38:00.048937 3693 camera_itof.cpp:404] jblfExponentialTerm : 5.0
-I20251104 10:38:00.048949 3693 camera_itof.cpp:404] jblfGaussianSigma : 10.0
-I20251104 10:38:00.048961 3693 camera_itof.cpp:404] jblfMaxEdge : 12.0
-I20251104 10:38:00.048974 3693 camera_itof.cpp:404] jblfWindowSize : 7
-I20251104 10:38:00.048986 3693 camera_itof.cpp:404] partialDepthEnable : 0
-I20251104 10:38:00.048999 3693 camera_itof.cpp:404] phaseInvalid : 0
-I20251104 10:38:00.049011 3693 camera_itof.cpp:404] radialThreshMax : 10000.0
-I20251104 10:38:00.049023 3693 camera_itof.cpp:404] radialThreshMin : 100.0
-I20251104 10:38:00.049035 3693 camera_itof.cpp:404] xyzEnable : 1
-I20251104 10:38:00.049185 3693 camera_itof.cpp:414] Metadata in AB is enabled and it is stored in the first 128 bytes.
-I20251104 10:38:00.284884 3693 camera_itof.cpp:505] Using closed source depth compute library.
+I20260225 13:52:29.471555 267320 adsd3500_sensor.cpp:336] Opening device
+I20260225 13:52:29.471584 267320 adsd3500_sensor.cpp:354] Looking for the following cards:
+I20260225 13:52:29.471598 267320 adsd3500_sensor.cpp:356] vi-output, adsd3500
+I20260225 13:52:29.471609 267320 adsd3500_sensor.cpp:418] device: /dev/video0   subdevice: /dev/v4l-subdev1
+I20260225 13:52:31.676008 267320 buffer_processor.cpp:260] setVideoProperties: Allocating 3 raw frame buffers, each of size 1313280 bytes (total: 3.75732 MB)
+I20260225 13:52:31.676311 267320 buffer_processor.cpp:279] setVideoProperties: Allocating 3 ToFi buffers, each of size 2097152 bytes (total: 6 MB)
+I20260225 13:52:31.878289 267320 camera_itof.cpp:3315] Camera FPS set from parameter list at: 40
+W20260225 13:52:31.878383 267320 camera_itof.cpp:3848] vcselDelay was not found in parameter list, not setting.
+W20260225 13:52:31.878870 267320 camera_itof.cpp:3911] enablePhaseInvalidation was not found in parameter list, not setting.
+I20260225 13:52:31.878928 267320 camera_itof.cpp:638] Using the following configuration parameters for mode 3
+I20260225 13:52:31.878946 267320 camera_itof.cpp:641] abThreshMin : 20
+I20260225 13:52:31.878958 267320 camera_itof.cpp:641] bitsInAB : 16
+I20260225 13:52:31.878969 267320 camera_itof.cpp:641] bitsInConf : 8
+I20260225 13:52:31.878979 267320 camera_itof.cpp:641] bitsInPhaseOrDepth : 16
+I20260225 13:52:31.878989 267320 camera_itof.cpp:641] confThresh : 25
+I20260225 13:52:31.878999 267320 camera_itof.cpp:641] depthComputeIspEnable : 1
+I20260225 13:52:31.879009 267320 camera_itof.cpp:641] fps : 40
+I20260225 13:52:31.879018 267320 camera_itof.cpp:641] headerSize : 128
+I20260225 13:52:31.879028 267320 camera_itof.cpp:641] inputFormat : raw8
+I20260225 13:52:31.879038 267320 camera_itof.cpp:641] interleavingEnable : 1
+I20260225 13:52:31.879047 267320 camera_itof.cpp:641] jblfABThreshold : 10
+I20260225 13:52:31.879057 267320 camera_itof.cpp:641] jblfApplyFlag : 1
+I20260225 13:52:31.879068 267320 camera_itof.cpp:641] jblfExponentialTerm : 5
+I20260225 13:52:31.879078 267320 camera_itof.cpp:641] jblfGaussianSigma : 10
+I20260225 13:52:31.879087 267320 camera_itof.cpp:641] jblfMaxEdge : 12
+I20260225 13:52:31.879097 267320 camera_itof.cpp:641] jblfWindowSize : 5
+I20260225 13:52:31.879106 267320 camera_itof.cpp:641] partialDepthEnable : 0
+I20260225 13:52:31.879116 267320 camera_itof.cpp:641] phaseInvalid : 0
+I20260225 13:52:31.879125 267320 camera_itof.cpp:641] radialThreshMax : 10000
+I20260225 13:52:31.879138 267320 camera_itof.cpp:641] radialThreshMin : 100
+I20260225 13:52:31.879149 267320 camera_itof.cpp:641] xyzEnable : 1
+I20260225 13:52:31.879284 267320 camera_itof.cpp:651] Metadata in AB is enabled and it is stored in the first 128 bytes.
+I20260225 13:52:32.090634 267320 camera_itof.cpp:749] Using closed source depth compute library.
 camera1.setMode() Status.Ok
-I20251104 10:38:00.422332 3693 adsd3500_sensor.cpp:454] Starting device 0
-I20251104 10:38:00.442145 3693 buffer_processor.cpp:733] startThreads: Starting Threads..
+I20260225 13:52:32.197406 267320 adsd3500_sensor.cpp:638] Starting device 0
+I20260225 13:52:32.217121 267320 buffer_processor.cpp:1042] startThreads: Starting Threads..
 camera1.start() Status.Ok
-W20251104 10:38:00.738963 3693 buffer_processor.cpp:326] captureFrameThread: No free buffers m_v4l2_input_buffer_Q size: 0
-W20251104 10:38:00.742255 3693 buffer_processor.cpp:436] processThread: No new frames, m_captureToProcessQueue Size: 0
-I20251104 10:38:00.911284 3693 camera_itof.cpp:637] Dropped first frame
-I20251104 10:38:04.988333 3693 buffer_processor.cpp:786] stopThreads: Threads Stopped. Raw buffers freed: 3, ToFi buffers freed: 3
-I20251104 10:38:04.988879 3693 adsd3500_sensor.cpp:499] Stopping device
-I20251104 10:38:04.992911 3693 adsd3500_sensor.cpp:1521] Waiting for interrupt.
-I20251104 10:38:04.992960 3693 adsd3500_sensor.cpp:1526] .
-I20251104 10:38:05.013059 3693 adsd3500_sensor.cpp:1526] .
-I20251104 10:38:05.035804 3693 adsd3500_sensor.cpp:1531] Waited: 40 ms.
-I20251104 10:38:05.035856 3693 adsd3500_sensor.cpp:1538] Got the Interrupt from ADSD3500
-I20251104 10:38:05.136029 3693 buffer_processor.cpp:97] freeComputeLibrary
+I20260225 13:52:32.652446 267320 camera_itof.cpp:1251] Dropped first frame
 ```
 
 [<img src="images/depth-image-animation-pygame.png" width="25%">](images/depth-image-animation-pygame.png)
