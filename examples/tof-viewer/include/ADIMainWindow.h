@@ -497,10 +497,7 @@ class ADIMainWindow {
      * Reads bitsInAB, bitsInPhaseOrDepth, xyzEnable from current mode config
     */
     void UpdateDisplayEnableFlagsFromConfig();
-
-    const uint32_t MAX_FRAME_RATE = 25;
-    uint32_t m_max_frame_rate = MAX_FRAME_RATE;
-
+    
     /**
 	* @brief Set any window a specific position
 	*/
