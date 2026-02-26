@@ -1,5 +1,9 @@
 # ADCAM Camera Kit
 
+![Static Badge](https://img.shields.io/badge/Important-FFD700?style=flat-square)
+
+This page is in preparation for the next release. See the ADCAM tag [v0.1.0-a.1](https://github.com/analogdevicesinc/ADCAM/tree/v0.1.0-a.1) for the latest release.
+
 ## Latest Release
 
 * [ADCAM Release 0.2.0-a.1](https://github.com/analogdevicesinc/ADCAM/releases/tag/v0.2.0-a.1)
