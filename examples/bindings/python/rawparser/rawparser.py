@@ -237,7 +237,20 @@ def main():
         if "conf" in available_types:
             image_conf = np.asarray(frame.getData("conf"))
             image_conf2 = image_conf.flatten()
-            generate_confidence(image_conf2, frame_dir, base_filename, str_frame_idx)
+            count = 0
+            final_conf = np.zeros(frameDataDetails.width*frameDataDetails.height*4)
+            for i in range(frameDataDetails.width*(frameDataDetails.height // 2)):
+                packed_float = struct.pack('f', image_conf2[i])
+            # Unpack the bytes into four uint8 values
+                uint8_values = struct.unpack('2H', packed_float)
+                array_data = np.array(uint8_values)
+                for j in range(2):
+                    final_conf[count+j] = array_data[j]
+                    #print(j)
+                count = count + 2
+            image_conf = np.reshape(final_conf[frameDataDetails.width*frameDataDetails.height*0:frameDataDetails.width*frameDataDetails.height*1], \
+                                    [frameDataDetails.height,frameDataDetails.width])
+            generate_confidence(image_conf, frame_dir, base_filename, str_frame_idx)
 
         # Get the confidence frame
         if "xyz" in available_types:
