@@ -442,7 +442,7 @@ Note, for visualzation, it is assumed that the Python environment is still activ
 
 To visualize the AB output:
 ```
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/first-frame$ python ../../../tools/visualization/visualize_ab.py out_ab_mode_3.bin 512 512
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/first-frame$ python visualization/visualize_ab.py out_ab_mode_3.bin 512 512
 Input file is:  out_ab_mode_3.bin
 
 ```
@@ -451,7 +451,7 @@ Input file is:  out_ab_mode_3.bin
 
 To visualize the depth output:
 ```
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/first-frame$ python ../../../tools/visualization/visualize_depth.py out_depth_mode_3.bin 512 512
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/first-frame$ python visualization/visualize_depth.py out_depth_mode_3.bin 512 512
 Input file is:  out_depth_mode_3.bin
 ```
 
@@ -876,6 +876,10 @@ Notice, line (*Measured FPS: 5.04668*), the frame rate is 5fps.
 
 *rawparser.py* is used to extract frames from data streams collected by data_collect. It can also be used to do the same for data streams recorded by ADIToFGUI. As with the Pyton bindings, Python 3.10 is required.
 
+![Static Badge](https://img.shields.io/badge/Important-FFD700?style=flat-square)
+
+The Python environment must be active, see the section [Python Tools](#python-tools).
+
 ##### Command Line Interface
 ```
 python rawparser.py -h
@@ -900,7 +904,7 @@ options:
 The following example extracts frames 10 thru 10 from the capture file *output\recordings\frame2025_11_04_10_53_14_0.bin* and places the contents in the folder *output\recordings\range_10_16*.
 
 ```
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python ../../../tools/rawparser/rawparser.py output/recordings/aditof_20260225_172421_df2852a8.adcam -f 10-16
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser.py output/recordings/aditof_20260225_172421_df2852a8.adcam -f 10-16
 rawparser 2.0.0
 filename: output/recordings/aditof_20260225_172421_df2852a8.adcam
 SDK version:  7.0.0 a-1  | branch:  main  | commit:  91b46285
@@ -947,7 +951,7 @@ drwxrwxr-x 9 analog analog     4096 Feb 25 13:05 ../
 ###### Using the Visualization tool for the AB and Depth PNGs
 
 ```
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python ../../../tools/rawparser/rawparser_visualize.py --view png output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view png output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
 ============================================================
 PNG and PLY File Visualizer
 ============================================================
@@ -986,7 +990,7 @@ Press any key in the window to continue (or Ctrl+C to exit)...
 
 ###### Using the Visualization tool for the Metadata
 ```
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python ../../../tools/rawparser/rawparser_visualize.py --view metadata output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view metadata output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
 ============================================================
 PNG and PLY File Visualizer
 ============================================================
@@ -1035,7 +1039,7 @@ Visualization complete!
 
 ###### Using the Visualization tool for the Point Cloud
 ```
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python ../../../tools/rawparser/rawparser_visualize.py --view pointcloud output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view pointcloud output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
 ```
 
 [<img src="images/visualize_ply.png" width="40%">](images/visualize_ply.png)
@@ -1200,6 +1204,28 @@ To do so, right click in the depth window, once the red line appears move the mo
 
 [<img src="images/aditofgui_depth_distance_windows.png" width="40%">](images/aditofgui_depth_distance_windows.png)
 
+#### Configuring ADIToFGUI
+
+In the *ADIToFGUI* folder there is a file: *tof-tools.config. This tool contains some GUI configuration parameters. The default contents of the file is shown below.
+
+```
+{
+    "skip_network_cameras": "off",
+    "camera_ip": "",
+    "tooltip_delay_seconds": 1.5,
+    "recordings_folder": "."
+}
+```
+
+Let's take a look at each definition:
+
+|Entry|Definition|
+|-----|----------|
+|skip_network_cameras|Look for networked ADI ToF Cameras if set to 'on'.|
+|camera_ip|IP address of network worked camera, used if 'skip_network_cameras' is set to 'on'.|
+|tooltip_delay_seconds|How long to wait before the GUI displays tooltips on hover. By default it is set to 1.5s.|
+|recordings_folder|The folder to save recordings to. By default it is the current folder - 'recordings' will be created.|
+
 # Appendix
 
 ## Configuration JSON File
@@ -1217,12 +1243,12 @@ These should not be changed in the context of the eval kit unless explicitly ask
 * *enableTempCompensation*: DO NOT CHANGE
 * *enableEdgeConfidence*: DO NOT CHANGE
 ```
-	"errata1":	1,
-	"fsyncMode":	-1,
-	"mipiOutputSpeed":	1,
+  "errata1":  1,
+  "fsyncMode":  -1,
+  "mipiOutputSpeed":  1,
   "isdeskewEnabled": 1,
-	"enableTempCompensation":	-1,
-	"enableEdgeConfidence":	-1,
+  "enableTempCompensation":  -1,
+  "enableEdgeConfidence":  -1,
 ```
 
 ### Mode Parameters
@@ -1239,34 +1265,32 @@ This is further sub-divived into two groups:
     * *numCores*: The number of CPU cores to use when *multiCoreEnable* is set to *1*.
     * *xyzEnable*: DO NOT CHANGE.
 ```
-	"0":	{
-		"depth-compute":	{
-			"abThreshMin":	3,
-			"bitsInAB":	16,
-			"bitsInConf":	0,
-			"bitsInPhaseOrDepth":	12,
-			"confThresh":	25,
-			"depthComputeIspEnable":	1,
-			"inputFormat":	"mipiRaw12_8",
-			"interleavingEnable":	0,
-			"jblfABThreshold":	10,
-			"jblfApplyFlag":	1,
-			"jblfExponentialTerm":	5,
-			"jblfGaussianSigma":	10,
-			"jblfMaxEdge":	12,
-			"jblfWindowSize":	7,
-			"partialDepthEnable":	1,
-			"phaseInvalid":	0,
-			"radialThreshMax":	4200,
-			"radialThreshMin":	30
-		},
-		"configuration-parameters":	{
-			"fps":	10,
-			"headerSize":	128,
-			"multiCoreEnable":	1,
-			"numCores":	4,
-			"xyzEnable":	1
-		}
-	},
+  "0":{
+    "depth-compute":{
+      "abThreshMin":20.0,
+      "bitsInAB":16.0,
+      "bitsInConf":0.0,
+      "bitsInPhaseOrDepth":16.0,
+      "confThresh":25.0,
+      "depthComputeIspEnable":1.0,
+      "inputFormat":"mipiRaw12_8",
+      "interleavingEnable":0.0,
+      "jblfABThreshold":10.0,
+      "jblfApplyFlag":1.0,
+      "jblfExponentialTerm":5.0,
+      "jblfGaussianSigma":10.0,
+      "jblfMaxEdge":12.0,
+      "jblfWindowSize":5.0,
+      "partialDepthEnable":1.0,
+      "phaseInvalid":0.0,
+      "radialThreshMax":10000.0,
+      "radialThreshMin":100.0
+    },
+    "configuration-parameters":{
+      "fps":10.0,
+      "headerSize":128.0,
+      "xyzEnable":1.0
+    }
+  },
 ```
 **
