@@ -76,6 +76,13 @@ Status save_frame(aditof::Frame &frame, std::string frameType,
     uint16_t *data1;
     FrameDataDetails fDetails;
     Status status = Status::OK;
+
+    bool frameHasType = frame.haveDataType(frameType);
+    if (!frameHasType) {
+        LOG(ERROR) << "Frame doesn't have data of type " + frameType + "!";
+        return Status::INVALID_ARGUMENT;
+    }
+
     status = frame.getData(frameType, &data1);
     if (status != Status::OK) {
         LOG(ERROR) << "Could not get frame data " + frameType + "!";
