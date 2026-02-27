@@ -1,57 +1,11 @@
-<span style="font-size:30px;"><u>ADCAM Camera Kit v0.2.0 Alpha 1</u></span>
-
-- [🛑 Release Notes 🛑](#-release-notes-)
-- [Requirements and Installation](#requirements-and-installation)
-- [Using the Eval Kit](#using-the-eval-kit)
-  - [Python Tools](#python-tools)
-      - [Setup the Virtual Environment](#setup-the-virtual-environment)
-      - [Activate the Virtual Environment](#activate-the-virtual-environment)
-      - [Deactivate the Virtual Environment](#deactivate-the-virtual-environment)
-    - [first\_frame (Python)](#first_frame-python)
-      - [Command Line Interface](#command-line-interface)
-      - [Example Usage](#example-usage)
-    - [data\_collect (Python)](#data_collect-python)
-      - [Command Line Interface](#command-line-interface-1)
-    - [streaming (Python)](#streaming-python)
-      - [Command Line Interface](#command-line-interface-2)
-      - [Example Usage](#example-usage-1)
-  - [C++ Tools](#c-tools)
-    - [first\_frame (C++)](#first_frame-c)
-      - [Command Line Interface](#command-line-interface-3)
-    - [data\_collect (C++)](#data_collect-c)
-      - [Command Line Interface](#command-line-interface-4)
-      - [Example 1: Basic Usage](#example-1-basic-usage)
-      - [Example 2: Saving Configuration Data to JSON](#example-2-saving-configuration-data-to-json)
-      - [Example 3: Loading Configuration Data from JSON](#example-3-loading-configuration-data-from-json)
-      - [Extracting Data from Saved Streams: rawparser.py](#extracting-data-from-saved-streams-rawparserpy)
-        - [Command Line Interface](#command-line-interface-5)
-        - [Example Usage](#example-usage-2)
-    - [ADIToFGUI (C++)](#aditofgui-c)
-        - [Open ADTF3175D Eval Kit](#open-adtf3175d-eval-kit)
-        - [Mode Selection](#mode-selection)
-        - [Data Views](#data-views)
-        - [ADIToFGUI and Configuration Parameters](#aditofgui-and-configuration-parameters)
-- [Appendix](#appendix)
-  - [Configuration JSON File](#configuration-json-file)
-    - [General Parameters](#general-parameters)
-    - [Mode Parameters](#mode-parameters)
-
----
----
-
 # 🛑 Release Notes 🛑
 
-  * Which includes the dual configuration ADSD3500 Depth ISP
-* Network connection for the Jetson Orin Nano Dev Kit
- 
----
----
+Refer to the release page for release notes.
+
 # Requirements and Installation 
 
-Refer to the Quick Start Guide for installation instructions.
+Refer to the Quick Start Guide, on the release page, for installation instructions.
 
----
----
 # Using the Eval Kit
 
 It is assumed the **ADCAM Camera Kit Quick Start Guide** was followed to get ADCAM up and running.
@@ -60,6 +14,9 @@ It is assumed the **ADCAM Camera Kit Quick Start Guide** was followed to get ADC
 
 The Python tools rely on the included Python bindings.
 
+<details>
+<summary>Setup the Virtual Environment</summary>
+  
 #### Setup the Virtual Environment
 
 The Python virtual environment step was done during the setup phase.
@@ -95,6 +52,11 @@ Activating ADI ToF python env
 (aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1$ deactivate
 ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1$
 
+</details>
+
+<details>
+<summary>Example: first_frame (Python)</summary>
+  
 ### first_frame (Python)
 
 A basic example showing how to get a frame from the device.
@@ -112,7 +74,7 @@ python first_frame.py 3 1
 ```
 
 #### Example Usage
-
+  
 ```
 (aditofpython_env) ~/dev/active/ADCAM.fix-gui-offline/build/examples/bindings/python/first_frame$ python first_frame.py 3 1
 SDK version:  7.0.0 a-1  | branch:    | commit:
@@ -223,6 +185,10 @@ I20260218 10:05:22.066078 16697 buffer_processor.cpp:132] freeComputeLibrary
 ```
 
 [<img src="images/first-frame-py.png" width="25%">](images/first-frame-py.png)
+</details>
+
+<details>
+<summary>Example: streaming (Python)</summary>
 
 ### streaming (Python)
 
@@ -243,7 +209,7 @@ python depth-image-animation-pygame.py 0 192.168.56.1
 ```
 
 #### Example Usage
-
+  
 ```
 (aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/Python$ python depth-image-animation-pygame.py 3
 pygame 2.6.1 (SDL 2.28.4, Python 3.10.12)
@@ -333,8 +299,14 @@ I20260225 13:52:32.652446 267320 camera_itof.cpp:1251] Dropped first frame
 ```
 
 [<img src="images/depth-image-animation-pygame.png" width="25%">](images/depth-image-animation-pygame.png)
+</details>
 
-## C++ Tools
+## C++ Examples and Tools
+
+We have provided examples and tools in C++ that should how to use the SDK.
+
+<details>
+<summary>first_frame (C++)</summary>
 
 ### first_frame (C++)
 
@@ -468,7 +440,11 @@ $ make -f Makefile.eval
 $ ls first-frame*
 first-frame  first-frame.user
 ```
+</details>
 
+<details>
+<summary>data_collect (C++)</summary>
+  
 ### data_collect (C++)
 
 **data_collect** is use save a stream of frames to the file system of the host computer. 
@@ -512,7 +488,10 @@ Data Collect.
 * *--f output*: Place captured data into the folder *output*.
 * *--m 1*: Use mode 1.
 * *--n 100*: Capture 100 frames.
-   
+
+<details>
+<summary>data_collect --f output --m 1 --n 100</summary>
+
 ```
 (aditofpython_env) analog@analog-desktop:~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ./data_collect --f output --m 1 --n 100
 I20260225 12:20:07.078713 261726 main.cpp:192] ADCAM version: 0.2.0 | SDK version: 7.0.0 a-1 | branch: main | commit: 91b46285
@@ -629,9 +608,13 @@ I20260225 12:20:25.386176 261726 buffer_processor.cpp:133] freeComputeLibrary
 (aditofpython_env) :~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ls output/recordings/
 aditof_20260225_172013_a4ce5cf9.adcam
 ```
+</details>
 
 #### Example 2: Saving Configuration Data to JSON
 * *--scf saved_cfg.json*: Save the device configuration file to *saved_cfg.json*.
+<details>
+<summary>data_collect --scf saved_cfg.json</summary>
+  
 ```
 (aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ./data_collect --scf saved_cfg.json
 I20260225 12:23:09.037848 261797 main.cpp:192] ADCAM version: 0.2.0 | SDK version: 7.0.0 a-1 | branch: main | commit: 91b46285
@@ -748,6 +731,7 @@ I20260225 12:23:17.430691 261797 buffer_processor.cpp:133] freeComputeLibrary
 (aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ls saved_cfg.json
 saved_cfg.json
 ```
+</details>
 
 #### Example 3: Loading Configuration Data from JSON
 
@@ -759,6 +743,9 @@ In this example we will use the JSON file to change the frame rate for mode 1 to
 * *--m 1*: Use mode 1.
 * *--n 100*: Capture 100 frames.
 * *--lcf saved_cfg.json*: Used the device configuration file *saved_cfg.json*.
+<details>
+<summary>data_collect --f output --m 1 --n 100 --lcf saved_cfg.json</summary>
+
 ```
 (aditofpython_env) analog@analog-desktop:~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ./data_collect --f output --m 1 --n 100 --lcf saved_cfg.json
 I20260225 12:24:14.976205 261852 main.cpp:192] ADCAM version: 0.2.0 | SDK version: 7.0.0 a-1 | branch: main | commit: 91b46285
@@ -870,179 +857,14 @@ I20260225 12:24:43.473676 261852 adsd3500_sensor.cpp:1927] Waited: 20 ms.
 I20260225 12:24:43.473755 261852 adsd3500_sensor.cpp:1934] Got the Interrupt from ADSD3500
 I20260225 12:24:43.479294 261852 buffer_processor.cpp:133] freeComputeLibrary
 ```
+</details>
 Notice, line (*Measured FPS: 5.04668*), the frame rate is 5fps.
 
-#### Extracting Data from Saved Streams: rawparser.py
+</details>
 
-*rawparser.py* is used to extract frames from data streams collected by data_collect. It can also be used to do the same for data streams recorded by ADIToFGUI. As with the Pyton bindings, Python 3.10 is required.
+<details>
 
-![Static Badge](https://img.shields.io/badge/Important-FFD700?style=flat-square)
-
-The Python environment must be active, see the section [Python Tools](#python-tools).
-
-##### Command Line Interface
-```
-python rawparser.py -h
-usage: rawparser.py [-h] [-o OUTDIR] [-n] [-f FRAMES] filename
-
-Script to parse a raw file and extract different frame data
-
-positional arguments:
-  filename              bin filename to parse
-
-options:
-  -h, --help            show this help message and exit
-  -o OUTDIR, --outdir OUTDIR
-                        Output directory (optional)
-  -n, --no_xyz          Input file doesn't have XYZ data
-  -f FRAMES, --frames FRAMES
-                        Frame range: N (just N), N- (from N to end), N-M (N to M inclusive)
-```
-
-##### Example Usage
-
-The following example extracts frames 10 thru 10 from the capture file *output\recordings\frame2025_11_04_10_53_14_0.bin* and places the contents in the folder *output\recordings\range_10_16*.
-
-```
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser.py output/recordings/aditof_20260225_172421_df2852a8.adcam -f 10-16
-rawparser 2.0.0
-filename: output/recordings/aditof_20260225_172421_df2852a8.adcam
-SDK version:  7.0.0 a-1  | branch:  main  | commit:  91b46285
-I20260225 13:05:05.354537 263648 system_impl.cpp:143] Creating offline sensor.
-I20260225 13:05:05.354705 263648 camera_itof.cpp:115] Sensor name = offline
-system.getCameraList() Status.Ok
-I20260225 13:05:05.354803 263648 camera_itof.cpp:161] Initializing camera: Offline
-I20260225 13:05:05.355107 263648 offline_depth_sensor.cpp:808] Building Index
-I20260225 13:05:05.355724 263648 camera_itof.cpp:513] Number of Frames: 100
-I20260225 13:05:05.355745 263648 camera_itof.cpp:515] Frame Rate: 5
-I20260225 13:05:05.355758 263648 camera_itof.cpp:536] [PLAYBACK] Reading frameContent from file header...
-I20260225 13:05:05.355771 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: depth
-I20260225 13:05:05.355784 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: ab
-I20260225 13:05:05.355795 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: xyz
-I20260225 13:05:05.355807 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: metadata
-I20260225 13:05:05.355818 263648 camera_itof.cpp:546] [PLAYBACK] Total frame types loaded: 4
-I20260225 13:05:05.355830 263648 camera_itof.cpp:558] [PLAYBACK] Loading 4 fDataDetails entries...
-I20260225 13:05:05.355841 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[0]: type=depth
-I20260225 13:05:05.355854 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[1]: type=ab
-I20260225 13:05:05.355865 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[2]: type=xyz
-I20260225 13:05:05.355876 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[3]: type=metadata
-I20260225 13:05:05.781687 263648 camera_itof.cpp:1932] [PLAYBACK] Setting enable flags based on frameContent...
-I20260225 13:05:05.781804 263648 camera_itof.cpp:1949] [PLAYBACK] Enable flags set: depth=1 ab=1 conf=0 xyz=1
-Processing Frame: 16
-Processed frames.
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ls output/recordings/aditof_20260225_172421_df2852a8/
-aditof_20260225_172421_df2852a8_10  aditof_20260225_172421_df2852a8_12  aditof_20260225_172421_df2852a8_14  aditof_20260225_172421_df2852a8_16
-aditof_20260225_172421_df2852a8_11  aditof_20260225_172421_df2852a8_13  aditof_20260225_172421_df2852a8_15
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ll output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10
-total 25112
-drwxrwxr-x 2 analog analog     4096 Feb 25 13:05 ./
-drwxrwxr-x 9 analog analog     4096 Feb 25 13:05 ../
--rw-rw-r-- 1 analog analog   426544 Feb 25 13:05 ab_aditof_20260225_172421_df2852a8_000010.png
--rw-rw-r-- 1 analog analog    98950 Feb 25 13:05 depth_aditof_20260225_172421_df2852a8_000010.png
--rw-rw-r-- 1 analog analog      308 Feb 25 13:05 metadata_aditof_20260225_172421_df2852a8_000010.txt
--rw-rw-r-- 1 analog analog 25165974 Feb 25 13:05 pointcloud_aditof_20260225_172421_df2852a8_000010.ply
-
-```
-* **ab_aditof_20260225_172421_df2852a8_000010.png**: PNG of the AB frame for frame #10.
-* **depth_aditof_20260225_172421_df2852a8_000010.png**: PNG of the depth frame for frame #10.
-* **metadata_aditof_20260225_172421_df2852a8_000010.txt**: Text file of metadata for frame #10.
-* **pointcloud_aditof_20260225_172421_df2852a8_000010.ply**: Point cloud file, in ply format, for frame #10.
-
-###### Using the Visualization tool for the AB and Depth PNGs
-
-```
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view png output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
-============================================================
-PNG and PLY File Visualizer
-============================================================
-
-Scanning directory: output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
-Looking for first file of each type...
-
-✓ Found metadata: metadata_aditof_20260225_172421_df2852a8_000010.txt
-✓ Found AB image: ab_aditof_20260225_172421_df2852a8_000010.png
-✗ No conf*.png files found
-✓ Found depth image: depth_aditof_20260225_172421_df2852a8_000010.png
-✓ Found point cloud: pointcloud_aditof_20260225_172421_df2852a8_000010.ply
-
-Displaying 4 file(s)...
-
-
-============================================================
-File 1/2: AB
-============================================================
-  Loaded: 1024x1024, 3 channel(s)
-
-============================================================
-File 2/2: DEPTH
-============================================================
-  Loaded: 1024x1024, 3 channel(s)
-
-============================================================
-Creating combined display...
-============================================================
-
-Displaying combined image (2048x1064)
-Press any key in the window to continue (or Ctrl+C to exit)...
-```
-
-[<img src="images/visualize_png.png" width="40%">](images/visualize_png.png)
-
-###### Using the Visualization tool for the Metadata
-```
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view metadata output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
-============================================================
-PNG and PLY File Visualizer
-============================================================
-
-Scanning directory: output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
-Looking for first file of each type...
-
-✓ Found metadata: metadata_aditof_20260225_172421_df2852a8_000010.txt
-✓ Found AB image: ab_aditof_20260225_172421_df2852a8_000010.png
-✗ No conf*.png files found
-✓ Found depth image: depth_aditof_20260225_172421_df2852a8_000010.png
-✓ Found point cloud: pointcloud_aditof_20260225_172421_df2852a8_000010.ply
-
-Displaying 4 file(s)...
-
-
-============================================================
-File 1/1: METADATA
-============================================================
-Reading metadata: output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/metadata_aditof_20260225_172421_df2852a8_000010.txt
-------------------------------------------------------------
-Metadata for frame 000010:
-frameWidth: 1024
-frameHeight: 1024
-outputconfig: 5
-depthPhaseBits: 12
-ABBits: 16
-confidenceBits: 0
-invalidPhaseValue: 20
-frequencyIndex: 32
-frameNumber: 12
-imagerMode: 1
-numberOfPhases: 3
-numberOfFrequencies: 3
-ElapsedTimeinFrac: 0
-ElapsedTimeinSec: 0
-sensorTemp: 38
-laserTemp: 39
-
-------------------------------------------------------------
-
-============================================================
-Visualization complete!
-============================================================
-```
-
-###### Using the Visualization tool for the Point Cloud
-```
-(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view pointcloud output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
-```
-
-[<img src="images/visualize_ply.png" width="40%">](images/visualize_ply.png)
+<summary>ADIToFGUI (C++)</summary>
 
 ### ADIToFGUI (C++)
 
@@ -1226,7 +1048,194 @@ Let's take a look at each definition:
 |tooltip_delay_seconds|How long to wait before the GUI displays tooltips on hover. By default it is set to 1.5s.|
 |recordings_folder|The folder to save recordings to. By default it is the current folder - 'recordings' will be created.|
 
+</details>
+
 # Appendix
+
+<details>
+
+<summary>Extracting Data from Saved Streams: rawparser.py</summary>
+
+## Extracting Data from Saved Streams: rawparser.py
+
+*rawparser.py* is used to extract frames from data streams collected by data_collect. It can also be used to do the same for data streams recorded by ADIToFGUI. As with the Pyton bindings, Python 3.10 is required.
+
+![Static Badge](https://img.shields.io/badge/Important-FFD700?style=flat-square)
+
+The Python environment must be active, see the section [Python Tools](#python-tools).
+
+##### Command Line Interface
+```
+python rawparser.py -h
+usage: rawparser.py [-h] [-o OUTDIR] [-n] [-f FRAMES] filename
+
+Script to parse a raw file and extract different frame data
+
+positional arguments:
+  filename              bin filename to parse
+
+options:
+  -h, --help            show this help message and exit
+  -o OUTDIR, --outdir OUTDIR
+                        Output directory (optional)
+  -n, --no_xyz          Input file doesn't have XYZ data
+  -f FRAMES, --frames FRAMES
+                        Frame range: N (just N), N- (from N to end), N-M (N to M inclusive)
+```
+
+##### Example Usage
+
+The following example extracts frames 10 thru 10 from the capture file *output\recordings\frame2025_11_04_10_53_14_0.bin* and places the contents in the folder *output\recordings\range_10_16*.
+<details>
+<summary>python rawparser/rawparser.py output/recordings/aditof_20260225_172421_df2852a8.adcam -f 10-16</summary>
+
+```
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser.py output/recordings/aditof_20260225_172421_df2852a8.adcam -f 10-16
+rawparser 2.0.0
+filename: output/recordings/aditof_20260225_172421_df2852a8.adcam
+SDK version:  7.0.0 a-1  | branch:  main  | commit:  91b46285
+I20260225 13:05:05.354537 263648 system_impl.cpp:143] Creating offline sensor.
+I20260225 13:05:05.354705 263648 camera_itof.cpp:115] Sensor name = offline
+system.getCameraList() Status.Ok
+I20260225 13:05:05.354803 263648 camera_itof.cpp:161] Initializing camera: Offline
+I20260225 13:05:05.355107 263648 offline_depth_sensor.cpp:808] Building Index
+I20260225 13:05:05.355724 263648 camera_itof.cpp:513] Number of Frames: 100
+I20260225 13:05:05.355745 263648 camera_itof.cpp:515] Frame Rate: 5
+I20260225 13:05:05.355758 263648 camera_itof.cpp:536] [PLAYBACK] Reading frameContent from file header...
+I20260225 13:05:05.355771 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: depth
+I20260225 13:05:05.355784 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: ab
+I20260225 13:05:05.355795 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: xyz
+I20260225 13:05:05.355807 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: metadata
+I20260225 13:05:05.355818 263648 camera_itof.cpp:546] [PLAYBACK] Total frame types loaded: 4
+I20260225 13:05:05.355830 263648 camera_itof.cpp:558] [PLAYBACK] Loading 4 fDataDetails entries...
+I20260225 13:05:05.355841 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[0]: type=depth
+I20260225 13:05:05.355854 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[1]: type=ab
+I20260225 13:05:05.355865 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[2]: type=xyz
+I20260225 13:05:05.355876 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[3]: type=metadata
+I20260225 13:05:05.781687 263648 camera_itof.cpp:1932] [PLAYBACK] Setting enable flags based on frameContent...
+I20260225 13:05:05.781804 263648 camera_itof.cpp:1949] [PLAYBACK] Enable flags set: depth=1 ab=1 conf=0 xyz=1
+Processing Frame: 16
+Processed frames.
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ls output/recordings/aditof_20260225_172421_df2852a8/
+aditof_20260225_172421_df2852a8_10  aditof_20260225_172421_df2852a8_12  aditof_20260225_172421_df2852a8_14  aditof_20260225_172421_df2852a8_16
+aditof_20260225_172421_df2852a8_11  aditof_20260225_172421_df2852a8_13  aditof_20260225_172421_df2852a8_15
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ll output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10
+total 25112
+drwxrwxr-x 2 analog analog     4096 Feb 25 13:05 ./
+drwxrwxr-x 9 analog analog     4096 Feb 25 13:05 ../
+-rw-rw-r-- 1 analog analog   426544 Feb 25 13:05 ab_aditof_20260225_172421_df2852a8_000010.png
+-rw-rw-r-- 1 analog analog    98950 Feb 25 13:05 depth_aditof_20260225_172421_df2852a8_000010.png
+-rw-rw-r-- 1 analog analog      308 Feb 25 13:05 metadata_aditof_20260225_172421_df2852a8_000010.txt
+-rw-rw-r-- 1 analog analog 25165974 Feb 25 13:05 pointcloud_aditof_20260225_172421_df2852a8_000010.ply
+```
+</details>
+
+* **ab_aditof_20260225_172421_df2852a8_000010.png**: PNG of the AB frame for frame #10.
+* **depth_aditof_20260225_172421_df2852a8_000010.png**: PNG of the depth frame for frame #10.
+* **metadata_aditof_20260225_172421_df2852a8_000010.txt**: Text file of metadata for frame #10.
+* **pointcloud_aditof_20260225_172421_df2852a8_000010.ply**: Point cloud file, in ply format, for frame #10.
+
+###### Using the Visualization tool for the AB and Depth PNGs
+
+```
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view png output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+============================================================
+PNG and PLY File Visualizer
+============================================================
+
+Scanning directory: output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+Looking for first file of each type...
+
+✓ Found metadata: metadata_aditof_20260225_172421_df2852a8_000010.txt
+✓ Found AB image: ab_aditof_20260225_172421_df2852a8_000010.png
+✗ No conf*.png files found
+✓ Found depth image: depth_aditof_20260225_172421_df2852a8_000010.png
+✓ Found point cloud: pointcloud_aditof_20260225_172421_df2852a8_000010.ply
+
+Displaying 4 file(s)...
+
+
+============================================================
+File 1/2: AB
+============================================================
+  Loaded: 1024x1024, 3 channel(s)
+
+============================================================
+File 2/2: DEPTH
+============================================================
+  Loaded: 1024x1024, 3 channel(s)
+
+============================================================
+Creating combined display...
+============================================================
+
+Displaying combined image (2048x1064)
+Press any key in the window to continue (or Ctrl+C to exit)...
+```
+
+[<img src="images/visualize_png.png" width="40%">](images/visualize_png.png)
+
+###### Using the Visualization tool for the Metadata
+```
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view metadata output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+============================================================
+PNG and PLY File Visualizer
+============================================================
+
+Scanning directory: output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+Looking for first file of each type...
+
+✓ Found metadata: metadata_aditof_20260225_172421_df2852a8_000010.txt
+✓ Found AB image: ab_aditof_20260225_172421_df2852a8_000010.png
+✗ No conf*.png files found
+✓ Found depth image: depth_aditof_20260225_172421_df2852a8_000010.png
+✓ Found point cloud: pointcloud_aditof_20260225_172421_df2852a8_000010.ply
+
+Displaying 4 file(s)...
+
+
+============================================================
+File 1/1: METADATA
+============================================================
+Reading metadata: output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/metadata_aditof_20260225_172421_df2852a8_000010.txt
+------------------------------------------------------------
+Metadata for frame 000010:
+frameWidth: 1024
+frameHeight: 1024
+outputconfig: 5
+depthPhaseBits: 12
+ABBits: 16
+confidenceBits: 0
+invalidPhaseValue: 20
+frequencyIndex: 32
+frameNumber: 12
+imagerMode: 1
+numberOfPhases: 3
+numberOfFrequencies: 3
+ElapsedTimeinFrac: 0
+ElapsedTimeinSec: 0
+sensorTemp: 38
+laserTemp: 39
+
+------------------------------------------------------------
+
+============================================================
+Visualization complete!
+============================================================
+```
+
+###### Using the Visualization tool for the Point Cloud
+```
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view pointcloud output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+```
+
+[<img src="images/visualize_ply.png" width="40%">](images/visualize_ply.png)
+
+</details>
+
+<details>
+
+<summary>Configuration JSON File</summary>
 
 ## Configuration JSON File
 
@@ -1293,4 +1302,4 @@ This is further sub-divived into two groups:
     }
   },
 ```
-**
+</details>
