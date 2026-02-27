@@ -28,6 +28,7 @@
 
 #include <aditof/log.h>
 
+#include <cmath>
 #include <cstdarg> // for va_list
 #include <cstdlib>
 #include <ctime>
@@ -224,6 +225,14 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
 
             ImGui::SameLine(0.0f, 10.0f);
 
+            ImU32 recordBgColor = IM_COL32(200, 0, 0, 255);
+            if (m_recordingActive) {
+                double blinkPhase = std::fmod(ImGui::GetTime(), 1.0);
+                bool blinkOn = blinkPhase < 0.5;
+                recordBgColor = blinkOn ? IM_COL32(200, 0, 0, 255)
+                                        : IM_COL32(80, 0, 0, 255);
+            }
+
             if (DrawIconButton(
                     "Record",
                     [](ImDrawList *dl, ImVec2 min, ImVec2 max) {
@@ -234,8 +243,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                         // Draw a white circle in the center for the record icon
                         dl->AddCircleFilled(center, radius, IM_COL32_WHITE);
                     },
-                    (!m_recordingActive) ? IM_COL32(200, 0, 0, 255)
-                                         : IM_COL32(0, 200, 0, 255))) {
+                    recordBgColor)) {
 
                 if (!m_recordingActive) {
 
@@ -278,6 +286,18 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                     ImVec2 pMax(center.x + side * 0.5f, center.y + side * 0.5f);
                     dl->AddRectFilled(pMin, pMax, IM_COL32_WHITE);
                 })) {
+                if (m_recordingActive) {
+                    aditof::Status status = GetActiveCamera()->stopRecording();
+                    if (status == aditof::Status::OK) {
+                        LOG(INFO) << "Recording stopped.";
+                        filePath = "";
+                        m_recordingActive = false;
+                        m_view_instance->m_ctrl->setPreviewRate(
+                            m_fps_expected, m_fps_expected);
+                    } else {
+                        LOG(ERROR) << "Unable to stop recording.";
+                    }
+                }
                 setWorkingLabel("Stopping camera...");
                 setIsWorking(true);
                 m_stop_filepath = filePath;
