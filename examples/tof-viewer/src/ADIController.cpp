@@ -36,6 +36,8 @@ ADIController::ADIController(
     std::vector<std::shared_ptr<aditof::Camera>> camerasList)
     : m_cameraInUse(-1), m_frameRequested(false) {
 
+    m_prev_frame_number = -1;
+    m_current_frame_number = 0;
     m_cameras = camerasList;
     if (m_cameras.size()) {
         // Use the first camera that is found
@@ -67,8 +69,6 @@ void ADIController::StartCapture(const uint32_t frameRate) {
     m_frame_counter = 0;
     m_stopFlag = false;
     m_frames_lost = 0;
-    m_prev_frame_number = -1;
-    m_current_frame_number = 0;
     m_frame_history.clear();
     m_workerThread = std::thread([this]() { captureFrames(); });
 }
@@ -191,6 +191,10 @@ void ADIController::captureFrames() {
         aditof::Metadata *metadata;
         status = frame->getData("metadata", (uint16_t **)&metadata);
         if (status == aditof::Status::OK && metadata != nullptr) {
+            if (metadata->frameNumber > 1) {
+                m_current_frame_number = metadata->frameNumber - 1;
+                m_prev_frame_number = m_current_frame_number - 1;
+            }
             calculateFrameLoss(metadata->frameNumber, m_prev_frame_number,
                                m_current_frame_number);
         }
