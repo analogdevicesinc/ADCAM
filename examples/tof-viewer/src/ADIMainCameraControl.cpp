@@ -508,7 +508,8 @@ void ADIMainWindow::RefreshDevices() {
         if (status != aditof::Status::OK) {
             LOG(WARNING) << "Unable to get Camera list.";
         }
-        if (!m_skip_network_cameras) {
+#if HAS_NETWORK
+        if (!m_skip_network_cameras && !m_cameraIp.empty()) {
             // Add network camera - reuse the same list instead of calling getCameraList again
             std::vector<std::shared_ptr<aditof::Camera>> networkCameras;
             m_system.getCameraList(networkCameras, m_cameraIp + m_ip_suffix);
@@ -516,7 +517,7 @@ void ADIMainWindow::RefreshDevices() {
             m_cameras_list.insert(m_cameras_list.end(), networkCameras.begin(),
                                   networkCameras.end());
         }
-
+#endif //HAS_NETWORK
         // Build the connected devices list once after collecting all cameras
         for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
             m_connected_devices.emplace_back(ix, "ToF Camera " +
