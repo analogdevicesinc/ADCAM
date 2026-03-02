@@ -48,34 +48,6 @@ struct help_markdown : public imgui_md {
             return g_font_bold;
         }
     };
-
-    void open_url() const override {
-        //platform dependent code
-        //SDL_OpenURL(m_href.c_str());
-    }
-
-    bool get_image(image_info &nfo) const override {
-        //use m_href to identify images
-        //nfo.texture_id = g_texture1;
-        nfo.size = {40, 20};
-        nfo.uv0 = {0, 0};
-        nfo.uv1 = {1, 1};
-        nfo.col_tint = {1, 1, 1, 1};
-        nfo.col_border = {0, 0, 0, 0};
-        return true;
-    }
-
-    void html_div(const std::string &dclass, bool e) override {
-        if (dclass == "red") {
-            if (e) {
-                m_table_border = false;
-                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
-            } else {
-                ImGui::PopStyleColor();
-                m_table_border = true;
-            }
-        }
-    }
 };
 
 void ADIMainWindow::DisplayHelp() {
@@ -83,6 +55,11 @@ void ADIMainWindow::DisplayHelp() {
     static std::string help_content = "";
 
     centreWindow(1000.0f * m_dpi_scale_factor, 1000.0f * m_dpi_scale_factor);
+
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(1, 1, 1, 1));
+    ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(1, 1, 1, 1));
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1, 1, 1, 1));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
 
     if (ImGui::BeginPopupModal("Help Window", NULL,
                                ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -111,4 +88,6 @@ void ADIMainWindow::DisplayHelp() {
 
         ImGui::EndPopup();
     }
+
+    ImGui::PopStyleColor(4);
 }

@@ -65,3 +65,5 @@ add_custom_target(evalkit-doc ALL
 ############### Install the documentation in the system #######################
 include(GNUInstallDirs)
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxygen_doc/html/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
+

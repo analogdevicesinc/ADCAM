@@ -161,6 +161,41 @@ target_link_libraries(ADIToFGUI PRIVATE
 					  json-c
 					 )
 
+# Generate tof-viewer.md only when building ADIToFGUI
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_FOUND)
+    file(GLOB ADCAM_SOURCE_MD "${CMAKE_SOURCE_DIR}/doc/user-guide/ADCAM-CameraKit-*.md")
+    if(ADCAM_SOURCE_MD)
+        list(GET ADCAM_SOURCE_MD 0 ADCAM_MD_FILE)
+        get_filename_component(ADCAM_MD_NAME "${ADCAM_MD_FILE}" NAME)
+
+        set(TOF_VIEWER_MD "${CMAKE_SOURCE_DIR}/doc/user-guide/tof-viewer.md")
+        set(EXTRACT_SCRIPT "${CMAKE_SOURCE_DIR}/doc/user-guide/extract_gui_markdown.py")
+
+        add_custom_command(
+            OUTPUT "${TOF_VIEWER_MD}"
+            COMMAND ${Python3_EXECUTABLE} ${EXTRACT_SCRIPT}
+                    ${ADCAM_MD_FILE}
+                    ${TOF_VIEWER_MD}
+                    --skip-first 10
+                    --drop-last 1
+            DEPENDS ${ADCAM_MD_FILE} ${EXTRACT_SCRIPT}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/doc/user-guide
+            COMMENT "Generating tof-viewer.md from ${ADCAM_MD_NAME}"
+        )
+
+        add_custom_target(generate_tof_viewer_md
+            DEPENDS "${TOF_VIEWER_MD}"
+        )
+
+        add_dependencies(ADIToFGUI generate_tof_viewer_md)
+    else()
+        message(WARNING "No ADCAM-CameraKit-*.md found - tof-viewer.md will not be auto-generated")
+    endif()
+else()
+    message(WARNING "Python3 not found - tof-viewer.md will not be auto-generated")
+endif()
+
 # Link CUDA runtime if CUDA is enabled
 if(USE_CUDA)
     target_link_libraries(ADIToFGUI PRIVATE ${CUDA_LIBRARIES})
@@ -215,6 +250,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tof-tools.config $<TARGET_FILE_DIR:${PROJECT_NAME}>/.
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBADITOF_SUBMODULE_PATH}/sdk/src/cameras/itof-camera/config/config_adsd3500_adsd3100.json $<TARGET_FILE_DIR:${PROJECT_NAME}>/.
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBADITOF_SUBMODULE_PATH}/sdk/src/cameras/itof-camera/config/config_adsd3500_adsd3030.json $<TARGET_FILE_DIR:${PROJECT_NAME}>/.
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/doc/user-guide/tof-viewer.md $<TARGET_FILE_DIR:${PROJECT_NAME}>/.
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/doc/user-guide/images $<TARGET_FILE_DIR:${PROJECT_NAME}>/images
     COMMENT "Copying docs, cfgs and libs to build examples for tof-viewer."
 	)
 

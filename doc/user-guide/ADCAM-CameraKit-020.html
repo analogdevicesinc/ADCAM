@@ -1,76 +1,13 @@
-<p><span style="font-size:30px;"><u>ADCAM Camera Kit v0.2.0 Alpha 1</u></span></p>
-<ul>
-<li><a href="#-release-notes-">🛑 Release Notes 🛑</a></li>
-<li><a href="#requirements-and-installation">Requirements and Installation</a></li>
-<li><a href="#using-the-eval-kit">Using the Eval Kit</a>
-<ul>
-<li><a href="#python-tools">Python Tools</a>
-<ul>
-<li><a href="#setup-the-virtual-environment">Setup the Virtual Environment</a></li>
-<li><a href="#activate-the-virtual-environment">Activate the Virtual Environment</a></li>
-<li><a href="#deactivate-the-virtual-environment">Deactivate the Virtual Environment</a></li>
-<li><a href="#first_frame-python">first_frame (Python)</a>
-<ul>
-<li><a href="#command-line-interface">Command Line Interface</a></li>
-<li><a href="#example-usage">Example Usage</a></li>
-</ul></li>
-<li><a href="#data_collect-python">data_collect (Python)</a>
-<ul>
-<li><a href="#command-line-interface-1">Command Line Interface</a></li>
-</ul></li>
-<li><a href="#streaming-python">streaming (Python)</a>
-<ul>
-<li><a href="#command-line-interface-2">Command Line Interface</a></li>
-<li><a href="#example-usage-1">Example Usage</a></li>
-</ul></li>
-</ul></li>
-<li><a href="#c-tools">C++ Tools</a>
-<ul>
-<li><a href="#first_frame-c">first_frame (C++)</a>
-<ul>
-<li><a href="#command-line-interface-3">Command Line Interface</a></li>
-</ul></li>
-<li><a href="#data_collect-c">data_collect (C++)</a>
-<ul>
-<li><a href="#command-line-interface-4">Command Line Interface</a></li>
-<li><a href="#example-1-basic-usage">Example 1: Basic Usage</a></li>
-<li><a href="#example-2-saving-configuration-data-to-json">Example 2: Saving Configuration Data to JSON</a></li>
-<li><a href="#example-3-loading-configuration-data-from-json">Example 3: Loading Configuration Data from JSON</a></li>
-<li><a href="#extracting-data-from-saved-streams-rawparserpy">Extracting Data from Saved Streams: rawparser.py</a>
-<ul>
-<li><a href="#command-line-interface-5">Command Line Interface</a></li>
-<li><a href="#example-usage-2">Example Usage</a></li>
-</ul></li>
-</ul></li>
-<li><a href="#aditofgui-c">ADIToFGUI (C++)</a>
-<ul>
-<li><a href="#open-adtf3175d-eval-kit">Open ADTF3175D Eval Kit</a></li>
-<li><a href="#mode-selection">Mode Selection</a></li>
-<li><a href="#data-views">Data Views</a></li>
-<li><a href="#aditofgui-and-configuration-parameters">ADIToFGUI and Configuration Parameters</a></li>
-</ul></li>
-</ul></li>
-</ul></li>
-<li><a href="#appendix">Appendix</a>
-<ul>
-<li><a href="#configuration-json-file">Configuration JSON File</a>
-<ul>
-<li><a href="#general-parameters">General Parameters</a></li>
-<li><a href="#mode-parameters">Mode Parameters</a></li>
-</ul></li>
-</ul></li>
-</ul>
 <h1 id="release-notes">🛑 Release Notes 🛑</h1>
-<ul>
-<li>Which includes the dual configuration ADSD3500 Depth ISP</li>
-<li>Network connection for the Jetson Orin Nano Dev Kit</li>
-</ul>
+<p>Refer to the release page for release notes.</p>
 <h1 id="requirements-and-installation">Requirements and Installation</h1>
-<p>Refer to the Quick Start Guide for installation instructions.</p>
+<p>Refer to the Quick Start Guide, on the release page, for installation instructions.</p>
 <h1 id="using-the-eval-kit">Using the Eval Kit</h1>
 <p>It is assumed the <strong>ADCAM Camera Kit Quick Start Guide</strong> was followed to get ADCAM up and running.</p>
 <h2 id="python-tools">Python Tools</h2>
 <p>The Python tools rely on the included Python bindings.</p>
+<details>
+<p><summary>Setup the Virtual Environment</summary></p>
 <h4 id="setup-the-virtual-environment">Setup the Virtual Environment</h4>
 <p>The Python virtual environment step was done during the setup phase.</p>
 <p>If you have not setup the virtual environment,</p>
@@ -94,6 +31,9 @@ Activating ADI ToF python env
 (aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1$</code></pre>
 <h4 id="deactivate-the-virtual-environment">Deactivate the Virtual Environment</h4>
 <p>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1$ deactivate ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1$</p>
+</details>
+<details>
+<p><summary>Example: first_frame (Python)</summary></p>
 <h3 id="first_frame-python">first_frame (Python)</h3>
 <p>A basic example showing how to get a frame from the device.</p>
 <h4 id="command-line-interface">Command Line Interface</h4>
@@ -211,7 +151,10 @@ Laser temperature from metadata:  36
 Frame number from metadata:  1
 Mode from metadata:  3
 I20260218 10:05:22.066078 16697 buffer_processor.cpp:132] freeComputeLibrary</code></pre>
-<p><a href="images/first-frame-py.png"><img src="images/first-frame-py.png" width="25%"></a></p>
+<a href="images/first-frame-py.png"><img src="images/first-frame-py.png" width="25%"></a>
+</details>
+<details>
+<p><summary>Example: streaming (Python)</summary></p>
 <h3 id="streaming-python">streaming (Python)</h3>
 <p>This tool uses Pygame to show streaming frames from the device in real-time.</p>
 <h4 id="command-line-interface-1">Command Line Interface</h4>
@@ -310,8 +253,12 @@ I20260225 13:52:32.197406 267320 adsd3500_sensor.cpp:638] Starting device 0
 I20260225 13:52:32.217121 267320 buffer_processor.cpp:1042] startThreads: Starting Threads..
 camera1.start() Status.Ok
 I20260225 13:52:32.652446 267320 camera_itof.cpp:1251] Dropped first frame</code></pre>
-<p><a href="images/depth-image-animation-pygame.png"><img src="images/depth-image-animation-pygame.png" width="25%"></a></p>
-<h2 id="c-tools">C++ Tools</h2>
+<a href="images/depth-image-animation-pygame.png"><img src="images/depth-image-animation-pygame.png" width="25%"></a>
+</details>
+<h2 id="c-examples-and-tools">C++ Examples and Tools</h2>
+<p>We have provided examples and tools in C++ that should how to use the SDK.</p>
+<details>
+<p><summary>first_frame (C++)</summary></p>
 <h3 id="first_frame-c">first_frame (C++)</h3>
 <h4 id="command-line-interface-2">Command Line Interface</h4>
 <pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/first-frame$ ./first-frame --m 3
@@ -424,6 +371,9 @@ Input file is:  out_depth_mode_3.bin</code></pre>
 <pre class="console"><code>$ make -f Makefile.eval
 $ ls first-frame*
 first-frame  first-frame.user</code></pre>
+</details>
+<details>
+<p><summary>data_collect (C++)</summary></p>
 <h3 id="data_collect-c">data_collect (C++)</h3>
 <p><strong>data_collect</strong> is use save a stream of frames to the file system of the host computer.</p>
 <h4 id="command-line-interface-3">Command Line Interface</h4>
@@ -464,6 +414,8 @@ Data Collect.
 <li><em>–m 1</em>: Use mode 1.</li>
 <li><em>–n 100</em>: Capture 100 frames.</li>
 </ul>
+<details>
+<p><summary>data_collect –f output –m 1 –n 100</summary></p>
 <pre><code>(aditofpython_env) analog@analog-desktop:~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ./data_collect --f output --m 1 --n 100
 I20260225 12:20:07.078713 261726 main.cpp:192] ADCAM version: 0.2.0 | SDK version: 7.0.0 a-1 | branch: main | commit: 91b46285
 I20260225 12:20:07.078938 261726 main.cpp:260] Output folder: output
@@ -578,9 +530,12 @@ I20260225 12:20:25.381746 261726 adsd3500_sensor.cpp:1934] Got the Interrupt fro
 I20260225 12:20:25.386176 261726 buffer_processor.cpp:133] freeComputeLibrary
 (aditofpython_env) :~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ls output/recordings/
 aditof_20260225_172013_a4ce5cf9.adcam</code></pre>
+</details>
 <h4 id="example-2-saving-configuration-data-to-json">Example 2: Saving Configuration Data to JSON</h4>
 <ul>
-<li><em>–scf saved_cfg.json</em>: Save the device configuration file to <em>saved_cfg.json</em>.</li>
+<li><em>–scf saved_cfg.json</em>: Save the device configuration file to <em>saved_cfg.json</em>.
+<details>
+<summary>data_collect –scf saved_cfg.json</summary></li>
 </ul>
 <pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ./data_collect --scf saved_cfg.json
 I20260225 12:23:09.037848 261797 main.cpp:192] ADCAM version: 0.2.0 | SDK version: 7.0.0 a-1 | branch: main | commit: 91b46285
@@ -696,6 +651,7 @@ I20260225 12:23:17.424123 261797 adsd3500_sensor.cpp:1934] Got the Interrupt fro
 I20260225 12:23:17.430691 261797 buffer_processor.cpp:133] freeComputeLibrary
 (aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ls saved_cfg.json
 saved_cfg.json</code></pre>
+</details>
 <h4 id="example-3-loading-configuration-data-from-json">Example 3: Loading Configuration Data from JSON</h4>
 <p>In this example we will use the JSON file to change the frame rate for mode 1 to 5fps.</p>
 <p><a href="images/data_collect_example_3_fps_change.png"><img src="images/data_collect_example_3_fps_change.png" width="25%"></a></p>
@@ -703,7 +659,9 @@ saved_cfg.json</code></pre>
 <li><em>–f output</em>: Place captured data into the folder <em>output</em>.</li>
 <li><em>–m 1</em>: Use mode 1.</li>
 <li><em>–n 100</em>: Capture 100 frames.</li>
-<li><em>–lcf saved_cfg.json</em>: Used the device configuration file <em>saved_cfg.json</em>.</li>
+<li><em>–lcf saved_cfg.json</em>: Used the device configuration file <em>saved_cfg.json</em>.
+<details>
+<summary>data_collect –f output –m 1 –n 100 –lcf saved_cfg.json</summary></li>
 </ul>
 <pre><code>(aditofpython_env) analog@analog-desktop:~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ ./data_collect --f output --m 1 --n 100 --lcf saved_cfg.json
 I20260225 12:24:14.976205 261852 main.cpp:192] ADCAM version: 0.2.0 | SDK version: 7.0.0 a-1 | branch: main | commit: 91b46285
@@ -814,8 +772,309 @@ I20260225 12:24:43.450911 261852 adsd3500_sensor.cpp:1922] .
 I20260225 12:24:43.473676 261852 adsd3500_sensor.cpp:1927] Waited: 20 ms.
 I20260225 12:24:43.473755 261852 adsd3500_sensor.cpp:1934] Got the Interrupt from ADSD3500
 I20260225 12:24:43.479294 261852 buffer_processor.cpp:133] freeComputeLibrary</code></pre>
+</details>
 <p>Notice, line (<em>Measured FPS: 5.04668</em>), the frame rate is 5fps.</p>
-<h4 id="extracting-data-from-saved-streams-rawparser.py">Extracting Data from Saved Streams: rawparser.py</h4>
+</details>
+<details>
+<p><summary>ADIToFGUI (C++)</summary></p>
+<h3 id="aditofgui-c">ADIToFGUI (C++)</h3>
+<pre><code>$ ADIToFGUI</code></pre>
+<h4 id="selection-wizard">Selection Wizard</h4>
+<h5 id="live-camera">Live Camera</h5>
+<p><a href="images/aditofgui_wizard_live_stream.png"><img src="images/aditofgui_wizard_live_stream.png" width="100%"></a></p>
+<p>This option is used to stream frames from a live ADCAM Time of Flight camera.</p>
+<ol type="1">
+<li>Select <em>Live Camera</em>. Please note, this is only possible if the <em>Saved Stream</em> or <em>Live Camera</em> is closed.</li>
+<li>Select <em>Open</em>.</li>
+<li>Select the mode from the dropdown list, where each mode is unique option of size, range and binning. If no mode is chosen, the mode shown is used.</li>
+<li>(Optional) Configure the device, where the parameters can be loaded from a JSON configuration file via <em>Load Config</em> or modified via the <em>Configurable Parameters</em> controls.</li>
+<li><em>Start Streaming</em>, where <em>Preview</em> mode allows a reduced frame rate - this is good for streaming and saving, a recording, at a desired frame without displaying every frame.</li>
+</ol>
+<h5 id="saved-stream">Saved Stream</h5>
+<p><a href="images/aditofgui_wizard_saved_stream.png"><img src="images/aditofgui_wizard_saved_stream.png" width="100%"></a></p>
+<p>This option is used to stream save recordings.</p>
+<ol type="1">
+<li>Select <em>Saved Stream</em>. Please note, this is only possible if the <em>Saved Stream</em> or <em>Live Camera</em> is closed.</li>
+<li>Select <em>Open</em>, with the file chooser, select the appropriate <strong>.adcam</strong> file.</li>
+<li>Select <em>Start Stream</em>.</li>
+</ol>
+<h4 id="data-view">Data View</h4>
+<p>The <em>Live Camera</em> and <em>Saved Stream</em> views each contains several windows. The windows are the same between the views, where the <em>Control Window</em> controls differ slightly between the two views. In the two sub-sections below we will cover the differences.</p>
+<p>Expand the images below to see the data views of the <em>Live Camera</em> and <em>Saved Stream</em>.</p>
+<ul>
+<li><p>Live Camera: <a href="images/aditofgui_live_stream.png"><img src="images/aditofgui_live_stream.png" width="100%"></a></p></li>
+<li><p>Save Stream: <a href="images/aditofgui_saved_stream.png"><img src="images/aditofgui_saved_stream.png" width="100%"></a>|</p></li>
+<li><p>Information Window</p>
+<ul>
+<li>This window shows metrics, telemetry and parameters.</li>
+</ul></li>
+<li><p>Control Windows</p>
+<ul>
+<li>This window allows the user to configure and control the stream. This is the only window that differs between the two views.</li>
+</ul></li>
+<li><p>Absolute Brightness Window</p>
+<ul>
+<li>This window show AB frames. In real time in the Live view and non-realtime in the Saved view.</li>
+</ul></li>
+<li><p>Depth Window</p>
+<ul>
+<li>This window shows Depth frames. In real time in the Live view and non-realtime in the Saved view.</li>
+</ul></li>
+<li><p>Point Cloud Window</p>
+<ul>
+<li>This window shows point cloud frames. In real time in the Live view and non-realtime in the Saved view.</li>
+</ul></li>
+</ul>
+<h5 id="information-window">Information Window</h5>
+<p><a href="images/aditofgui_live_stream_control.png"><img src="images/aditofgui_live_stream_control.png" width="20%"></a></p>
+<ul>
+<li>Camera
+<ul>
+<li>This defines is your are using an online (aka Live Camera) or offline (aka Saved Stream) camera.</li>
+</ul></li>
+<li>Preview Mode
+<ul>
+<li>Shows if <em>Preview Mode</em> is on or off.</li>
+</ul></li>
+<li>Mode
+<ul>
+<li>The current mode as selected by the user for the <em>Live Camera</em> view or as saved in the recording for the <em>Saved Stream</em> view.</li>
+</ul></li>
+<li>Expected fps
+<ul>
+<li>The set and expected frame rate.</li>
+</ul></li>
+<li>Current fps
+<ul>
+<li>The actual frame rate as calculated in real-time.</li>
+</ul></li>
+<li>Frames Recevied
+<ul>
+<li>Frames received in a session, so far, in real-time.</li>
+</ul></li>
+<li>Frames Lost
+<ul>
+<li>Frames lost in a session, so far, in real-time.</li>
+</ul></li>
+<li>Laser Temp
+<ul>
+<li>The current laser temperature as sent via metadata from the imager module.</li>
+</ul></li>
+<li>Sensor Temp
+<ul>
+<li>The current laser temperature as sent via metadata from the imager module.</li>
+</ul></li>
+<li>Point Cloud FoV
+<ul>
+<li>The field of view in the point cloud window.</li>
+</ul></li>
+<li>Point Cloud Camera
+<ul>
+<li>The location of the camera in the point cloud window.</li>
+</ul></li>
+<li>Camera (Y, P, R)
+<ul>
+<li>The Yaw, Pitch and Rotation of the scene in the point cloud window.</li>
+</ul></li>
+</ul>
+<h5 id="control-window-live-camera-view">Control Window: Live Camera View</h5>
+<p><a href="images/aditofgui_saved_stream_control.png"><img src="images/aditofgui_saved_stream_control.png" width="20%"></a></p>
+<ul>
+<li>Configuration-&gt;Load Config
+<ul>
+<li>Allows the user to load a configuration JSON file. Device and software parameters are loaded and applied.</li>
+</ul></li>
+<li>Configuration-&gt;Save Config
+<ul>
+<li>Allows the user to save a configuration JSON file. Device and software parameters are stored.</li>
+</ul></li>
+<li>Control-&gt;Camera Icon
+<ul>
+<li>Save a snapshot of the current frame set. This is covered in more detail later.</li>
+</ul></li>
+<li>Control-&gt;Record Icon
+<ul>
+<li>Start recording the stream. When the icon is blinking the system is recording.</li>
+</ul></li>
+<li>Control-&gt;Stop Icon
+<ul>
+<li>Stop the active stream, returning to the <em>Selection Wizard</em>.</li>
+</ul></li>
+<li>Rotate-&gt;+
+<ul>
+<li>This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.</li>
+</ul></li>
+<li>Point Cloud-&gt;Reset
+<ul>
+<li>If the user rotates or translates the point cloud <em>Reset</em> goes back to the default translation and rotation values.</li>
+</ul></li>
+<li>Point Cloud-&gt;Colour Option
+<ul>
+<li>Depth Colour, AB Colour and Solid Color for the point cloud window.</li>
+</ul></li>
+<li>Active Brigthtnes-&gt;Auto-scale
+<ul>
+<li>Improves AB image to make it less dark.</li>
+</ul></li>
+<li>Active Brigthtness-&gt;Log Image
+<ul>
+<li>Improves AB image to make it less dark, but depends on Auto-scale being</li>
+</ul></li>
+<li>Configuration Parameters-&gt;Reset Parameters
+<ul>
+<li>Reset the parameters shown to the defaults. This does not write back to the Time of Flight hardawre.</li>
+</ul></li>
+<li>Configuration Parameters-&gt;Modify Parameters
+<ul>
+<li>Write the configuration parameters to the Time of Flight hardware.</li>
+</ul></li>
+</ul>
+<h5 id="control-window-saved-stream-view">Control Window: Saved Stream View</h5>
+<ul>
+<li>Control-&gt;Export All Frames
+<ul>
+<li>Export all frames in the record to png, text and ply files when the <em>Camera</em> icon is pressed.</li>
+</ul></li>
+<li>Control-&gt;Camera Icon
+<ul>
+<li>Save a snapshot of the current frame set; if <em>Export All Fames</em> is selected then all frames are saved. This is covered in more detail later.</li>
+</ul></li>
+<li>Control-&gt; ‘|&lt;’ Icon
+<ul>
+<li>Goto the first frame in the recording.</li>
+</ul></li>
+<li>Control-&gt; ‘&lt;’ Icon
+<ul>
+<li>Step back one frame in the recording.</li>
+</ul></li>
+<li>Control-&gt; ‘&gt;|’ Icon
+<ul>
+<li>Goto the last frame in the recording.</li>
+</ul></li>
+<li>Control-&gt; ‘&gt;’ Icon
+<ul>
+<li>Step forward one frame in the recording.</li>
+</ul></li>
+<li>Control-&gt;Stop Icon
+<ul>
+<li>Stop and return to the <em>Selection Wizard</em>.</li>
+</ul></li>
+<li>Rotate-&gt;+
+<ul>
+<li>This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.</li>
+</ul></li>
+<li>Point Cloud-&gt;Reset
+<ul>
+<li>If the user rotates or translates the point cloud <em>Reset</em> goes back to the default translation and rotation values.</li>
+</ul></li>
+<li>Point Cloud-&gt;Colour Option
+<ul>
+<li>Depth Colour, AB Colour and Solid Color for the point cloud window.</li>
+</ul></li>
+<li>Active Brigthtness-&gt;Auto-scale
+<ul>
+<li>Improves AB image to make it less dark.</li>
+</ul></li>
+<li>|Active Brigthtness-&gt;Log Image
+<ul>
+<li>Improves AB image to make it less dark, but depends on Auto-scale being</li>
+</ul></li>
+</ul>
+<h4 id="aditofgui-and-configuration-parameters">ADIToFGUI and Configuration Parameters</h4>
+<p>This section covers modification of ToF parameters per mode. To accomplish this the user needs to:</p>
+<ol type="1">
+<li>Save the configuration file, via <em>Control Window-&gt;Configuration-&gt;Save Config</em>.</li>
+</ol>
+<p><a href="images/aditofgui_control_save_or_load_configuration.png"><img src="images/aditofgui_control_save_or_load_configuration.png" width="25%"></a></p>
+<ol start="2" type="1">
+<li>Modify the saved configuration file outside of ADIToFGUI using a text editor.</li>
+</ol>
+<p><a href="images/data_collect_example_3_fps_change.png"><img src="images/data_collect_example_3_fps_change.png" width="25%"></a></p>
+<ol start="3" type="1">
+<li>Load the configuration file, via <em>Control Window-&gt;Configuration-&gt;Load Config</em>.</li>
+</ol>
+<p><a href="images/aditofgui_control_save_or_load_configuration.png"><img src="images/aditofgui_control_save_or_load_configuration.png" width="25%"></a></p>
+<ol start="4" type="1">
+<li>Observing the result.</li>
+</ol>
+<p>From the screen capture below you can see the frame rate for mode 1 is now 5fps.</p>
+<p><a href="images/aditofgui_control_modify_fps.png"><img src="images/aditofgui_control_modify_fps.png" width="50%"></a></p>
+<h4 id="point-cloud-ab-and-depth-windows">Point Cloud, AB and Depth Windows</h4>
+<h5 id="point-cloud-controls">Point Cloud Controls</h5>
+<p>While hovering over the point cloud window with the mouse pointer, the point cloud translation and rotation can be control by the user.</p>
+<ul>
+<li><p>Translation is possible in the X, Y and Z planes.</p></li>
+<li><p>Yaw, pitch and roll rotations are possible.</p></li>
+<li><p>Left Mouse Button + Mouse</p>
+<ul>
+<li>Freeform control.</li>
+</ul></li>
+<li><p>Right Mouse Button + Mouse Up/Down</p>
+<ul>
+<li>Translate on the y-axis.</li>
+</ul></li>
+<li><p>Right Mouse Button + Mouse Left/Right</p>
+<ul>
+<li>Translate on the x-axis.</li>
+</ul></li>
+<li><p>Mouse Wheel</p>
+<ul>
+<li>Translate on the z-axis.</li>
+</ul></li>
+<li><p>CTRL + Mouse Wheel</p>
+<ul>
+<li>Pitch control.</li>
+</ul></li>
+<li><p>ALT + Mouse Wheel</p>
+<ul>
+<li>Yaw control.</li>
+</ul></li>
+<li><p>CTRL + ALT + Mouse Wheel</p>
+<ul>
+<li>Roll control.</li>
+</ul></li>
+</ul>
+<h5 id="ab-window">AB Window</h5>
+<p>Hovering the mouse pointer over the AB image shows the AB intensity for a given pixel.</p>
+<p><a href="images/aditofgui_ab_window.png"><img src="images/aditofgui_ab_window.png" width="25%"></a></p>
+<h5 id="depth-window">Depth Window</h5>
+<p>Hovering the mouse pointer over the depth image shows the depth/distance for a given pixel.</p>
+<p><a href="images/aditofgui_depth_window.png"><img src="images/aditofgui_depth_window.png" width="25%"></a></p>
+<p>It is also possible to mointor the depth across a given line drawn on the depth image by the user.</p>
+<p>To do so, right click in the depth window, once the red line appears move the mouse to the next point and press the right mouse button again. A graph will appear with the length of the line (in pixels) on the x-axis and depth (in mm) on the y-axis. Press the right mouse button in the depth window to remove the line.</p>
+<p><a href="images/aditofgui_depth_distance_windows.png"><img src="images/aditofgui_depth_distance_windows.png" width="40%"></a></p>
+<h4 id="configuring-aditofgui">Configuring ADIToFGUI</h4>
+<p>In the <em>ADIToFGUI</em> folder there is a file: *tof-tools.config. This tool contains some GUI configuration parameters. The default contents of the file is shown below.</p>
+<pre><code>{
+    &quot;skip_network_cameras&quot;: &quot;off&quot;,
+    &quot;camera_ip&quot;: &quot;&quot;,
+    &quot;tooltip_delay_seconds&quot;: 1.5,
+    &quot;recordings_folder&quot;: &quot;.&quot;
+}</code></pre>
+<p>Let’s take a look at each definition:</p>
+<ul>
+<li>skip_network_cameras
+<ul>
+<li>Look for networked ADI ToF Cameras if set to ‘on’.</li>
+</ul></li>
+<li>camera_ip
+<ul>
+<li>IP address of network worked camera, used if ‘skip_network_cameras’ is set to ‘on’.</li>
+</ul></li>
+<li>tooltip_delay_seconds
+<ul>
+<li>How long to wait before the GUI displays tooltips on hover. By default it is set to 1.5s.</li>
+</ul></li>
+<li>recordings_folder
+<ul>
+<li>The folder to save recordings to. By default it is the current folder - ‘recordings’ will be created.</li>
+</ul></li>
+</ul>
+</details>
+<h1 id="appendix">Appendix</h1>
+<details>
+<p><summary>Extracting Data from Saved Streams: rawparser.py</summary></p>
+<h2 id="extracting-data-from-saved-streams-rawparser.py">Extracting Data from Saved Streams: rawparser.py</h2>
 <p><em>rawparser.py</em> is used to extract frames from data streams collected by data_collect. It can also be used to do the same for data streams recorded by ADIToFGUI. As with the Pyton bindings, Python 3.10 is required.</p>
 <figure>
 <img src="https://img.shields.io/badge/Important-FFD700?style=flat-square" alt="" /><figcaption>Static Badge</figcaption>
@@ -838,7 +1097,9 @@ options:
   -f FRAMES, --frames FRAMES
                         Frame range: N (just N), N- (from N to end), N-M (N to M inclusive)</code></pre>
 <h5 id="example-usage-2">Example Usage</h5>
-<p>The following example extracts frames 10 thru 10 from the capture file *output_11_04_10_53_14_0.bin* and places the contents in the folder *output_10_16*.</p>
+The following example extracts frames 10 thru 10 from the capture file *output_11_04_10_53_14_0.bin* and places the contents in the folder *output_10_16*.
+<details>
+<p><summary>python rawparser/rawparser.py output/recordings/aditof_20260225_172421_df2852a8.adcam -f 10-16</summary></p>
 <pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser.py output/recordings/aditof_20260225_172421_df2852a8.adcam -f 10-16
 rawparser 2.0.0
 filename: output/recordings/aditof_20260225_172421_df2852a8.adcam
@@ -875,8 +1136,8 @@ drwxrwxr-x 9 analog analog     4096 Feb 25 13:05 ../
 -rw-rw-r-- 1 analog analog   426544 Feb 25 13:05 ab_aditof_20260225_172421_df2852a8_000010.png
 -rw-rw-r-- 1 analog analog    98950 Feb 25 13:05 depth_aditof_20260225_172421_df2852a8_000010.png
 -rw-rw-r-- 1 analog analog      308 Feb 25 13:05 metadata_aditof_20260225_172421_df2852a8_000010.txt
--rw-rw-r-- 1 analog analog 25165974 Feb 25 13:05 pointcloud_aditof_20260225_172421_df2852a8_000010.ply
-</code></pre>
+-rw-rw-r-- 1 analog analog 25165974 Feb 25 13:05 pointcloud_aditof_20260225_172421_df2852a8_000010.ply</code></pre>
+</details>
 <ul>
 <li><strong>ab_aditof_20260225_172421_df2852a8_000010.png</strong>: PNG of the AB frame for frame #10.</li>
 <li><strong>depth_aditof_20260225_172421_df2852a8_000010.png</strong>: PNG of the depth frame for frame #10.</li>
@@ -967,382 +1228,9 @@ Visualization complete!
 <h6 id="using-the-visualization-tool-for-the-point-cloud">Using the Visualization tool for the Point Cloud</h6>
 <pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view pointcloud output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/</code></pre>
 <p><a href="images/visualize_ply.png"><img src="images/visualize_ply.png" width="40%"></a></p>
-<h3 id="aditofgui-c">ADIToFGUI (C++)</h3>
-<pre><code>$ ADIToFGUI</code></pre>
-<h4 id="selection-wizard">Selection Wizard</h4>
-<h5 id="live-camera">Live Camera</h5>
-<p><a href="images/aditofgui_wizard_live_stream.png"><img src="images/aditofgui_wizard_live_stream.png" width="100%"></a></p>
-<p>This option is used to stream frames from a live ADCAM Time of Flight camera.</p>
-<ol type="1">
-<li>Select <em>Live Camera</em>. Please note, this is only possible if the <em>Saved Stream</em> or <em>Live Camera</em> is closed.</li>
-<li>Select <em>Open</em>.</li>
-<li>Select the mode from the dropdown list, where each mode is unique option of size, range and binning. If no mode is chosen, the mode shown is used.</li>
-<li>(Optional) Configure the device, where the parameters can be loaded from a JSON configuration file via <em>Load Config</em> or modified via the <em>Configurable Parameters</em> controls.</li>
-<li><em>Start Streaming</em>, where <em>Preview</em> mode allows a reduced frame rate - this is good for streaming and saving, a recording, at a desired frame without displaying every frame.</li>
-</ol>
-<h5 id="saved-stream">Saved Stream</h5>
-<p><a href="images/aditofgui_wizard_saved_stream.png"><img src="images/aditofgui_wizard_saved_stream.png" width="100%"></a></p>
-<p>This option is used to stream save recordings.</p>
-<ol type="1">
-<li>Select <em>Saved Stream</em>. Please note, this is only possible if the <em>Saved Stream</em> or <em>Live Camera</em> is closed.</li>
-<li>Select <em>Open</em>, with the file chooser, select the appropriate <strong>.adcam</strong> file.</li>
-<li>Select <em>Start Stream</em>.</li>
-</ol>
-<h4 id="data-view">Data View</h4>
-<p>The <em>Live Camera</em> and <em>Saved Stream</em> views each contains several windows. The windows are the same between the views, where the <em>Control Window</em> controls differ slightly between the two views. In the two sub-sections below we will cover the differences.</p>
-<p>Expand the images below to see the data views of the <em>Live Camera</em> and <em>Saved Stream</em>.</p>
-<table>
-<thead>
-<tr class="header">
-<th>Live Camera</th>
-<th>Saved Stream</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><a href="images/aditofgui_live_stream.png"><img src="images/aditofgui_live_stream.png" width="100%"></a></td>
-<td><a href="images/aditofgui_saved_stream.png"><img src="images/aditofgui_saved_stream.png" width="100%"></a></td>
-</tr>
-</tbody>
-</table>
-<table>
-<colgroup>
-<col style="width: 47%" />
-<col style="width: 52%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Window</th>
-<th>Definition</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Information Window</td>
-<td>This window shows metrics, telemetry and parameters.</td>
-</tr>
-<tr class="even">
-<td>Control Windows</td>
-<td>This window allows the user to configure and control the stream. This is the only window that differs between the two views.</td>
-</tr>
-<tr class="odd">
-<td>Absolute Brightness Window</td>
-<td>This window show AB frames. In real time in the Live view and non-realtime in the Saved view.</td>
-</tr>
-<tr class="even">
-<td>Depth Window</td>
-<td>This window shows Depth frames. In real time in the Live view and non-realtime in the Saved view.</td>
-</tr>
-<tr class="odd">
-<td>Point Cloud Window</td>
-<td>This window shows point cloud frames. In real time in the Live view and non-realtime in the Saved view.</td>
-</tr>
-</tbody>
-</table>
-<h5 id="information-window">Information Window</h5>
-<p><a href="images/aditofgui_live_stream_control.png"><img src="images/aditofgui_live_stream_control.png" width="20%"></a></p>
-<table>
-<colgroup>
-<col style="width: 30%" />
-<col style="width: 69%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Type</th>
-<th>Definition</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Camera</td>
-<td>This defines is your are using an online (aka Live Camera) or offline (aka Saved Stream) camera.</td>
-</tr>
-<tr class="even">
-<td>Preview Mode</td>
-<td>Shows if <em>Preview Mode</em> is on or off</td>
-</tr>
-<tr class="odd">
-<td>Mode</td>
-<td>The current mode as selected by the user for the <em>Live Camera</em> view or as saved in the recording for the <em>Saved Stream</em> view.</td>
-</tr>
-<tr class="even">
-<td>Expected fps</td>
-<td>The set and expected frame rate.</td>
-</tr>
-<tr class="odd">
-<td>Current fps</td>
-<td>The actual frame rate as calculated in real-time.</td>
-</tr>
-<tr class="even">
-<td>Frames Recevied</td>
-<td>Frames received in a session, so far, in real-time.</td>
-</tr>
-<tr class="odd">
-<td>Frames Lost</td>
-<td>Frames lost in a session, so far, in real-time.</td>
-</tr>
-<tr class="even">
-<td>Laser Temp</td>
-<td>The current laser temperature as sent via metadata from the imager module.</td>
-</tr>
-<tr class="odd">
-<td>Sensor Temp</td>
-<td>The current laser temperature as sent via metadata from the imager module.</td>
-</tr>
-<tr class="even">
-<td>Point Cloud FoV</td>
-<td>The field of view in the point cloud window.</td>
-</tr>
-<tr class="odd">
-<td>Point Cloud Camera</td>
-<td>The location of the camera in the point cloud window.</td>
-</tr>
-<tr class="even">
-<td>Camera (Y, P, R)</td>
-<td>The Yaw, Pitch and Rotation of the scene in the point cloud window.</td>
-</tr>
-</tbody>
-</table>
-<h5 id="control-window-live-camera-view">Control Window: Live Camera View</h5>
-<p><a href="images/aditofgui_saved_stream_control.png"><img src="images/aditofgui_saved_stream_control.png" width="20%"></a></p>
-<table>
-<colgroup>
-<col style="width: 28%" />
-<col style="width: 71%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Type</th>
-<th>Definition</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Configuration: Load Config</td>
-<td>Allows the user to load a configuration JSON file. Device and software parameters are loaded and applied,</td>
-</tr>
-<tr class="even">
-<td>Configuration: Save Config</td>
-<td>Allows the user to save a configuration JSON file. Device and software parameters are stored.</td>
-</tr>
-<tr class="odd">
-<td>Control: Camera Icon</td>
-<td>Save a snapshot of the current frame set. This is covered in more detail later.</td>
-</tr>
-<tr class="even">
-<td>Control: Record Icon</td>
-<td>Start recording the stream. Green: the user can start recording. Yellow: the recording is in active. This is covered in more detail later.</td>
-</tr>
-<tr class="odd">
-<td>Control: Stop Icon</td>
-<td>Stop the active stream, returning to the <em>Selection Wizard</em>.</td>
-</tr>
-<tr class="even">
-<td>Rotate: +</td>
-<td>This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.</td>
-</tr>
-<tr class="odd">
-<td>Point Cloud: Reset</td>
-<td>If the user rotates or translates the point cloud <em>Reset</em> goes back to the default translation and rotation values.</td>
-</tr>
-<tr class="even">
-<td>Point Cloud: Colour Option</td>
-<td>Depth Colour, AB Colour and Solid Color for the point cloud window.</td>
-</tr>
-<tr class="odd">
-<td>Active Brigthtness: Auto-scale</td>
-<td>Improves AB image to make it less dark.</td>
-</tr>
-<tr class="even">
-<td>Active Brigthtness: Log Image</td>
-<td>Improves AB image to make it less dark, but depends on Auto-scale being</td>
-</tr>
-<tr class="odd">
-<td>Configuration Parameters: Reset Parameters</td>
-<td>Reset the parameters shown to the defaults. This does not write back to the Time of Flight hardawre.</td>
-</tr>
-<tr class="even">
-<td>Configuration Parameters: Modify Parameters</td>
-<td>Write the configuration parameters to the Time of Flight hardware.</td>
-</tr>
-</tbody>
-</table>
-<h5 id="control-window-saved-stream-view">Control Window: Saved Stream View</h5>
-<table>
-<colgroup>
-<col style="width: 28%" />
-<col style="width: 71%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Type</th>
-<th>Definition</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Control: Export All Frames</td>
-<td>Export all frames in the record to png, text and ply files when the <em>Camera</em> icon is pressed.</td>
-</tr>
-<tr class="even">
-<td>Control: Camera Icon</td>
-<td>Save a snapshot of the current frame set; if <em>Export All Fames</em> is selected then all frames are saved. This is covered in more detail later.</td>
-</tr>
-<tr class="odd">
-<td>Control: |&lt; Icon</td>
-<td>Goto the first frame in the recording.</td>
-</tr>
-<tr class="even">
-<td>Control: &lt; Icon</td>
-<td>Step back one frame in the recording.</td>
-</tr>
-<tr class="odd">
-<td>Control: &gt;| Icon</td>
-<td>Goto the last frame in the recording.</td>
-</tr>
-<tr class="even">
-<td>Control: &gt; Icon</td>
-<td>Step forward one frame in the recording.</td>
-</tr>
-<tr class="odd">
-<td>Control: Stop Icon</td>
-<td>Stop and return to the <em>Selection Wizard</em>.</td>
-</tr>
-<tr class="even">
-<td>Rotate: +</td>
-<td>This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.</td>
-</tr>
-<tr class="odd">
-<td>Point Cloud: Reset</td>
-<td>If the user rotates or translates the point cloud <em>Reset</em> goes back to the default translation and rotation values.</td>
-</tr>
-<tr class="even">
-<td>Point Cloud: Colour Option</td>
-<td>Depth Colour, AB Colour and Solid Color for the point cloud window.</td>
-</tr>
-<tr class="odd">
-<td>Active Brigthtness: Auto-scale</td>
-<td>Improves AB image to make it less dark.</td>
-</tr>
-<tr class="even">
-<td>Active Brigthtness: Log Image</td>
-<td>Improves AB image to make it less dark, but depends on Auto-scale being</td>
-</tr>
-</tbody>
-</table>
-<h4 id="aditofgui-and-configuration-parameters">ADIToFGUI and Configuration Parameters</h4>
-<p>This section covers modification of ToF parameters per mode. To accomplish this the user needs to:</p>
-<ol type="1">
-<li>Save the configuration file, via <em>Control Window-&gt;Configuration-&gt;Save Config</em>.</li>
-</ol>
-<p><a href="images/aditofgui_control_save_or_load_configuration.png"><img src="images/aditofgui_control_save_or_load_configuration.png" width="25%"></a></p>
-<ol start="2" type="1">
-<li>Modify the saved configuration file outside of ADIToFGUI using a text editor.</li>
-</ol>
-<p><a href="images/data_collect_example_3_fps_change.png"><img src="images/data_collect_example_3_fps_change.png" width="25%"></a></p>
-<ol start="3" type="1">
-<li>Load the configuration file, via <em>Control Window-&gt;Configuration-&gt;Load Config</em>.</li>
-</ol>
-<p><a href="images/aditofgui_control_save_or_load_configuration.png"><img src="images/aditofgui_control_save_or_load_configuration.png" width="25%"></a></p>
-<ol start="4" type="1">
-<li>Observing the result.</li>
-</ol>
-<p>From the screen capture below you can see the frame rate for mode 1 is now 5fps.</p>
-<p><a href="images/aditofgui_control_modify_fps.png"><img src="images/aditofgui_control_modify_fps.png" width="50%"></a></p>
-<h4 id="point-cloud-ab-and-depth-windows">Point Cloud, AB and Depth Windows</h4>
-<h5 id="point-cloud-controls">Point Cloud Controls</h5>
-<p>While hovering over the point cloud window with the mouse pointer, the point cloud translation and rotation can be control by the user.</p>
-<ul>
-<li>Translation is possible in the X, Y and Z planes.</li>
-<li>Yaw, pitch and roll rotations are possible.</li>
-</ul>
-<table>
-<thead>
-<tr class="header">
-<th>Mouse Combo</th>
-<th>Defintion</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Left Mouse Button + Mouse</td>
-<td>Freeform control.</td>
-</tr>
-<tr class="even">
-<td>Right Mouse Button + Mouse Up/Down</td>
-<td>Translate on the y-axis.</td>
-</tr>
-<tr class="odd">
-<td>Right Mouse Button + Mouse Left/Right</td>
-<td>Translate on the x-axis.</td>
-</tr>
-<tr class="even">
-<td>Mouse Wheel</td>
-<td>Translate on the z-axis.</td>
-</tr>
-<tr class="odd">
-<td>CTRL + Mouse Wheel</td>
-<td>Pitch control.</td>
-</tr>
-<tr class="even">
-<td>ALT + Mouse Wheel</td>
-<td>Yaw control.</td>
-</tr>
-<tr class="odd">
-<td>CTRL + ALT + Mouse Wheel</td>
-<td>Roll control</td>
-</tr>
-</tbody>
-</table>
-<h5 id="ab-window">AB Window</h5>
-<p>Hovering the mouse pointer over the AB image shows the AB intensity for a given pixel.</p>
-<p><a href="images/aditofgui_ab_window.png"><img src="images/aditofgui_ab_window.png" width="25%"></a></p>
-<h5 id="depth-window">Depth Window</h5>
-<p>Hovering the mouse pointer over the depth image shows the depth/distance for a given pixel.</p>
-<p><a href="images/aditofgui_depth_window.png"><img src="images/aditofgui_depth_window.png" width="25%"></a></p>
-<p>It is also possible to mointor the depth across a given line drawn on the depth image by the user.</p>
-<p>To do so, right click in the depth window, once the red line appears move the mouse to the next point and press the right mouse button again. A graph will appear with the length of the line (in pixels) on the x-axis and depth (in mm) on the y-axis. Press the right mouse button in the depth window to remove the line.</p>
-<p><a href="images/aditofgui_depth_distance_windows.png"><img src="images/aditofgui_depth_distance_windows.png" width="40%"></a></p>
-<h4 id="configuring-aditofgui">Configuring ADIToFGUI</h4>
-<p>In the <em>ADIToFGUI</em> folder there is a file: *tof-tools.config. This tool contains some GUI configuration parameters. The default contents of the file is shown below.</p>
-<pre><code>{
-    &quot;skip_network_cameras&quot;: &quot;off&quot;,
-    &quot;camera_ip&quot;: &quot;&quot;,
-    &quot;tooltip_delay_seconds&quot;: 1.5,
-    &quot;recordings_folder&quot;: &quot;.&quot;
-}</code></pre>
-<p>Let’s take a look at each definition:</p>
-<table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 66%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Entry</th>
-<th>Definition</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>skip_network_cameras</td>
-<td>Look for networked ADI ToF Cameras if set to ‘on’.</td>
-</tr>
-<tr class="even">
-<td>camera_ip</td>
-<td>IP address of network worked camera, used if ‘skip_network_cameras’ is set to ‘on’.</td>
-</tr>
-<tr class="odd">
-<td>tooltip_delay_seconds</td>
-<td>How long to wait before the GUI displays tooltips on hover. By default it is set to 1.5s.</td>
-</tr>
-<tr class="even">
-<td>recordings_folder</td>
-<td>The folder to save recordings to. By default it is the current folder - ‘recordings’ will be created.</td>
-</tr>
-</tbody>
-</table>
-<h1 id="appendix">Appendix</h1>
+</details>
+<details>
+<p><summary>Configuration JSON File</summary></p>
 <h2 id="configuration-json-file">Configuration JSON File</h2>
 <p>For the following discussion <a href="other/example-cfg.json">example-cfg.json</a> will be referenced.</p>
 <h3 id="general-parameters">General Parameters</h3>
@@ -1400,6 +1288,6 @@ Visualization complete!
     &quot;headerSize&quot;:128.0,
     &quot;xyzEnable&quot;:1.0
   }
-},</code></pre>
-**</li>
+},</code></pre></li>
 </ul>
+</details>

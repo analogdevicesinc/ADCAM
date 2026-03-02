@@ -627,9 +627,9 @@ void ADIMainWindow::SetDpi() {
     ImGui::GetIO().Fonts->AddFontDefault(&fontConfig);
 
     g_font_regular =
-        LoadFont(Roboto_Regular_ttf, Roboto_Regular_ttf_len, 12.0f);
-    g_font_bold = LoadFont(Roboto_Bold_ttf, Roboto_Bold_ttf_len, 12.0f);
-    g_font_bold_large = LoadFont(Roboto_Bold_ttf, Roboto_Bold_ttf_len, 18.0f);
+        LoadFont(Roboto_Regular_ttf, Roboto_Regular_ttf_len, 14.0f);
+    g_font_bold = LoadFont(Roboto_Bold_ttf, Roboto_Bold_ttf_len, 14.0f);
+    g_font_bold_large = LoadFont(Roboto_Bold_ttf, Roboto_Bold_ttf_len, 20.0f);
 
     glfwGetWindowSize(window, &m_main_window_width, &m_main_window_height);
     m_main_window_width =
