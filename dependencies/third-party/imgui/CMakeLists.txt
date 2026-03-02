@@ -39,6 +39,7 @@ if (NOT TARGET imgui)
 		${gladextern_SOURCE_DIR}/include
 		${imguimd_SOURCE_DIR}
 		${md4c_SOURCE_DIR}/src
+		${CMAKE_SOURCE_DIR}/examples/tof-viewer/include
     )
 	
 else()

@@ -900,72 +900,104 @@ The *Live Camera* and *Saved Stream* views each contains several windows. The wi
 
 Expand the images below to see the data views of the *Live Camera* and *Saved Stream*.
 
-| Live Camera | Saved Stream |
-|-------------|--------------|
-|[<img src="images/aditofgui_live_stream.png" width="100%">](images/aditofgui_live_stream.png)|[<img src="images/aditofgui_saved_stream.png" width="100%">](images/aditofgui_saved_stream.png)|
+* Live Camera: [<img src="images/aditofgui_live_stream.png" width="100%">](images/aditofgui_live_stream.png)
+* Save Stream: [<img src="images/aditofgui_saved_stream.png" width="100%">](images/aditofgui_saved_stream.png)|
 
-| Window | Definition |
-|--------|---------|
-|Information Window|This window shows metrics, telemetry and parameters.|
-|Control Windows|This window allows the user to configure and control the stream. This is the only window that differs between the two views.|
-|Absolute Brightness Window|This window show AB frames. In real time in the Live view and non-realtime in the Saved view.|
-|Depth Window|This window shows Depth frames. In real time in the Live view and non-realtime in the Saved view.|
-|Point Cloud Window|This window shows point cloud frames. In real time in the Live view and non-realtime in the Saved view.|
+* Information Window
+  * This window shows metrics, telemetry and parameters.
+* Control Windows
+  * This window allows the user to configure and control the stream. This is the only window that differs between the two views.
+* Absolute Brightness Window
+  * This window show AB frames. In real time in the Live view and non-realtime in the Saved view.
+* Depth Window
+  * This window shows Depth frames. In real time in the Live view and non-realtime in the Saved view.
+* Point Cloud Window
+  * This window shows point cloud frames. In real time in the Live view and non-realtime in the Saved view.
 
 ##### Information Window
 
 [<img src="images/aditofgui_live_stream_control.png" width="20%">](images/aditofgui_live_stream_control.png)
 
-|Type|Definition|
-|----|---------|
-|Camera|This defines is your are using an online (aka Live Camera) or offline (aka Saved Stream) camera.|
-|Preview Mode|Shows if *Preview Mode* is on or off|
-|Mode|The current mode as selected by the user for the *Live Camera* view or as saved in the recording for the *Saved Stream* view.|
-|Expected fps|The set and expected frame rate.|
-|Current fps|The actual frame rate as calculated in real-time.|
-|Frames Recevied|Frames received in a session, so far, in real-time.|
-|Frames Lost|Frames lost in a session, so far, in real-time.|
-|Laser Temp|The current laser temperature as sent via metadata from the imager module.|
-|Sensor Temp|The current laser temperature as sent via metadata from the imager module.|
-|Point Cloud FoV|The field of view in the point cloud window.|
-|Point Cloud Camera|The location of the camera in the point cloud window.|
-|Camera (Y, P, R)|The Yaw, Pitch and Rotation of the scene in the point cloud window.|
+* Camera
+  * This defines is your are using an online (aka Live Camera) or offline (aka Saved Stream) camera.
+* Preview Mode
+  * Shows if *Preview Mode* is on or off.
+* Mode
+  * The current mode as selected by the user for the *Live Camera* view or as saved in the recording for the *Saved Stream* view.
+* Expected fps
+  * The set and expected frame rate.
+* Current fps
+  * The actual frame rate as calculated in real-time.
+* Frames Recevied
+  * Frames received in a session, so far, in real-time.
+* Frames Lost
+  * Frames lost in a session, so far, in real-time.
+* Laser Temp
+  * The current laser temperature as sent via metadata from the imager module.
+* Sensor Temp
+  * The current laser temperature as sent via metadata from the imager module.
+* Point Cloud FoV
+  * The field of view in the point cloud window.
+* Point Cloud Camera
+  * The location of the camera in the point cloud window.
+* Camera (Y, P, R)
+  * The Yaw, Pitch and Rotation of the scene in the point cloud window.
 
 ##### Control Window: Live Camera View
 
 [<img src="images/aditofgui_saved_stream_control.png" width="20%">](images/aditofgui_saved_stream_control.png)
 
-|Type|Definition|
-|----|----------|
-|Configuration: Load Config|Allows the user to load a configuration JSON file. Device and software parameters are loaded and applied,|
-|Configuration: Save Config|Allows the user to save a configuration JSON file. Device and software parameters are stored.|
-|Control: Camera Icon|Save a snapshot of the current frame set. This is covered in more detail later.|
-|Control: Record Icon|Start recording the stream. Green: the user can start recording. Yellow: the recording is in active. This is covered in more detail later.|
-|Control: Stop Icon|Stop the active stream, returning to the *Selection Wizard*.|
-|Rotate: +|This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.|
-|Point Cloud: Reset|If the user rotates or translates the point cloud *Reset* goes back to the default translation and rotation values.|
-|Point Cloud: Colour Option|Depth Colour, AB Colour and Solid Color for the point cloud window.|
-|Active Brigthtness: Auto-scale|Improves AB image to make it less dark.|
-|Active Brigthtness: Log Image|Improves AB image to make it less dark, but depends on Auto-scale being |
-|Configuration Parameters: Reset Parameters|Reset the parameters shown to the defaults. This does not write back to the Time of Flight hardawre.|
-|Configuration Parameters: Modify Parameters|Write the configuration parameters to the Time of Flight hardware.|
+* Configuration->Load Config
+  * Allows the user to load a configuration JSON file. Device and software parameters are loaded and applied.
+* Configuration->Save Config
+  * Allows the user to save a configuration JSON file. Device and software parameters are stored.
+* Control->Camera Icon
+  * Save a snapshot of the current frame set. This is covered in more detail later.
+* Control->Record Icon
+  * Start recording the stream. When the icon is blinking the system is recording.
+* Control->Stop Icon
+  * Stop the active stream, returning to the *Selection Wizard*.
+* Rotate->+
+  * This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.
+* Point Cloud->Reset
+  * If the user rotates or translates the point cloud *Reset* goes back to the default translation and rotation values.
+* Point Cloud->Colour Option
+  * Depth Colour, AB Colour and Solid Color for the point cloud window.
+* Active Brigthtnes->Auto-scale
+  * Improves AB image to make it less dark.
+* Active Brigthtness->Log Image
+  * Improves AB image to make it less dark, but depends on Auto-scale being 
+* Configuration Parameters->Reset Parameters
+  * Reset the parameters shown to the defaults. This does not write back to the Time of Flight hardawre.
+* Configuration Parameters->Modify Parameters
+  * Write the configuration parameters to the Time of Flight hardware.
 
 ##### Control Window: Saved Stream View
 
-|Type|Definition|
-|----|----------|
-|Control: Export All Frames|Export all frames in the record to png, text and ply files when the *Camera* icon is pressed.|
-|Control: Camera Icon|Save a snapshot of the current frame set; if *Export All Fames* is selected then all frames are saved. This is covered in more detail later.|
-|Control: \|< Icon|Goto the first frame in the recording.|
-|Control:  < Icon|Step back one frame in the recording.|
-|Control: >\| Icon|Goto the last frame in the recording.|
-|Control:  > Icon|Step forward one frame in the recording.|
-|Control: Stop Icon|Stop and return to the *Selection Wizard*.|
-|Rotate: +|This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.|
-|Point Cloud: Reset|If the user rotates or translates the point cloud *Reset* goes back to the default translation and rotation values.|
-|Point Cloud: Colour Option|Depth Colour, AB Colour and Solid Color for the point cloud window.|
-|Active Brigthtness: Auto-scale|Improves AB image to make it less dark.|
-|Active Brigthtness: Log Image|Improves AB image to make it less dark, but depends on Auto-scale being |
+* Control->Export All Frames
+  * Export all frames in the record to png, text and ply files when the *Camera* icon is pressed.
+* Control->Camera Icon
+  * Save a snapshot of the current frame set; if *Export All Fames* is selected then all frames are saved. This is covered in more detail later.
+* Control-> '\|<' Icon
+  * Goto the first frame in the recording.
+* Control-> '<' Icon
+  * Step back one frame in the recording.
+* Control-> '>\|' Icon
+  * Goto the last frame in the recording.
+* Control-> '>' Icon
+  * Step forward one frame in the recording.
+* Control->Stop Icon
+  * Stop and return to the *Selection Wizard*.
+* Rotate->+
+  * This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.
+* Point Cloud->Reset
+  * If the user rotates or translates the point cloud *Reset* goes back to the default translation and rotation values.
+* Point Cloud->Colour Option
+  * Depth Colour, AB Colour and Solid Color for the point cloud window.
+* Active Brigthtness->Auto-scale
+  * Improves AB image to make it less dark.
+* |Active Brigthtness->Log Image
+  * Improves AB image to make it less dark, but depends on Auto-scale being 
 
 #### ADIToFGUI and Configuration Parameters
 
@@ -998,15 +1030,20 @@ While hovering over the point cloud window with the mouse pointer, the point clo
 * Translation is possible in the X, Y and Z planes.
 * Yaw, pitch and roll rotations are possible.
 
-|Mouse Combo|Defintion|
-|-----------|---------|
-|Left Mouse Button + Mouse|Freeform control.|
-|Right Mouse Button + Mouse Up/Down |Translate on the y-axis.|
-|Right Mouse Button + Mouse Left/Right |Translate on the x-axis.|
-|Mouse Wheel |Translate on the z-axis.|
-|CTRL + Mouse Wheel|Pitch control.|
-|ALT + Mouse Wheel|Yaw control.|
-|CTRL + ALT + Mouse Wheel|Roll control|
+* Left Mouse Button + Mouse
+  * Freeform control.
+* Right Mouse Button + Mouse Up/Down
+  * Translate on the y-axis.
+* Right Mouse Button + Mouse Left/Right
+  * Translate on the x-axis.
+* Mouse Wheel
+  * Translate on the z-axis.
+* CTRL + Mouse Wheel
+  * Pitch control.
+* ALT + Mouse Wheel
+  * Yaw control.
+* CTRL + ALT + Mouse Wheel
+  * Roll control.
 
 ##### AB Window
 
@@ -1041,12 +1078,14 @@ In the *ADIToFGUI* folder there is a file: *tof-tools.config. This tool contains
 
 Let's take a look at each definition:
 
-|Entry|Definition|
-|-----|----------|
-|skip_network_cameras|Look for networked ADI ToF Cameras if set to 'on'.|
-|camera_ip|IP address of network worked camera, used if 'skip_network_cameras' is set to 'on'.|
-|tooltip_delay_seconds|How long to wait before the GUI displays tooltips on hover. By default it is set to 1.5s.|
-|recordings_folder|The folder to save recordings to. By default it is the current folder - 'recordings' will be created.|
+* skip_network_cameras
+  * Look for networked ADI ToF Cameras if set to 'on'.
+* camera_ip
+  * IP address of network worked camera, used if 'skip_network_cameras' is set to 'on'.
+* tooltip_delay_seconds
+  * How long to wait before the GUI displays tooltips on hover. By default it is set to 1.5s.
+* recordings_folder
+  * The folder to save recordings to. By default it is the current folder - 'recordings' will be created.
 
 </details>
 
