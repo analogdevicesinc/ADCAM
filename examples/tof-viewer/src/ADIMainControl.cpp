@@ -258,14 +258,14 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                         m_view_instance->m_ctrl->setPreviewRate(m_fps_expected,
                                                                 m_fps_expected);
                         LOG(ERROR) << "Unable to start recording.";
-                        filePath = "";
+                        filePath = m_recording_path;;
                         m_recordingActive = false;
                     }
                 } else {
                     aditof::Status status = GetActiveCamera()->stopRecording();
                     if (status == aditof::Status::OK) {
                         LOG(INFO) << "Recording stopped.";
-                        filePath = "";
+                        filePath = m_recording_path;
                         m_recordingActive = false;
                         m_view_instance->m_ctrl->setPreviewRate(m_fps_expected,
                                                                 m_fps_expected);
@@ -290,7 +290,7 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
                     aditof::Status status = GetActiveCamera()->stopRecording();
                     if (status == aditof::Status::OK) {
                         LOG(INFO) << "Recording stopped.";
-                        filePath = "";
+                        filePath = m_recording_path;
                         m_recordingActive = false;
                         m_view_instance->m_ctrl->setPreviewRate(
                             m_fps_expected, m_fps_expected);
