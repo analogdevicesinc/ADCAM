@@ -692,26 +692,18 @@ bool imgui_md::check_html(const char* str, const char* str_end)
     if (sz >= img_sz && strncmp(str, "<img", img_sz) == 0) {
         html_img_attrs attrs = parse_img_tag(str, str_end);
         if (!attrs.src.empty()) {
-            // Debug: print the image path
-            fprintf(stderr, "[DEBUG imgui_md] Attempting to load image: '%s'\n", attrs.src.c_str());
-            fprintf(stderr, "[DEBUG imgui_md]   width='%s', height='%s'\n", attrs.width.c_str(), attrs.height.c_str());
-            
             // Set href temporarily to load the image
             std::string old_href = m_href;
             m_href = attrs.src;
 
             image_info nfo;
             if (get_image(nfo)) {
-                fprintf(stderr, "[DEBUG imgui_md] Image loaded successfully: '%s'\n", attrs.src.c_str());
-                fprintf(stderr, "[DEBUG imgui_md]   texture_id=%llu, size=(%.1f, %.1f)\n", (unsigned long long)nfo.texture_id, nfo.size.x, nfo.size.y);
-                
                 const float scale = ImGui::GetIO().FontGlobalScale;
                 nfo.size.x *= scale;
                 nfo.size.y *= scale;
 
                 // Store aspect ratio before any modifications
                 float aspect_ratio = nfo.size.y / nfo.size.x;
-                fprintf(stderr, "[DEBUG imgui_md]   scaled size=(%.1f, %.1f), aspect_ratio=%.3f\n", nfo.size.x, nfo.size.y, aspect_ratio);
 
                 // Parse width attribute (supports pixels and percentages)
                 if (!attrs.width.empty()) {
@@ -721,13 +713,11 @@ bool imgui_md::check_html(const char* str, const char* str_end)
                         ImVec2 csz = ImGui::GetContentRegionAvail();
                         nfo.size.x = csz.x * percent;
                         nfo.size.y = nfo.size.x * aspect_ratio;
-                        fprintf(stderr, "[DEBUG imgui_md]   applied width percentage (%.1f%%) -> size=(%.1f, %.1f)\n", percent * 100.0f, nfo.size.x, nfo.size.y);
                     } else {
                         // Pixel values
                         float width_px = std::stof(attrs.width);
                         nfo.size.x = width_px;
                         nfo.size.y = width_px * aspect_ratio;
-                        fprintf(stderr, "[DEBUG imgui_md]   applied width pixels (%.1f) -> size=(%.1f, %.1f)\n", width_px, nfo.size.x, nfo.size.y);
                     }
                 }
 
@@ -735,7 +725,6 @@ bool imgui_md::check_html(const char* str, const char* str_end)
                 if (!attrs.height.empty()) {
                     float height_px = std::stof(attrs.height);
                     nfo.size.y = height_px;
-                    fprintf(stderr, "[DEBUG imgui_md]   applied height (%.1f) -> size=(%.1f, %.1f)\n", height_px, nfo.size.x, nfo.size.y);
                 }
 
                 // Ensure image doesn't exceed content width
@@ -744,12 +733,9 @@ bool imgui_md::check_html(const char* str, const char* str_end)
                     const float r = nfo.size.y / nfo.size.x;
                     nfo.size.x = csz.x;
                     nfo.size.y = csz.x * r;
-                    fprintf(stderr, "[DEBUG imgui_md]   clamped to content width -> size=(%.1f, %.1f)\n", nfo.size.x, nfo.size.y);
                 }
 
-                fprintf(stderr, "[DEBUG imgui_md] Calling ImGui::Image() with texture_id=%llu, size=(%.1f, %.1f)\n", (unsigned long long)nfo.texture_id, nfo.size.x, nfo.size.y);
                 ImGui::Image(nfo.texture_id, nfo.size, nfo.uv0, nfo.uv1, nfo.col_tint, nfo.col_border);
-                fprintf(stderr, "[DEBUG imgui_md] ImGui::Image() returned\n");
 
                 if (ImGui::IsItemHovered()) {
                     if (!old_href.empty()) {
@@ -761,14 +747,10 @@ bool imgui_md::check_html(const char* str, const char* str_end)
                         open_url();
                     }
                 }
-            } else {
-                fprintf(stderr, "[DEBUG imgui_md] Failed to load image: '%s'\n", attrs.src.c_str());
             }
 
             // Restore original href
             m_href = old_href;
-        } else {
-            fprintf(stderr, "[DEBUG imgui_md] No src attribute found in img tag\n");
         }
         return true;
     }
@@ -1051,8 +1033,6 @@ bool imgui_md::get_image(image_info& nfo) const
     unsigned char* image_data = stbi_load(m_href.c_str(), &image_width, &image_height, &channels, 4);
     
     if (image_data == nullptr) {
-        fprintf(stderr, "[imgui_md] Failed to load image: '%s' - %s\n", m_href.c_str(), stbi_failure_reason());
-        
         // Fall back to ImGui font texture
         nfo.texture_id = ImGui::GetIO().Fonts->TexID;
         nfo.size = { 100.0f, 50.0f };
@@ -1062,9 +1042,6 @@ bool imgui_md::get_image(image_info& nfo) const
         nfo.col_border = { 0, 0, 0, 0 };
         return false;
     }
-
-    fprintf(stderr, "[imgui_md] Loaded image: '%s' (%dx%d, %d channels)\n", 
-            m_href.c_str(), image_width, image_height, channels);
 
     // Create OpenGL texture
     GLuint texture_id;
@@ -1089,9 +1066,6 @@ bool imgui_md::get_image(image_info& nfo) const
     tex_data.width = image_width;
     tex_data.height = image_height;
     m_texture_cache[m_href] = tex_data;
-
-    fprintf(stderr, "[imgui_md] Created OpenGL texture: id=%u, size=(%dx%d)\n", 
-            texture_id, image_width, image_height);
 
     // Set output
     nfo.texture_id = (ImTextureID)(intptr_t)texture_id;
