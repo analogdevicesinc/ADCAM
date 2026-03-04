@@ -1227,12 +1227,6 @@ void ADIMainWindow::ShowStartWizard() {
             if (ImGuiExtensions::ADIButton("Close", m_is_open_device)) {
                 setWorkingLabel("Closing file...");
                 setIsWorking(true);
-                CameraStop();
-                if (initCameraWorker.joinable()) {
-                    initCameraWorker.join();
-                    m_cameraModes.clear();
-                    _cameraModes.clear();
-                }
                 m_view_instance->cleanUp();
                 m_view_instance.reset();
 
