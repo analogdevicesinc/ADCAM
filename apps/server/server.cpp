@@ -752,6 +752,7 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
             protoContent->set_metadata_size(frameDetails.metadataSize);
             protoContent->set_is_pcm(frameDetails.isPCM);
             protoContent->set_number_of_phases(frameDetails.numberOfPhases);
+            protoContent->set_number_of_frequencies(frameDetails.numberOfFrequencies);
             for (size_t i = 0; i < frameDetails.frameContent.size(); i++) {
                 protoContent->add_frame_content(
                     frameDetails.frameContent.at(i));

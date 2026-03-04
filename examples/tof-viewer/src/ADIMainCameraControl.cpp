@@ -116,7 +116,7 @@ void ADIMainWindow::InitCamera(std::string filePath) {
             s = s + ":" + std::to_string(modeDetails.baseResolutionWidth) +
                 "x" + std::to_string(modeDetails.baseResolutionHeight) + ",";
             if (!modeDetails.isPCM) {
-                std::string append = (modeDetails.numberOfPhases == 2)
+                std::string append = (modeDetails.numberOfFrequencies == 2)
                                          ? "Short Range"
                                          : "Long Range";
                 s = s + append;
@@ -445,11 +445,11 @@ void ADIMainWindow::CameraStop() {
             m_view_instance->m_ctrl->panicStop = false;
         }
     }
-    /*if (initCameraWorker.joinable()) {
+    if (initCameraWorker.joinable()) {
         initCameraWorker.join();
         m_cameraModes.clear();
         _cameraModes.clear();
-    }*/
+    }
     m_focused_once = false;
     m_capture_separate_enabled = true;
     m_set_ab_win_position_once = true;
