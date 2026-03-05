@@ -11,6 +11,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(ENABLE_CUDA_ACCELERATION "Enable CUDA GPU acceleration if available" ON)
 
+# WSL2-specific OpenGL version configuration
+if(WSL2)
+    set(WSL2_GL_VERSION "3.3" CACHE STRING "WSL2 OpenGL version override (3.3 or 4.6)")
+    if(WSL2_GL_VERSION STREQUAL "4.6")
+        add_compile_definitions(WSL2_GL_VERSION_MAJOR=4 WSL2_GL_VERSION_MINOR=6)
+        message(STATUS "WSL2 OpenGL override: 4.6 (requires GPU passthrough)")
+    else()
+        add_compile_definitions(WSL2_GL_VERSION_MAJOR=3 WSL2_GL_VERSION_MINOR=3)
+        message(STATUS "WSL2 OpenGL override: 3.3 (default)")
+    endif()
+endif()
+
 # Disable ARM and CUDA support on Windows - use x86 SIMD (AVX2) instead
 if(WIN32)
     set(USE_CUDA OFF)

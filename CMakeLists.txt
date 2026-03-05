@@ -21,17 +21,18 @@ option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
 option(WITH_NETWORK "Build network interface?" OFF)
-set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO", "NVIDIA", "RPI" or "HOST"
+set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO", "NVIDIA", "RPI", "WSL2", or "HOST"
 
 ################################# PLATFORM DETECTION ###############################
 
-set_property(CACHE WITH_PLATFORM PROPERTY STRINGS "AUTO" "NVIDIA" "RPI" "HOST")
+set_property(CACHE WITH_PLATFORM PROPERTY STRINGS "AUTO" "NVIDIA" "RPI" "WSL2" "HOST")
 # Map WITH_PLATFORM to PLATFORM_CHOICE for platform detection
 set(PLATFORM_CHOICE "${WITH_PLATFORM}")
 
 # Initialize platform variables as cache to prevent libaditof from overriding
 set(NVIDIA OFF CACHE BOOL "Set to ON when building on NVIDIA" FORCE)
 set(RPI OFF CACHE BOOL "Set to ON when building on Raspberry Pi" FORCE)
+set(WSL2 OFF CACHE BOOL "Set to ON when building on Windows Subsystem for Linux 2" FORCE)
 
 # Include platform detection
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/platform_detection.cmake)
@@ -100,7 +101,7 @@ set(LIBADITOF_SUBMODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libaditof)
 
 # Check whether we configure thgs for remote or we're on target
 set(SELECTED_PLATFORMS 0)
-set(ALL_PLATFORMS NVIDIA RPI)
+set(ALL_PLATFORMS NVIDIA RPI WSL2)
 foreach(platform IN LISTS ALL_PLATFORMS)
     if(${platform})
         math(EXPR SELECTED_PLATFORMS "${SELECTED_PLATFORMS}+1")
@@ -111,8 +112,11 @@ set(ON_TARGET FALSE)
 if(${SELECTED_PLATFORMS} GREATER 1)
         message(FATAL_ERROR "More than one platform was selected. \nPlease select a single platform. CMake will exit.")
 elseif(${SELECTED_PLATFORMS} EQUAL 1)
-    add_definitions(-DTARGET)
-    set(ON_TARGET TRUE)
+    # WSL2 is not an embedded target - it's a host environment for development
+    if(NOT WSL2)
+        add_definitions(-DTARGET)
+        set(ON_TARGET TRUE)
+    endif()
 endif()
 
 if(NOT ON_TARGET AND USE_DEPTH_COMPUTE_OPENSOURCE)
@@ -140,6 +144,8 @@ if(NVIDIA)
      add_definitions(-DNVIDIA)
 elseif(RPI)
      add_definitions(-DRPI)
+elseif(WSL2)
+     add_definitions(-DWSL2)
 endif()
 
 set(RESOURCES_DIR "${CMAKE_BINARY_DIR}/resources")
@@ -150,8 +156,8 @@ if (WITH_OFFLINE)
 endif()
 
 if(NOT WITH_PROTOBUF_DEPENDENCY)
-        if(NOT ON_TARGET)
-                message(FATAL_ERROR "SDK can be built without protobuf only on target builds!")
+        if(NOT ON_TARGET AND NOT WSL2)
+                message(FATAL_ERROR "SDK can be built without protobuf only on target builds or development environments like WSL2!")
         endif()
 else()
         add_definitions(-DUSE_PROTOBUF)

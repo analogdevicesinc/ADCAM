@@ -139,8 +139,10 @@ These libraries must be in a folder called **libs** that in one level below the 
 └── libtofi_config.so
 ```
 
-### Building the SDK
+### Building the ADCAM Software
 
+
+#### On Device Build: Jetson Orin Nano Dev Kit or Raspberry Pi 5
 Let's start with a standard build. Where we need:
 1. Clone the repo.
 2. Update the required submodules.
@@ -161,6 +163,77 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j 6
 ```
 
+#### Network Build: Jetson Orin Nano Dev Kit or Raspberry Pi <-----at least 1 Gbps Ethernet-----> Windows WSL2 Ubuntu 22.04 w/GPU Acceleration
+
+While this is skewed towards WSL2 aspects of this can be applied to another Linux host system in general. Where we currently recommend Ubuntu 22.04 as the host to avoid dependency and build issue due to differing tools versions.
+
+##### Jetson Orin Nano Dev Kit or Raspberry Pi as a Network Device
+
+```console
+git clone https://github.com/analogdevicesinc/ADCAM.git
+cd ADCAM
+git submodule update --init
+git checkout <branch or tag>
+cd libaditof
+git checkout <branch or tag>
+cd ..
+mkdir build
+cd build
+cmake -DWITH_NETWORK=ON -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . -j 6
+cd apps/server
+sudo ./aditof-server
+```
+
+##### Windows WSL2 Host
+
+```console
+sudo apt update
+sudo apt install cmake g++ \
+     libopencv-dev \
+     libgl1-mesa-dev libglfw3-dev \
+     doxygen graphviz \
+     libxinerama-dev \
+     libxcursor-dev \
+     libxi-dev \
+     libxrandr-dev \
+     python3.10-dev \
+     mesa-utils
+```
+
+```console
+git clone https://github.com/analogdevicesinc/ADCAM.git
+cd ADCAM
+git submodule update --init
+git checkout <branch or tag>
+cd libaditof
+git checkout <branch or tag>
+cd ..
+mkdir build
+cd build
+cmake -DWITH_PLATFORM=WSL2 -DWSL2_GL_VERSION=4.6 -DWITH_NETWORK=ON ..
+cmake --build . -j 6
+```
+
+For the best performance:
+1. Use a direct Ethernet connection.
+2. For ADIToFGUI, enable GPU usage in WSL2 and use a high-performance GPU. The instructions below may help, if not Google Search AI can assist.
+
+On Windows 11, enable GPU for WSL2, add the following *%UserProfile%\.wslconfig*.
+```
+[wsl2]
+gpu=true
+```
+Add the following to the bottom of *~./bashrc*.
+```
+export LIBGL_ALWAYS_SOFTWARE=0
+export MESA_GL_VERSION_OVERRIDE=4.6
+export MESA_GLSL_VERSION_OVERRIDE=460
+export MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA
+```
+
+#### CMake options
+
 There are a number of build options available via the root CMakeLists.txt file: https://github.com/analogdevicesinc/ADCAM/blob/6e5b722b5c36923065c4a3be96ad0553d387e699/CMakeLists.txt#L20C1-L24C109
 ```
 option(WITH_EXAMPLES "Build examples?" ON)
@@ -178,6 +251,7 @@ set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO
   * **AUTO**: Auto detect between the NVIDIA, Raspberry or Host device
   * **NVIDIA**: Forces a build for NVIDIA Jetson Orin Nano Dev Kit
   * **RPI**: Forces a build for the Raspberry Pi 5
+  * **WSL2**: Forces a build for Windows WSL2 (this is **only** for a networked setup)
 
 An example build showing how to change an option during the build process. For this we will disable building the Python bindings. 
 
