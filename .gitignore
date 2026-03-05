@@ -2,6 +2,7 @@ build/
 sdcard-images-utils/nxp/ROS/
 sdcard-images-utils/nxp/Firmware/
 sdk/include/aditof/version.h
+doc/user-guide/tof-viewer.md
 
 *deps/
 *.temp/
