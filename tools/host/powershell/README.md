@@ -1,6 +1,6 @@
 ## Setting the IP address on a Windows Machine
 
-We have provided a tool
+We have provided a tool for setting the IP Address on the host via PowerShell with Administration rights.
 
 ```console
 PS C:\tmp> .\set-ip.ps1 -ShowInterfaces

@@ -232,6 +232,11 @@ export MESA_GLSL_VERSION_OVERRIDE=460
 export MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA
 ```
 
+Before you get started:
+
+1. Set the Ethernet IP Address on the NVIDIA or Raspberry Pi.
+2. Set the IP address on Windows. (See tools/host/powershell)[tools/host/powershell/README.md]
+
 #### CMake options
 
 There are a number of build options available via the root CMakeLists.txt file: https://github.com/analogdevicesinc/ADCAM/blob/6e5b722b5c36923065c4a3be96ad0553d387e699/CMakeLists.txt#L20C1-L24C109
