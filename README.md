@@ -42,7 +42,7 @@ See the latest **Quick Start Guide** for details on getting the system and hardw
 |Platform||
 |--------|-----|
 |[NVIDIA Jetson Orin Nano Developer Kit](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit)|![ADCAM with Jetson Orin Nano Dev Kit](./doc/img/ADCAM-Jetson-Orin-Nano-Dev-Kit.png "ADCAM with Jetson Orin Nano Dev Kit")|
-|[Raspberry Pi 5](https://www.raspberrypi.com/products/raspberry-pi-5/)||
+|[Raspberry Pi 5](https://www.raspberrypi.com/products/raspberry-pi-5/)|![ADCAM with the Raspberry Pi 5](./doc/img/ADCAM-Raspberry_Pi_5.png "ADCAM with the Raspberry Pi 5")|
 
 ### Requirements
 
