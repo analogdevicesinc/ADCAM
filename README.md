@@ -87,7 +87,7 @@ Note, prior to committing to the repo it is important to format the source code,
 ### Pre-requisites
 * CMake
 * g++
-* Python 3 - note, we are assuming Python 3.8 in this document, change as needed for your setup
+* Python 3
 * OpenCV - for the examples
 * OpenGL - for the examples
 * Doxygen - for documentation generation
