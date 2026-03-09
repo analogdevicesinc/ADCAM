@@ -65,18 +65,19 @@ A basic example showing how to get a frame from the device.
 
 ```
 (aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/Python$ python first_frame.py
-first_frame.py usage:
-Target: first_frame.py <mode number> <show frames(0/1)>
-Network connection: first_frame.py <mode number> <ip> <show frames (0/1)>
-
-For example:
-python first_frame.py 3 1
+usage: first_frame.py [-h] -m MODE [-i IP] [-o {bin,snap,show}]
+first_frame.py: error: the following arguments are required: -m/--mode
 ```
 
-#### Example Usage
+Where:
+* **-b bin** saves .bin files files based on the frame contents for visualzation using files in the *visualization* folder; example below.
+* **-b snap** saves .jpg, .txt and .ply files based on the frame contents.
+* **-b show** shows the AB, depth, confidence and metadata frame contents via the active display; example below.
+
+#### Example Usage: -o show
   
 ```
-(aditofpython_env) ~/dev/active/ADCAM.fix-gui-offline/build/examples/bindings/python/first_frame$ python first_frame.py 3 1
+(aditofpython_env) ~/dev/active/ADCAM.fix-gui-offline/build/examples/bindings/python/first_frame$ python first_frame.py -m 3 -o show
 SDK version:  7.0.0 a-1  | branch:    | commit:
 Looking for camera on Target.
 I20260218 10:04:13.260467 16697 platform_impl.cpp:53] Initializing platform: NVIDIA Jetson Orin Nano
@@ -185,6 +186,134 @@ I20260218 10:05:22.066078 16697 buffer_processor.cpp:132] freeComputeLibrary
 ```
 
 [<img src="images/first-frame-py.png" width="25%">](images/first-frame-py.png)
+
+#### Example Usage: -o bin
+  
+```
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/Python$ python first_frame.py -m 3 -o bin
+SDK version:  7.0.0 a-1  | branch:  main  | commit:  2cf2f548
+Looking for camera on Target.
+I20260309 13:39:44.509903 40831 platform_impl.cpp:49] Initializing platform: NVIDIA Jetson Orin Nano
+I20260309 13:39:44.509990 40831 sensor_enumerator.cpp:163] Initialized platform: NVIDIA Jetson Orin Nano (aarch64)
+I20260309 13:39:44.513017 40831 platform_impl.cpp:334] Found ADSD3500: video=/dev/video0 subdev=/dev/v4l-subdev1
+I20260309 13:39:44.513061 40831 sensor_enumerator.cpp:192] Found 1 ToF sensor(s)
+I20260309 13:39:44.525280 40831 platform_impl.cpp:49] Initializing platform: NVIDIA Jetson Orin Nano
+I20260309 13:39:44.525328 40831 buffer_processor.cpp:110] BufferProcessor initialized
+I20260309 13:39:44.525374 40831 sensor_enumerator.cpp:240] Created ADSD3500 sensor at /dev/video0
+I20260309 13:39:44.525433 40831 camera_itof.cpp:115] Sensor name = adsd3500
+system.getCameraList() Status.Ok
+I20260309 13:39:44.525560 40831 camera_itof.cpp:165] Initializing camera: Online
+I20260309 13:39:44.525586 40831 adsd3500_sensor.cpp:336] Opening device
+I20260309 13:39:44.525602 40831 adsd3500_sensor.cpp:354] Looking for the following cards:
+I20260309 13:39:44.525614 40831 adsd3500_sensor.cpp:356] vi-output, adsd3500
+I20260309 13:39:44.525627 40831 adsd3500_sensor.cpp:418] device: /dev/video0    subdevice: /dev/v4l-subdev1
+I20260309 13:39:44.525679 40831 adsd3500_sensor.cpp:513] ADSD3500 initialization attempt 1 of 3
+I20260309 13:39:44.525692 40831 platform_impl.cpp:546] Resetting sensor via GPIO
+W20260309 13:39:44.529235 40831 adsd3500_sensor.cpp:189] xioctl failed: fd=5 request=0xc0205648 errno=5 (Input/output error) after 2 attempts
+W20260309 13:39:44.529268 40831 adsd3500_sensor.cpp:1423] Could not set control: 0x9819d1 with command: 0x20. Reason: Input/output error(5)
+E20260309 13:39:44.529284 40831 adsd3500_sensor.cpp:2673] Failed to read status register!
+I20260309 13:39:44.630286 40831 platform_impl.cpp:644] Waiting for sensor to reset
+I20260309 13:39:44.630327 40831 platform_impl.cpp:647] .
+I20260309 13:39:45.630413 40831 platform_impl.cpp:647] .
+Running the python callback for which the status of ADSD3500 has been forwarded. ADSD3500 status =  Adsd3500Status.OK
+Running the python callback for which the status of ADSD3500 has been forwarded. ADSD3500 status =  Adsd3500Status.OK
+I20260309 13:39:46.635500 40831 platform_impl.cpp:651] Waited: 2 seconds
+I20260309 13:39:46.635555 40831 platform_impl.cpp:663] Sensor reset complete
+I20260309 13:39:46.747197 40831 adsd3500_sensor.cpp:550] ADSD3500 is ready to communicate with after 1 attempt(s)
+I20260309 13:39:46.748848 40831 adsd3500_sensor.cpp:2407] CCB master is supported. Reading mode details from nvm.
+I20260309 13:39:46.765693 40831 camera_itof.cpp:263] Current adsd3500 firmware version is: 7.0.2.0
+I20260309 13:39:46.765717 40831 camera_itof.cpp:265] Current adsd3500 firmware git hash is: d340af8bfad4f13980f4d9a9e166ee20f2358fd5
+W20260309 13:39:46.765820 40831 camera_itof.cpp:286] fsyncMode is not being set by SDK.
+I20260309 13:39:46.765836 40831 camera_itof.cpp:298] Using platform MIPI output speed: 1
+I20260309 13:39:46.765848 40831 camera_itof.cpp:303] Using platform deskew setting: 1
+I20260309 13:39:46.765985 40831 camera_itof.cpp:324] MIPI output speed set to 1
+I20260309 13:39:46.766123 40831 camera_itof.cpp:334] Deskew enabled at stream on
+W20260309 13:39:46.766139 40831 camera_itof.cpp:345] enableTempCompenstation is not being set by SDK.
+W20260309 13:39:46.766151 40831 camera_itof.cpp:355] enableEdgeConfidence is not being set by SDK.
+I20260309 13:39:46.772176 40831 camera_itof.cpp:361] Module serial number: 026AM313018F0N6JAL
+I20260309 13:39:46.772195 40831 camera_itof.cpp:369] Camera initialized
+camera1.initialize() Status.Ok
+camera1.getAvailableModes() Status.Ok
+[0, 1, 2, 3]
+camera1.getDetails() Status.Ok
+camera1 details: id: /dev/video0 connection: ConnectionType.OnTarget
+I20260309 13:39:46.772509 40831 adsd3500_sensor.cpp:336] Opening device
+I20260309 13:39:46.772537 40831 adsd3500_sensor.cpp:354] Looking for the following cards:
+I20260309 13:39:46.772550 40831 adsd3500_sensor.cpp:356] vi-output, adsd3500
+I20260309 13:39:46.772561 40831 adsd3500_sensor.cpp:418] device: /dev/video0    subdevice: /dev/v4l-subdev1
+I20260309 13:39:48.975576 40831 buffer_processor.cpp:260] setVideoProperties: Allocating 3 raw frame buffers, each of size 1313280 bytes (total: 3.75732 MB)
+I20260309 13:39:48.975714 40831 buffer_processor.cpp:279] setVideoProperties: Allocating 3 ToFi buffers, each of size 2097152 bytes (total: 6 MB)
+I20260309 13:39:49.176911 40831 camera_itof.cpp:3319] Camera FPS set from parameter list at: 40
+W20260309 13:39:49.176942 40831 camera_itof.cpp:3852] vcselDelay was not found in parameter list, not setting.
+W20260309 13:39:49.177433 40831 camera_itof.cpp:3915] enablePhaseInvalidation was not found in parameter list, not setting.
+I20260309 13:39:49.177480 40831 camera_itof.cpp:640] Using the following configuration parameters for mode 3
+I20260309 13:39:49.177494 40831 camera_itof.cpp:643] abThreshMin : 20
+I20260309 13:39:49.177505 40831 camera_itof.cpp:643] bitsInAB : 16
+I20260309 13:39:49.177515 40831 camera_itof.cpp:643] bitsInConf : 8
+I20260309 13:39:49.177525 40831 camera_itof.cpp:643] bitsInPhaseOrDepth : 16
+I20260309 13:39:49.177535 40831 camera_itof.cpp:643] confThresh : 25
+I20260309 13:39:49.177544 40831 camera_itof.cpp:643] depthComputeIspEnable : 1
+I20260309 13:39:49.177553 40831 camera_itof.cpp:643] fps : 40
+I20260309 13:39:49.177565 40831 camera_itof.cpp:643] headerSize : 128
+I20260309 13:39:49.177574 40831 camera_itof.cpp:643] inputFormat : raw8
+I20260309 13:39:49.177583 40831 camera_itof.cpp:643] interleavingEnable : 1
+I20260309 13:39:49.177595 40831 camera_itof.cpp:643] jblfABThreshold : 10
+I20260309 13:39:49.177605 40831 camera_itof.cpp:643] jblfApplyFlag : 1
+I20260309 13:39:49.177616 40831 camera_itof.cpp:643] jblfExponentialTerm : 5
+I20260309 13:39:49.177626 40831 camera_itof.cpp:643] jblfGaussianSigma : 10
+I20260309 13:39:49.177636 40831 camera_itof.cpp:643] jblfMaxEdge : 12
+I20260309 13:39:49.177646 40831 camera_itof.cpp:643] jblfWindowSize : 5
+I20260309 13:39:49.177656 40831 camera_itof.cpp:643] partialDepthEnable : 0
+I20260309 13:39:49.177666 40831 camera_itof.cpp:643] phaseInvalid : 0
+I20260309 13:39:49.177676 40831 camera_itof.cpp:643] radialThreshMax : 10000
+I20260309 13:39:49.177686 40831 camera_itof.cpp:643] radialThreshMin : 100
+I20260309 13:39:49.177697 40831 camera_itof.cpp:643] xyzEnable : 1
+I20260309 13:39:49.177828 40831 camera_itof.cpp:653] Metadata in AB is enabled and it is stored in the first 128 bytes.
+I20260309 13:39:49.344708 40831 camera_itof.cpp:751] Using closed source depth compute library.
+camera1.setMode( 3 ) Status.Ok
+I20260309 13:39:49.451717 40831 adsd3500_sensor.cpp:638] Starting device 0
+I20260309 13:39:49.461207 40831 buffer_processor.cpp:1042] startThreads: Starting Threads..
+camera1.start() Status.Ok
+I20260309 13:39:49.488855 40831 camera_itof.cpp:1255] Dropped first frame
+camera1.requestFrame() Status.Ok
+frame.getDataDetails() Status.Ok
+depth frame details: width: 512 height: 512 type: depth
+I20260309 13:39:51.728860 40831 buffer_processor.cpp:1112] stopThreads: Threads stopped successfully. Queue sizes - v4l2_input: 3, capture_to_process: 0, tofi_io: 3, process_done: 0
+I20260309 13:39:51.728939 40831 adsd3500_sensor.cpp:691] Stopping device
+I20260309 13:39:51.730670 40831 adsd3500_sensor.cpp:1917] Waiting for interrupt.
+I20260309 13:39:51.730696 40831 adsd3500_sensor.cpp:1922] .
+Running the python callback for which the status of ADSD3500 has been forwarded. ADSD3500 status =  Adsd3500Status.Imager_Stream_Off
+I20260309 13:39:51.753321 40831 adsd3500_sensor.cpp:1927] Waited: 20 ms.
+I20260309 13:39:51.753350 40831 adsd3500_sensor.cpp:1934] Got the Interrupt from ADSD3500
+camera1.stop() Status.Ok
+Available frame types: ['depth', 'ab', 'conf', 'xyz', 'metadata']
+Depth frame retrieved
+AB frame retrieved
+Confidence frame retrieved
+XYZ frame retrieved
+Sensor temperature from metadata:  36
+Laser temperature from metadata:  37
+Frame number from metadata:  1
+Mode from metadata:  3
+Saved: depth_mode_3.bin
+Saved: ab_mode_3.bin
+Saved: conf_mode_3.bin
+Saved: xyz_mode_3.bin
+I20260309 13:39:52.206338 40831 buffer_processor.cpp:133] freeComputeLibrary
+```
+
+Now, let's look at the output files. In this case we will look at the depth image specifically. However, you can find Python scripts to visualize AB, depth and point cloud saved **.bin** files.
+
+* visualize_ab.py
+* visualize_depth.py 
+* visualize_pointcloud.py
+
+```
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/0.2.0-a.1/eval/Python$ python visualization/visualize_depth.py depth_mode_3.bin 512 512
+Input file is:  depth_mode_3.bin
+```
+[<img src="images/first-frame-py-viz-depth-bin.png" width="25%">](images/first-frame-py-viz-depth-bin.png)
+
 </details>
 
 <details>
