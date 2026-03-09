@@ -22,6 +22,18 @@ foreach(ex ${PY_EXAMPLES})
     PopulateforPython("${ex}")
 endforeach()
 
+add_custom_target(copy_python_support_files ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "${CMAKE_CURRENT_BINARY_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt"
+        "${CMAKE_CURRENT_BINARY_DIR}/requirements.txt"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/adcam_virtual_env.sh"
+        "${CMAKE_CURRENT_BINARY_DIR}/adcam_virtual_env.sh"
+    COMMENT "Copying Python requirements and virtual env script to build output."
+)
+
 if (NOT WIN32)
     if (TARGET aditof AND TARGET aditofpython)
         add_custom_target(copy_so_to_python_examples ALL

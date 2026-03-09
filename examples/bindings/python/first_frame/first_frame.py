@@ -29,44 +29,63 @@ from mpl_toolkits.mplot3d import Axes3D
 import sys
 import os
 import struct
+import argparse
 
-def help():
-    print(f"{sys.argv[0]} usage:")
-    print(f"Target: {sys.argv[0]} <mode number> <show frames(0/1)>")
-    print(f"Network connection: {sys.argv[0]} <mode number> <ip> <show frames (0/1)>")
-    print()
-    print("For example:")
-    print(f"python {sys.argv[0]} 0 192.168.56.1 0")
-    exit(1)
+def _to_uint8_rgb(image_u16):
+    if image_u16 is None:
+        return None
+    image = np.asarray(image_u16)
+    if image.size == 0:
+        return None
 
-if len(sys.argv) < 3 or len(sys.argv) > 4 or sys.argv[1] == "--help" or sys.argv[1] == "-h" :
-    help()
-    exit(-1)
+    max_val = float(np.max(image))
+    if max_val <= 0.0:
+        scaled = np.zeros_like(image, dtype=np.uint8)
+    else:
+        scaled = (image.astype(np.float32) * (255.0 / max_val)).astype(np.uint8)
+
+    rgb = np.stack([scaled, scaled, scaled], axis=-1)
+    return np.ascontiguousarray(rgb)
+
+parser = argparse.ArgumentParser(
+    description="ADCAM First Frame Example - Capture and save/display ToF frames",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    epilog="""
+Examples:
+  # Target with mode 2, show visualization
+  python %(prog)s -m 2 -o show
+
+  # Network with mode 3, save snapshot
+  python %(prog)s -m 3 -i 192.168.56.1 -o snap
+
+  # Target with mode 5, dump binary files
+  python %(prog)s -m 5 -o bin
+"""
+)
+parser.add_argument('-m', '--mode', type=int, required=True,
+                    help='Frame mode number (0-6)')
+parser.add_argument('-i', '--ip', type=str, default='',
+                    help='IP address for network connection (omit for target)')
+parser.add_argument('-o', '--output', type=str, choices=['bin', 'snap', 'show'], default='show',
+                    help='Output type: bin=binary dumps, snap=snapshot files, show=visualization (default: show)')
+
+args = parser.parse_args()
+
+mode = args.mode
+ip = args.ip
+output_type = args.output
 
 system = tof.System()
 
 print("SDK version: ", tof.getApiVersion(), " | branch: ", tof.getBranchVersion(), " | commit: ", tof.getCommitVersion())
 
-mode = 0
 cameras = []
-isdisplay = 1
-ip = ""
-if len(sys.argv) == 4:
-    mode = sys.argv[1]
-    ip = sys.argv[2]
-    print (f"Looking for camera on network @ {ip}.")
-    ip = "ip:" + ip
-    isdisplay = sys.argv[3]
-elif len(sys.argv) == 3:
-    mode = sys.argv[1]
-    isdisplay = sys.argv[2]
-    print (f"Looking for camera on Target.")
-else :
-    print("Too many arguments provided!")
-    exit(-2)
 if ip:
+    print(f"Looking for camera on network @ {ip}.")
+    ip = "ip:" + ip
     status = system.getCameraList(cameras, ip)
 else:
+    print("Looking for camera on Target.")
     status = system.getCameraList(cameras)
 print("system.getCameraList()", status)
 
@@ -200,7 +219,7 @@ print("Laser temperature from metadata: ", laser_temp)
 print("Frame number from metadata: ", frame_num)
 print("Mode from metadata: ", imager_mode)
 
-if int(isdisplay)==1:
+if output_type == 'show':
     # Count available frames and create dynamic layout
     subplot_idx = 1
     
@@ -248,7 +267,20 @@ if int(isdisplay)==1:
 
     plt.tight_layout()
     plt.show()
-else:
+elif output_type == 'snap':
+    if image_depth is not None and image_ab is not None:
+        depth_rgb = _to_uint8_rgb(image_depth)
+        ab_rgb = _to_uint8_rgb(image_ab)
+        if depth_rgb is None or ab_rgb is None:
+            print("Warning: Unable to build RGB preview buffers for snapshot")
+        else:
+            handler = tof.FrameHandler()
+            base_name = "snapshot_mode_" + str(mode)
+            status = handler.SnapShotFrames(base_name, frame, ab_rgb, depth_rgb)
+            print("FrameHandler.SnapShotFrames()", status)
+    else:
+        print("Warning: Snapshot requires both depth and AB frames")
+elif output_type == 'bin':
     # dump the files - only save frames that are available
     if image_depth is not None:
         image_depth.tofile("depth_mode_" + str(mode) + ".bin")
