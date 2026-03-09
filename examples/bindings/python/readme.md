@@ -76,4 +76,7 @@ typing_extensions==4.15.0
 urllib3==2.5.0
 Werkzeug==3.1.3
 zipp==3.23.0
+numba==0.64.0
+llvmlite==0.46.0
+torch==2.10.0
 ```
