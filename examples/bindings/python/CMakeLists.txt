@@ -10,7 +10,6 @@ endfunction()
 set(PY_EXAMPLES
     dnn
     first_frame
-    gesture_rec
     streaming
     skeletal_tracking
     skeletal_tracking_in_pointcloud
