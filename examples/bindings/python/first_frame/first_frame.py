@@ -31,22 +31,6 @@ import os
 import struct
 import argparse
 
-def _to_uint8_rgb(image_u16):
-    if image_u16 is None:
-        return None
-    image = np.asarray(image_u16)
-    if image.size == 0:
-        return None
-
-    max_val = float(np.max(image))
-    if max_val <= 0.0:
-        scaled = np.zeros_like(image, dtype=np.uint8)
-    else:
-        scaled = (image.astype(np.float32) * (255.0 / max_val)).astype(np.uint8)
-
-    rgb = np.stack([scaled, scaled, scaled], axis=-1)
-    return np.ascontiguousarray(rgb)
-
 parser = argparse.ArgumentParser(
     description="ADCAM First Frame Example - Capture and save/display ToF frames",
     formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -269,15 +253,10 @@ if output_type == 'show':
     plt.show()
 elif output_type == 'snap':
     if image_depth is not None and image_ab is not None:
-        depth_rgb = _to_uint8_rgb(image_depth)
-        ab_rgb = _to_uint8_rgb(image_ab)
-        if depth_rgb is None or ab_rgb is None:
-            print("Warning: Unable to build RGB preview buffers for snapshot")
-        else:
-            handler = tof.FrameHandler()
-            base_name = "snapshot_mode_" + str(mode)
-            status = handler.SnapShotFrames(base_name, frame, ab_rgb, depth_rgb)
-            print("FrameHandler.SnapShotFrames()", status)
+        handler = tof.FrameHandler()
+        base_name = "snapshot_mode_" + str(mode)
+        status = handler.SnapShotFrames(base_name, frame)
+        print("FrameHandler.SnapShotFrames()", status)
     else:
         print("Warning: Snapshot requires both depth and AB frames")
 elif output_type == 'bin':
