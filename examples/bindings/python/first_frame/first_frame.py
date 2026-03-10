@@ -252,13 +252,10 @@ if output_type == 'show':
     plt.tight_layout()
     plt.show()
 elif output_type == 'snap':
-    if image_depth is not None and image_ab is not None:
-        handler = tof.FrameHandler()
-        base_name = "snapshot_mode_" + str(mode)
-        status = handler.SnapShotFrames(base_name, frame)
-        print("FrameHandler.SnapShotFrames()", status)
-    else:
-        print("Warning: Snapshot requires both depth and AB frames")
+    handler = tof.FrameHandler()
+    base_name = "snapshot_mode_" + str(mode)
+    status = handler.SnapShotFrames(base_name, frame)
+    print("FrameHandler.SnapShotFrames()", status)
 elif output_type == 'bin':
     # dump the files - only save frames that are available
     if image_depth is not None:
