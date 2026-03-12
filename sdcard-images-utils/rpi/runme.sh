@@ -468,13 +468,25 @@ create_package() {
 
     local archive_name="RPI_ToF_ADSD3500_REL_PATCH_$(date +"%d%b%y").zip"
     local patch_dir_name=$(basename "${PATCH_DIR}")
+    local build_dir=$(dirname "${PATCH_DIR}")
 
     log_info "Creating archive: ${archive_name}"
     log_info "Archiving directory: ${patch_dir_name}"
 
-    # Create ZIP archive
-    if ! zip -r "${archive_name}" "${patch_dir_name}" 2>&1 | tee -a "${LOG_FILE}" | strip_colors | head -20; then
-        error_exit "Failed to create archive" ${EXIT_ARCHIVE_ERROR}
+    # Change to build directory where patch directory is located
+    cd "${build_dir}" || error_exit "Failed to change to build directory" ${EXIT_ARCHIVE_ERROR}
+
+    # Create ZIP archive (capture output to avoid SIGPIPE from head)
+    local zip_output
+    zip_output=$(zip -r "${archive_name}" "${patch_dir_name}" 2>&1)
+    local zip_status=$?
+
+    # Log the output (first 20 lines to console, full output to log file)
+    echo "${zip_output}" >> "${LOG_FILE}"
+    echo "${zip_output}" | head -20
+
+    if [[ ${zip_status} -ne 0 ]]; then
+        error_exit "Failed to create archive (zip exit code: ${zip_status})" ${EXIT_ARCHIVE_ERROR}
     fi
 
     # Verify archive was created
@@ -484,6 +496,13 @@ create_package() {
 
     local archive_size=$(stat -c%s "${archive_name}" 2>/dev/null || stat -f%z "${archive_name}" 2>/dev/null)
     log_success "Archive created: ${archive_name} ($(numfmt --to=iec-i --suffix=B ${archive_size} 2>/dev/null || echo "${archive_size} bytes"))"
+
+    # Move archive to root directory
+    mv "${archive_name}" "${ROOTDIR}/" || error_exit "Failed to move archive to root directory" ${EXIT_ARCHIVE_ERROR}
+    log_info "Archive moved to: ${ROOTDIR}/${archive_name}"
+
+    # Return to root directory
+    cd "${ROOTDIR}" || error_exit "Failed to return to root directory" ${EXIT_ARCHIVE_ERROR}
 
     # Cleanup patch directory
     log_info "Cleaning up temporary patch directory..."
