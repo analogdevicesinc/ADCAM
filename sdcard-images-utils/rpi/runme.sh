@@ -548,7 +548,6 @@ main() {
     log_success "Total execution time: ${hours}h ${minutes}m ${seconds}s"
     log_info "Log file: ${LOG_FILE}"
 
-    return ${EXIT_SUCCESS}
 }
 
 # Trap errors and interrupts
