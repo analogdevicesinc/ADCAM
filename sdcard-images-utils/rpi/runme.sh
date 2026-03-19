@@ -555,5 +555,3 @@ trap 'error_exit "Script interrupted or error occurred" ${EXIT_GENERAL_ERROR}' E
 
 # Execute main function
 main "$@"
-
-exit ${EXIT_SUCCESS}
