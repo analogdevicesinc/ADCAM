@@ -747,7 +747,6 @@ main() {
     log_info "Total execution time: ${hours}h ${minutes}m ${seconds}s"
     log_success "Distribution package ready for deployment"
 
-    return ${EXIT_SUCCESS}
 }
 
 # Trap errors
