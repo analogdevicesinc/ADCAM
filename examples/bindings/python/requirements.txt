@@ -1,4 +1,3 @@
-absl-py
 attrs
 cffi
 contourpy
