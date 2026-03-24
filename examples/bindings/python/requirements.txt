@@ -1,6 +1,5 @@
 attrs
 cffi
-contourpy
 cycler
 flatbuffers
 fonttools
