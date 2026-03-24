@@ -2,7 +2,7 @@
 
 Refer to the eval kit [documentation](../../../doc/user-guide/ADTF3175D-EvalKit-610.md#python-tools) for more details.
 
-Requirements:
+Create requirements.txt with the contents from below:
 ```
 absl-py==2.3.1
 attrs==25.4.0
