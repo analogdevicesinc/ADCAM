@@ -6,6 +6,8 @@ This page is in preparation for the next release. See the ADCAM tag [v0.1.0-a.1]
 
 Please note, the [ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki) is available with additional documentation.
 
+Eval kit user guide documentation can be found [here](doc/user-guide/ADCAM-CameraKit-020.md). 
+
 ## Latest Release
 
 * [ADCAM Release 0.2.0-a.1](https://github.com/analogdevicesinc/ADCAM/releases/tag/v0.2.0-a.1)
@@ -138,7 +140,7 @@ The two libraries files are:
 
 There are two options for pointing these libraries:
 
-1. Set the **export LIBTOFI_LIBDIR_PATH="$(realpath libs/lib)"** enviroment variable to the path with these files.
+1. Set the **LIBTOFI_LIBDIR_PATH** enviroment variable to the path with these files.
 2. Place the libraries must be in a folder called **libs** that in one level below the cloned ADCAM repo folder. For example:
 ```
 (aditofpython_env) analog@analog-desktop:~/dev/ADCAM$ pwd
