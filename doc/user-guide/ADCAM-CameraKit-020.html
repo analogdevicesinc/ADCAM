@@ -1408,3 +1408,20 @@ Visualization complete!
 },</code></pre></li>
 </ul>
 </details>
+<details>
+<p><summary>Building the ‘dev’ Folder</summary></p>
+<p>We have include a script to clone th sources that were used to build the binaries in the evaluation kit. With this the user is able to build all code:</p>
+<ul>
+<li>Eval kit binary examples</li>
+<li>libaditof aka SDK</li>
+<li>ADSD3500 V4L2 Camera Sensor Driver</li>
+</ul>
+<p>The script is locationed under the <em>dev</em> folder: <strong>git_clone_tof.sh</strong></p>
+<p>To get the sources run this script in the <em>dev</em> folder.</p>
+<pre class="console"><code>$ cd dev
+$ ./git_clone_tof.sh
+$ cd ToF-main</code></pre>
+<p>Now refer to the main page of the associated ADCAM release for how to build the code.</p>
+<p>https://github.com/analogdevicesinc/ADCAM/tree/v0.2.0-a.1</p>
+<p>Note, the script <strong>activate_env.sh</strong> set the environment variable <strong>LIBTOFI_LIBDIR_PATH</strong> to point to the depth compute libraries.</p>
+</details>
