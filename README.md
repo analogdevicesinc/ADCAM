@@ -12,10 +12,6 @@ This page is in preparation for the next release. See the ADCAM tag [v0.1.0-a.1]
 
 # ADCAM Camera Kit
 
-## Documentation
-
-[ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki): This is a jumping off point for other documentation
-
 ## Latest Release
 
 * [ADCAM Release 0.2.0-a.1](https://github.com/analogdevicesinc/ADCAM/releases/tag/v0.2.0-a.1)
@@ -35,12 +31,20 @@ This repository depends on the following components:
   Provides the V4L2 camera sensor driver for the ADSD3500 Depth ISP, along with device tree sources and kernel patches as required.
 * [**libaditof**](https://github.com/analogdevicesinc/libaditof/tree/main)  
   Provides the SDK supporting the ADCAM system, integrating ADSD3500 Depth ISP processing with the ADI ToF imager.
- 
----
+
+
+
+## Documentation
+
+[ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki): This is a jumping off point for other documentation
+
+
 
 ## Quick Start Guide
 
 See the latest **Quick Start Guide** for details on getting the system and hardware ready for any development use.
+
+
 
 ## Supported Platforms
 
@@ -55,13 +59,15 @@ See the latest **Quick Start Guide** for details on getting the system and hardw
 * Raspberry Pi 5: Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
 
 ## Examples
+
+### Core Examples
 | Example | Language | Description |
 | --------- | ------------- | ----------- |
 | tof-viewer | <a href="examples/tof-viewer"> C++ </a> | Graphical User interface for visualising stream from depth camera |
 | data-collect | <a href="examples/data_collect"> C++ </a> | A command line application that takes in command line input arguments (like number of frames, mode to be set, folder location to save frame data) and captures the frames and stores in path provided |
 | first-frame | <a href="examples/first-frame"> C++ </a> <br> <a href="bindings/python/examples/first_frame"> Python </a> | An example code that shows the steps required to get to the point where camera frames can be captured. |
 
-## Other Examples
+### Other Examples
 | Example | Language | Description |
 | --------- | ------------- | ----------- |
 | ROS2 Application | <a href="https://github.com/analogdevicesinc/adi_3dtof_adtf31xx"> C++ </a> | A more extensive ROS2 example based on the ADI ToF SDK. |
