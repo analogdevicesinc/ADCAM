@@ -79,17 +79,16 @@ See the latest **Quick Start Guide** for details on getting the system and hardw
 | Directory | Description |
 | --------- | ----------- |
 | apps | Applications specific to various targets and hosts |
-| bindings | SDK bindings to other languages |
 | ci | Useful scripts for continuous integration |
 | cmake | Helper files for cmake |
 | dependencies | Contains third-party and owned libraries |
 | doc | Documentation |
-| drivers | Holds drivers for nxp and nvidia |
 | examples | Example code for the supported programming languages |
 | scripts | Useful development scripts |
 | tools | Standalone applications |
 | ToF-drivers *(submodule)*| ADSD3500 V4L2 Camera Sensor device driver |
 | libaditof *(submodule)*| Submodule with SDK source code |
+| sdcard-images-utils | Linux image build tools |
 
 ## Building the Eval Kit
 
