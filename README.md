@@ -1,3 +1,11 @@
+![License](https://img.shields.io/badge/platform%20arch-ARM64-blue.svg)
+[![Platform: NVIDIA Jetson Orin Nano](https://img.shields.io/badge/Platform-NVIDIA%20Jetson%20Orin%20Nano-%2376B900?style=plastic&logo=nvidia&logoColor=white&logoWidth=14)](https://developer.nvidia.com/embedded/jetson-orin)
+[![Platform: Raspberry Pi 5](https://img.shields.io/badge/Platform-Raspberry%20Pi%205-%23A01339?style=plastic&logo=raspberrypi&logoColor=white)](https://www.raspberrypi.com/)
+[![OS: Ubuntu 22.04](https://img.shields.io/badge/OS-Ubuntu%2022.04-blue?style=plastic&logo=ubuntu&logoColor=white)](https://releases.ubuntu.com/22.04/)
+[![C++](https://img.shields.io/badge/Language-C%2B%2B-%2300599C?style=plastic&logo=cplusplus&logoColor=white)](https://isocpp.org)
+[![Python](https://img.shields.io/badge/Language-Python-%233776AB?style=plastic&logo=python&logoColor=white)](https://www.python.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) 
+
 ![Static Badge](https://img.shields.io/badge/Important-FFD700?style=flat-square)
 
 This page is in preparation for the next release. See the ADCAM tag [v0.1.0-a.1](https://github.com/analogdevicesinc/ADCAM/tree/v0.1.0-a.1) for the latest release.
@@ -27,14 +35,7 @@ This repository depends on the following components:
   Provides the V4L2 camera sensor driver for the ADSD3500 Depth ISP, along with device tree sources and kernel patches as required.
 * [**libaditof**](https://github.com/analogdevicesinc/libaditof/tree/main)  
   Provides the SDK supporting the ADCAM system, integrating ADSD3500 Depth ISP processing with the ADI ToF imager.
-
----
-
-## License and Documentation
-
-* License: [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
-* Hardware Documentation: [![Hardware](https://img.shields.io/badge/hardware-wiki-green.svg)]()
-
+ 
 ---
 
 ## Quick Start Guide
