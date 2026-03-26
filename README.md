@@ -65,7 +65,9 @@ See the latest **Quick Start Guide** for details on getting the system and hardw
 | --------- | ------------- | ----------- |
 | tof-viewer | <a href="examples/tof-viewer"> C++ </a> | Graphical User interface for visualising stream from depth camera |
 | data-collect | <a href="examples/data_collect"> C++ </a> | A command line application that takes in command line input arguments (like number of frames, mode to be set, folder location to save frame data) and captures the frames and stores in path provided |
-| first-frame | <a href="examples/first-frame"> C++ </a> <br> <a href="bindings/python/examples/first_frame"> Python </a> | An example code that shows the steps required to get to the point where camera frames can be captured. |
+| first-frame | <a href="examples/first-frame"> C++ </a> | A C++ that example that shows the steps required to get to the point where camera frames can be captured. |
+| first-frame | <br> <a href="examples/bindings/python/first_frame"> Python </a> | A Python that example that shows the steps required to get to the point where camera frames can be captured. |
+| streaming example | <br> <a href="examples/bindings/python/streaming"> Python </a> | A Python example that shows streaming depth frames. |
 
 ### Other Examples
 | Example | Language | Description |
