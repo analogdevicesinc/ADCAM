@@ -78,7 +78,7 @@ See the latest **Quick Start Guide** for details on getting the system and hardw
 ## Directory Structure
 | Directory | Description |
 | --------- | ----------- |
-| apps | Applications specific to various targets and hosts |
+| apps | Applications specific to various targets and hosts. Currently contains the server applications for streaming to the host. |
 | ci | Useful scripts for continuous integration |
 | cmake | Helper files for cmake |
 | dependencies | Contains third-party and owned libraries |
