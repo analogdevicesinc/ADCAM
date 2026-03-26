@@ -14,8 +14,7 @@ This page is in preparation for the next release. See the ADCAM tag [v0.1.0-a.1]
 
 ## Documentation
 
-* The [ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki) is available with additional documentation.
-* Eval kit user guide documentation can be found [here](doc/user-guide/ADCAM-CameraKit-020.md). 
+[ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki): This is a jumping off point for other documentation
 
 ## Latest Release
 
