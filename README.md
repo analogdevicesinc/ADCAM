@@ -27,12 +27,10 @@ The ADCAM hardware interfaces with the **NVIDIA Jetson Orin Nano Developer Kit**
 
 This repository depends on the following components:
 
-* [**ToF-drivers**](https://github.com/analogdevicesinc/ToF-drivers/tree/main)  
-  Provides the V4L2 camera sensor driver for the ADSD3500 Depth ISP, along with device tree sources and kernel patches as required.
-* [**libaditof**](https://github.com/analogdevicesinc/libaditof/tree/main)  
-  Provides the SDK supporting the ADCAM system, integrating ADSD3500 Depth ISP processing with the ADI ToF imager.
-
-
+| Repo | Purpose |
+|------|----------|
+|[**ToF-drivers**](https://github.com/analogdevicesinc/ToF-drivers/tree/main)|Provides the V4L2 camera sensor driver for the ADSD3500 Depth ISP, along with device tree sources and kernel patches as required.|
+|[**libaditof**](https://github.com/analogdevicesinc/libaditof/tree/main)|Provides the SDK supporting the ADCAM system, integrating ADSD3500 Depth ISP processing with the ADI ToF imager.|
 
 ## Documentation
 
