@@ -1,12 +1,16 @@
+![License](https://img.shields.io/badge/platform%20arch-ARM64-blue.svg)
+[![Platform: NVIDIA Jetson Orin Nano](https://img.shields.io/badge/Platform-NVIDIA%20Jetson%20Orin%20Nano-%2376B900?style=plastic&logo=nvidia&logoColor=white&logoWidth=14)](https://developer.nvidia.com/embedded/jetson-orin)
+[![Platform: Raspberry Pi 5](https://img.shields.io/badge/Platform-Raspberry%20Pi%205-%23A01339?style=plastic&logo=raspberrypi&logoColor=white)](https://www.raspberrypi.com/)
+[![OS: Ubuntu 22.04](https://img.shields.io/badge/OS-Ubuntu%2022.04-blue?style=plastic&logo=ubuntu&logoColor=white)](https://releases.ubuntu.com/22.04/)
+[![C++](https://img.shields.io/badge/Language-C%2B%2B-%2300599C?style=plastic&logo=cplusplus&logoColor=white)](https://isocpp.org)
+[![Python](https://img.shields.io/badge/Language-Python-%233776AB?style=plastic&logo=python&logoColor=white)](https://www.python.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) 
+
 ![Static Badge](https://img.shields.io/badge/Important-FFD700?style=flat-square)
 
 This page is in preparation for the next release. See the ADCAM tag [v0.1.0-a.1](https://github.com/analogdevicesinc/ADCAM/tree/v0.1.0-a.1) for the latest release.
 
 # ADCAM Camera Kit
-
-Please note, the [ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki) is available with additional documentation.
-
-Eval kit user guide documentation can be found [here](doc/user-guide/ADCAM-CameraKit-020.md). 
 
 ## Latest Release
 
@@ -23,23 +27,22 @@ The ADCAM hardware interfaces with the **NVIDIA Jetson Orin Nano Developer Kit**
 
 This repository depends on the following components:
 
-* [**ToF-drivers**](https://github.com/analogdevicesinc/ToF-drivers/tree/main)  
-  Provides the V4L2 camera sensor driver for the ADSD3500 Depth ISP, along with device tree sources and kernel patches as required.
-* [**libaditof**](https://github.com/analogdevicesinc/libaditof/tree/main)  
-  Provides the SDK supporting the ADCAM system, integrating ADSD3500 Depth ISP processing with the ADI ToF imager.
+| Repo | Purpose |
+|------|----------|
+|[**ToF-drivers**](https://github.com/analogdevicesinc/ToF-drivers/tree/main)|Provides the V4L2 camera sensor driver for the ADSD3500 Depth ISP, along with device tree sources and kernel patches as required.|
+|[**libaditof**](https://github.com/analogdevicesinc/libaditof/tree/main)|Provides the SDK supporting the ADCAM system, integrating ADSD3500 Depth ISP processing with the ADI ToF imager.|
 
----
+## Documentation
 
-## License and Documentation
+[ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki): This is a jumping off point for other documentation
 
-* License: [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
-* Hardware Documentation: [![Hardware](https://img.shields.io/badge/hardware-wiki-green.svg)]()
 
----
 
 ## Quick Start Guide
 
 See the latest **Quick Start Guide** for details on getting the system and hardware ready for any development use.
+
+
 
 ## Supported Platforms
 
@@ -54,13 +57,17 @@ See the latest **Quick Start Guide** for details on getting the system and hardw
 * Raspberry Pi 5: Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
 
 ## Examples
+
+### Core Examples
 | Example | Language | Description |
 | --------- | ------------- | ----------- |
 | tof-viewer | <a href="examples/tof-viewer"> C++ </a> | Graphical User interface for visualising stream from depth camera |
 | data-collect | <a href="examples/data_collect"> C++ </a> | A command line application that takes in command line input arguments (like number of frames, mode to be set, folder location to save frame data) and captures the frames and stores in path provided |
-| first-frame | <a href="examples/first-frame"> C++ </a> <br> <a href="bindings/python/examples/first_frame"> Python </a> | An example code that shows the steps required to get to the point where camera frames can be captured. |
+| first-frame | <a href="examples/first-frame"> C++ </a> | A C++ that example that shows the steps required to get to the point where camera frames can be captured. |
+| first-frame | <br> <a href="examples/bindings/python/first_frame"> Python </a> | A Python that example that shows the steps required to get to the point where camera frames can be captured. |
+| streaming example | <br> <a href="examples/bindings/python/streaming"> Python </a> | A Python example that shows streaming depth frames. |
 
-## Other Examples
+### Other Examples
 | Example | Language | Description |
 | --------- | ------------- | ----------- |
 | ROS2 Application | <a href="https://github.com/analogdevicesinc/adi_3dtof_adtf31xx"> C++ </a> | A more extensive ROS2 example based on the ADI ToF SDK. |
@@ -69,18 +76,17 @@ See the latest **Quick Start Guide** for details on getting the system and hardw
 ## Directory Structure
 | Directory | Description |
 | --------- | ----------- |
-| apps | Applications specific to various targets and hosts |
-| bindings | SDK bindings to other languages |
+| apps | Applications specific to various targets and hosts. Currently contains the server applications for streaming to the host. |
 | ci | Useful scripts for continuous integration |
 | cmake | Helper files for cmake |
 | dependencies | Contains third-party and owned libraries |
 | doc | Documentation |
-| drivers | Holds drivers for nxp and nvidia |
 | examples | Example code for the supported programming languages |
 | scripts | Useful development scripts |
 | tools | Standalone applications |
 | ToF-drivers *(submodule)*| ADSD3500 V4L2 Camera Sensor device driver |
 | libaditof *(submodule)*| Submodule with SDK source code |
+| sdcard-images-utils | Linux image build tools |
 
 ## Building the Eval Kit
 
