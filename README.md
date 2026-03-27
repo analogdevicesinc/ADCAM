@@ -42,6 +42,8 @@ This repository depends on the following components:
 
 ## Documentation
 
+[ADCAM Eval Kit Documentation](doc/user-guide/ADCAM-CameraKit-020.md)
+
 [ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki): This is a jumping off point for other documentation
 
 
