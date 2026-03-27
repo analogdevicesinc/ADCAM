@@ -8,7 +8,7 @@ This page is in preparation for the next release. See the ADCAM tag [v0.1.0-a.1]
 ![License](https://img.shields.io/badge/platform%20arch-ARM64-blue.svg)
 
 [![Platform: NVIDIA Jetson Orin Nano](https://img.shields.io/badge/Platform-NVIDIA%20Jetson%20Orin%20Nano-%2376B900?style=plastic&logo=nvidia&logoColor=white&logoWidth=14)](https://developer.nvidia.com/embedded/jetson-orin)
-[![OS: Ubuntu 22.04](https://img.shields.io/badge/OS-Ubuntu%2022.04-blue?style=plastic&logo=ubuntu&logoColor=white)](https://releases.ubuntu.com/22.04/)
+[![OS: NVIDIA JetPack 6.2.1](https://img.shields.io/badge/OS-NVIDIA%20Jetpack%206.2.1%20(Ubuntu%2022.04)-%2376B900?style=plastic&logo=nvidia&logoColor=white&logoWidth=14)](https://developer.nvidia.com/embedded/jetson-orin)
 
 [![Platform: Raspberry Pi 5](https://img.shields.io/badge/Platform-Raspberry%20Pi%205-%23A01339?style=plastic&logo=raspberrypi&logoColor=white)](https://www.raspberrypi.com/)
 [![OS: Raspberry Pi OS 64-bit](https://img.shields.io/static/v1?label=OS&message=Raspberry%20Pi%20OS%2064%2Dbit%202025%2D12%2D04&color=%23C51A4A&style=flat&logo=raspberrypi&logoColor=white)](https://www.raspberrypi.com/software/)
