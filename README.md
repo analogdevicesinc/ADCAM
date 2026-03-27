@@ -23,6 +23,9 @@ This page is in preparation for the next release. See the ADCAM tag [v0.1.0-a.1]
 ## Latest Release
 
 * [ADCAM Release 0.2.0-a.1](https://github.com/analogdevicesinc/ADCAM/releases/tag/v0.2.0-a.1)
+  * Please reference the **Quick Start Guide**, on the release page, for setting up the eval kit.
+* [ADCAM Eval Kit Documentation](doc/user-guide/ADCAM-CameraKit-020.md)
+* The [ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki) is a jumping off point for other documentation.
 
 ## Overview
 
@@ -39,20 +42,6 @@ This repository depends on the following components:
 |------|----------|
 |[**ToF-drivers**](https://github.com/analogdevicesinc/ToF-drivers/tree/main)|Provides the V4L2 camera sensor driver for the ADSD3500 Depth ISP, along with device tree sources and kernel patches as required.|
 |[**libaditof**](https://github.com/analogdevicesinc/libaditof/tree/main)|Provides the SDK supporting the ADCAM system, integrating ADSD3500 Depth ISP processing with the ADI ToF imager.|
-
-## Documentation
-
-[ADCAM Eval Kit Documentation](doc/user-guide/ADCAM-CameraKit-020.md)
-
-[ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki): This is a jumping off point for other documentation
-
-
-
-## Quick Start Guide
-
-See the latest **Quick Start Guide** for details on getting the system and hardware ready for any development use.
-
-
 
 ## Supported Platforms
 
