@@ -16,7 +16,7 @@ RUN apt update
 RUN apt install -y sudo
 
 RUN sudo apt install -y build-essential cmake python-dev python3-dev \
-        libssl-dev git libgl1-mesa-dev libglfw3-dev
+        libssl-dev git libgl1-mesa-dev libglfw3-dev gcc-12 g++-12
 
 RUN chmod +x ./setup_docker.sh
 RUN ./setup_docker.sh

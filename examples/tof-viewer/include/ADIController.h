@@ -41,6 +41,12 @@
 
 namespace adicontroller {
 
+/**
+ * @brief Controller for managing camera capture, playback, and recording operations.
+ * 
+ * Handles frame acquisition, mode selection, recording/playback workflows,
+ * and frame drop detection for Time-of-Flight cameras.
+ */
 class ADIController {
   public:
     /**
@@ -56,11 +62,18 @@ class ADIController {
     /**
 		* @brief	Start capture thread
 		*/
+    /**
+     * @brief Starts frame capture at the specified frame rate.
+     * @param[in] frameRate Desired capture rate in frames per second.
+     */
     void StartCapture(const uint32_t frameRate);
 
     /**
 		* @brief	Stops capture thread
 		*/
+    /**
+     * @brief Stops the active frame capture session.
+     */
     void StopCapture();
 
     /**
@@ -71,16 +84,16 @@ class ADIController {
     aditof::Status requestFrameOffline(uint32_t index);
 
     /**
-		* @brief			  Set the camera index for active camera
-		* @param cameraIndex	Index of camera in SDK system camera list
-		*/
+     * @brief			  Set the camera index for active camera
+     * @param cameraIndex	Index of camera in SDK system camera list
+     */
     void setCamera(const int cameraIndex) { m_cameraInUse = cameraIndex; }
 
     /**
-		* @brief	Deprecated. There is another getMode from SDK.
-		*			We may keep this in case needed for future
-		*			imagers.
-		*/
+		 * @brief	Deprecated. There is another getMode from SDK.
+		 *			We may keep this in case needed for future
+		 *			imagers.
+		 */
     std::string getMode() const;
 
     /**
@@ -234,9 +247,16 @@ class ADIController {
      */
     aditof::Status getFramesLost(uint32_t &framesLost);
 
+    /** @brief List of available cameras */
     std::vector<std::shared_ptr<aditof::Camera>> m_cameras;
+
+    /** @brief Emergency stop flag for immediate capture termination */
     bool panicStop = false;
+
+    /** @brief Count of panic stop events triggered */
     size_t panicCount = 0;
+
+    /** @brief Index of currently active camera (zero-based) */
     int m_cameraInUse;
 
   private:
