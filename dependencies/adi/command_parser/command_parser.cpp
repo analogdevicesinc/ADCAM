@@ -44,16 +44,16 @@ void CommandParser::parseArguments(
 
     for (int i = 1; i < argc; i++) {
         bool mandatory = false;
-        int contains_equal = std::string(argv[i]).find("=");
+        int contains_equal = (int)std::string(argv[i]).find("=");
         int next_is_argument = -1;
         if (i < argc - 1) {
             next_is_argument = std::string(argv[i + 1]).find("-");
         }
         // Save manadtory arguments
-        for (int j = 0; j < arg_position.size(); j++) {
+        for (int j = 0; j < (int)arg_position.size(); j++) {
             if (arg_number == arg_position[j].second &&
-                (std::string(argv[i]).find("-h") == -1 &&
-                 std::string(argv[i]).find("--help") == -1)) {
+                ((int)std::string(argv[i]).find("-h") == -1 &&
+                 (int)std::string(argv[i]).find("--help") == -1)) {
                 if (contains_equal != -1) {
                     m_command_vector.push_back(
                         {std::string(argv[i]).substr(0, contains_equal),
@@ -128,7 +128,7 @@ int CommandParser::checkArgumentExist(
     std::map<std::string, struct Argument> &command_map,
     std::string &arg_error) {
     // Check if arguments used exist
-    for (int i = 0; i < m_command_vector.size(); i++) {
+    for (int i = 0; i < (int)m_command_vector.size(); i++) {
         bool is_command = false;
         for (auto ct = command_map.begin(); ct != command_map.end(); ct++) {
             if (m_command_vector[i].first == ct->first ||
@@ -146,7 +146,7 @@ int CommandParser::checkArgumentExist(
 }
 
 int CommandParser::helpMenu() {
-    for (int i = 0; i < m_command_vector.size(); i++) {
+    for (int i = 0; i < (int)m_command_vector.size(); i++) {
         if (m_command_vector[i].first == "-h" ||
             m_command_vector[i].first == "--help") {
             if (i != 0 || m_command_vector.size() != 1) {
@@ -163,7 +163,7 @@ int CommandParser::checkValue(
     std::string &arg_error) {
     // Checks if argument has default and value assigned.
     // If there is value assigned, it will send it
-    for (int i = 0; i < m_command_vector.size(); i++) {
+    for (int i = 0; i < (int)m_command_vector.size(); i++) {
         for (auto ct = command_map.begin(); ct != command_map.end(); ct++) {
             if (m_command_vector[i].first == ct->first ||
                 m_command_vector[i].first == ct->second.long_option) {
