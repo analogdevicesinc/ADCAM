@@ -27,7 +27,7 @@ jobs:
       ubuntu_22_04_nvidia:
         imageName: 'ubuntu-22.04'
         DOCKER: "septimiuvana/arm64-ubuntu"
-        EXTRA_CMAKE_FLAGS: "-DWITH_PLATFORM=NVIDIA"
+        EXTRA_CMAKE_FLAGS: "-DWITH_PLATFORM=NVIDIA -DUSE_DEPTH_COMPUTE_OPENSOURCE=ON"
 
       cppcheck:
         imageName: 'ubuntu-22.04'
