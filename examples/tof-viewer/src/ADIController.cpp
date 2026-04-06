@@ -64,7 +64,8 @@ void ADIController::StartCapture(const uint32_t frameRate) {
         return;
     }
 
-    setDropOldestWhenQueueFull(true); // Default to dropping oldest frames when queue is full
+    setDropOldestWhenQueueFull(
+        true); // Default to dropping oldest frames when queue is full
     m_fps_startTime = std::chrono::system_clock::now();
     m_last_frame_time = std::chrono::steady_clock::time_point();
     m_fps_ema_initialized = false;

@@ -278,7 +278,8 @@ class ADIController {
      * @brief Enqueue frame using currently selected overflow policy
      * @param[in] frame Frame to enqueue
      */
-    void enqueueFrameWithOverflowPolicy(const std::shared_ptr<aditof::Frame> &frame);
+    void
+    enqueueFrameWithOverflowPolicy(const std::shared_ptr<aditof::Frame> &frame);
 
   private:
     std::thread m_workerThread;
