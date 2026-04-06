@@ -51,13 +51,27 @@ def parse_frame_range(range_str):
     """
     Accepts range_str (e.g. '30', '30-', '30-40') and total_frames.
     Returns (start, end) inclusive.
+    '30' -> (30, 30) - single frame
+    '30-' -> (30, None) - from 30 to end
+    '30-40' -> (30, 40) - range from 30 to 40
     """
 
     match = re.fullmatch(r'(\d+)(?:-(\d*)?)?', range_str)
     if not match:
         raise ValueError(f"Invalid frame range: {range_str}")
     start = int(match.group(1))
-    end = int(match.group(2)) if match.group(2) else None
+    # If no '-' is present, end should be same as start (single frame)
+    # If '-' is present but no end number, end is None (to end of file)
+    # If '-X' is present, end is X
+    if match.group(2) is None and '-' not in range_str:
+        # Single frame number like "30"
+        end = start
+    elif match.group(2) == '':
+        # Range like "30-" (from start to end of file)
+        end = None
+    else:
+        # Range like "30-40"
+        end = int(match.group(2))
     return start, end
 
 def generate_metadata(metadata, directory, base_filename, index):
@@ -80,6 +94,13 @@ def generate_metadata(metadata, directory, base_filename, index):
         outfile.writelines(f'ElapsedTimeinSec: {metadata.elapsedTimeSecondsValue}\n')
         outfile.writelines(f'sensorTemp: {metadata.sensorTemperature}\n')
         outfile.writelines(f'laserTemp: {metadata.laserTemperature}\n')
+        # Timestamps
+        if hasattr(metadata, 'wallclock_sec') and metadata.wallclock_sec > 0:
+            import datetime
+            dt = datetime.datetime.fromtimestamp(metadata.wallclock_sec + metadata.wallclock_usec / 1000000.0)
+            outfile.writelines(f'Timestamp: {dt.strftime("%Y-%m-%d %H:%M:%S")}.{metadata.wallclock_usec:06d}\n')
+        if hasattr(metadata, 'timestamp_sec') and (metadata.timestamp_sec > 0 or metadata.timestamp_usec > 0):
+            outfile.writelines(f'V4L2_Monotonic: {metadata.timestamp_sec}.{metadata.timestamp_usec:06d} seconds (since boot)\n')
 
 def generate_depth(depth_data, directory, base_filename, index):
     depth_frame = np.reshape(depth_data, (depth_data.shape[0], depth_data.shape[1]))
@@ -107,16 +128,19 @@ def generate_confidence(conf_frame, directory, base_filename, index):
     o3d.io.write_image(safe_join(directory, f'conf_{base_filename}_{index}{PNG_EXT}'), img)
 
 def generate_pcloud(xyz_frame, directory, base_filename, index, height, width):
-    xyz_frame = xyz_frame.view(np.int16)
+    xyz_frame = xyz_frame.view(np.int16).astype(np.float64)  # Convert to float64 first
+    # Apply transformation on numpy array before creating PointCloud
+    # Transform: x' = x, y' = -y, z' = -z
+    xyz_frame[:,:,1] *= -1  # Flip Y
+    xyz_frame[:,:,2] *= -1  # Flip Z
     xyz_frame = xyz_frame.reshape(-1, 3)
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(xyz_frame)
-    point_cloud.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
     o3d.io.write_point_cloud(safe_join(directory, f'pointcloud_{base_filename}_{index}{PLY_EXT}'), point_cloud)
 
 def generate_vid(main_dir, base_filename, processed_frames, width, height):
     vid_dir = safe_join(main_dir, f'vid_{base_filename}')
-    make_dir(vid_dir)
+    os.makedirs(vid_dir, exist_ok=True)
     video_path = safe_join(vid_dir, f'vid_{base_filename}.mp4')
     video = cv.VideoWriter(video_path, cv.VideoWriter_fourcc(*"mp4v"), 10, (width * 2, height))
     for i in processed_frames:
@@ -173,6 +197,11 @@ def main():
 
     sensor = camera1.getSensor()
     
+    # Set playback file BEFORE initialize (required for offline mode)
+    status = camera1.setPlaybackFile(args.filename)
+    if (status != tof.Status.Ok):
+        sys.exit(f"Error: camera1.setPlaybackFile() failed with status {status}")
+    
     status = camera1.initialize()
     if (status != tof.Status.Ok):
         sys.exit(f"Error: camera1.initialize() failed with status {status}")
@@ -180,13 +209,11 @@ def main():
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
-    status = camera1.setPlaybackFile(args.filename)
-    status = camera1.setMode(0)
-    status = camera1.start()
-
-    status = tof.Status.Ok
+    camera1.setMode(0)
+    camera1.start()
     
     frame_idx = start_frame
+    status = tof.Status.Ok
     while (status == tof.Status.Ok):
         print(f"\rProcessing Frame: {frame_idx}", end='', flush=True)
         frame = tof.Frame()
@@ -202,7 +229,6 @@ def main():
         width = frameDataDetails.width
 
         # Process Metadata
-        metadata = tof.Metadata
         status, metadata = frame.getMetadataStruct()
         if (status != tof.Status.Ok):
             print("Cannot read metadata from frame.")
@@ -246,13 +272,12 @@ def main():
                 array_data = np.array(uint8_values)
                 for j in range(2):
                     final_conf[count+j] = array_data[j]
-                    #print(j)
                 count = count + 2
             image_conf = np.reshape(final_conf[frameDataDetails.width*frameDataDetails.height*0:frameDataDetails.width*frameDataDetails.height*1], \
                                     [frameDataDetails.height,frameDataDetails.width])
             generate_confidence(image_conf, frame_dir, base_filename, str_frame_idx)
 
-        # Get the confidence frame
+        # Get the XYZ frame
         if "xyz" in available_types:
             image_xyz = np.asarray(frame.getData("xyz"))
             generate_pcloud(image_xyz, frame_dir, base_filename, str_frame_idx, height, width)
