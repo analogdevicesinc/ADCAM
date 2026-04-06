@@ -9,3 +9,4 @@ The examples in this directory provide sample applications to demonstrate how 3D
 | first-frame | C++ | An example code that shows the step required to get to the point where camera frames can be captured (even from a remote camera) |
 | data_collect | C++ | An example code and user application for retriving data from the device then saving to files |
 | tof-viewer | C++ | ADIToFGUI Application |
+| adsd3500_sample_program | C++ | Standalone low-level example for direct ADSD3500 control via V4L2 (NVIDIA Jetson only) |

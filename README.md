@@ -65,6 +65,7 @@ This repository depends on the following components:
 | first-frame | <a href="examples/first-frame"> C++ </a> | A C++ that example that shows the steps required to get to the point where camera frames can be captured. |
 | first-frame | <br> <a href="examples/bindings/python/first_frame"> Python </a> | A Python that example that shows the steps required to get to the point where camera frames can be captured. |
 | streaming example | <br> <a href="examples/bindings/python/streaming"> Python </a> | A Python example that shows streaming depth frames. |
+| adsd3500_sample_program | <a href="examples/adsd3500_sample_program"> C++ </a> | Standalone low-level example for direct ADSD3500 control via V4L2 (NVIDIA Jetson only) |
 
 ### Other Examples
 | Example | Language | Description |
