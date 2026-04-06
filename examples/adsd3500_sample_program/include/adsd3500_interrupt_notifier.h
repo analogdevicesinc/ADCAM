@@ -28,14 +28,57 @@
 
 class Adsd3500;
 
+/**
+ * @brief Singleton class for managing ADSD3500 hardware interrupt notifications
+ *
+ * This class handles interrupt delivery from the ADSD3500 device via the
+ * /proc/adsd3500/value interface. It allows multiple sensors to subscribe
+ * for interrupt notifications.
+ */
 class Adsd3500InterruptNotifier {
   public:
+    /**
+     * @brief Get the singleton instance
+     * @return Reference to the singleton instance
+     */
     static Adsd3500InterruptNotifier &getInstance();
+
+    /**
+     * @brief Signal event handler for ADSD3500 interrupts
+     * @param n Signal number
+     * @param info Signal information structure
+     * @param unused Unused context parameter
+     */
     static void signalEventHandler(int n, siginfo_t *info, void *unused);
+
+    /**
+     * @brief Enable hardware interrupt notifications
+     * @return 0 on success, negative error code on failure
+     */
     int enableInterrupts();
+
+    /**
+     * @brief Disable hardware interrupt notifications
+     * @return 0 on success, negative error code on failure
+     */
     int disableInterrupts();
+
+    /**
+     * @brief Check if interrupts are available
+     * @return true if interrupts are enabled and available, false otherwise
+     */
     bool interruptsAvailable();
+
+    /**
+     * @brief Subscribe a sensor to receive interrupt notifications
+     * @param sensor Weak pointer to the sensor object
+     */
     void subscribeSensor(std::weak_ptr<Adsd3500> sensor);
+
+    /**
+     * @brief Unsubscribe a sensor from interrupt notifications
+     * @param sensor Weak pointer to the sensor object
+     */
     void unsubscribeSensor(std::weak_ptr<Adsd3500> sensor);
 
   private:

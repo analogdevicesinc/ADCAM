@@ -81,7 +81,7 @@
 #define CTRL_CONFIDENCE_BITS (0x9819d4)        // confidence_bits (same)
 
 #define MAX_SUBFRAMES_COUNT                                                    \
-    10  // maximum number of subframes that are used to create a full frame    \
+    10 // maximum number of subframes that are used to create a full frame    \
         // (maximum total_captures of all modes)
 
 #ifndef ARRAY_SIZE
@@ -326,54 +326,196 @@ class IniFilePath {
 
 class Adsd3500InterruptNotifier;
 
+/**
+ * @brief Main class for controlling the ADSD3500 Depth ISP
+ *
+ * This class provides direct V4L2-based control of the ADSD3500 device,
+ * including sensor configuration, frame capture, and depth computation
+ * using the ToFi libraries.
+ */
 class Adsd3500 : public std::enable_shared_from_this<Adsd3500> {
   public:
-    // Constructor
+    /** @brief Constructor */
     Adsd3500();
-    // Destructor
+    /** @brief Destructor */
     ~Adsd3500();
 
-    int mode_num;
-    TofiXYZDealiasData xyzDealiasData;
-    ImagerType imagerType;
-    CCBVersion ccbVersion;
-    int depthBits = 0;
-    int abBits = 0;
-    int confBits = 0;
-    std::string inputFormat;
-    TofiComputeContext *tofi_compute_context;
-    TofiConfig *tofi_config;
-    int dynamic_mode_switch = 0;
-    int ccb_as_master = 0;
-    INI_TABLE_ENTRY ccb_iniTableEntry;
-    Frame frame;
-    int enableMetaDatainAB = 0;
+    int mode_num;                             ///< Current imaging mode number
+    TofiXYZDealiasData xyzDealiasData;        ///< XYZ dealias parameters
+    ImagerType imagerType;                    ///< Detected imager type
+    CCBVersion ccbVersion;                    ///< Camera Control Block version
+    int depthBits = 0;                        ///< Bit depth for depth data
+    int abBits = 0;                           ///< Bit depth for AB data
+    int confBits = 0;                         ///< Bit depth for confidence data
+    std::string inputFormat;                  ///< Input pixel format
+    TofiComputeContext *tofi_compute_context; ///< ToFi compute context
+    TofiConfig *tofi_config;                  ///< ToFi configuration
+    int dynamic_mode_switch = 0;              ///< Enable dynamic mode switching
+    int ccb_as_master = 0;             ///< Use CCB as configuration master
+    INI_TABLE_ENTRY ccb_iniTableEntry; ///< CCB INI table entry
+    Frame frame;                       ///< Current frame metadata
+    int enableMetaDatainAB = 0;        ///< Enable metadata in AB frame
 
+    /**
+     * @brief Open and initialize the ADSD3500 device
+     * @return 0 on success, negative error code on failure
+     */
     int OpenAdsd3500();
+
+    /**
+     * @brief Close the ADSD3500 device
+     * @return 0 on success, negative error code on failure
+     */
     int CloseAdsd3500();
+
+    /**
+     * @brief Reset the ADSD3500 device via GPIO
+     * @return 0 on success, negative error code on failure
+     */
     int ResetAdsd3500();
+
+    /**
+     * @brief Set V4L2 control parameters
+     * @return 0 on success, negative error code on failure
+     */
     int SetControl();
+
+    /**
+     * @brief Set the imaging mode
+     * @param modeNumber Mode number (0-6)
+     * @return 0 on success, negative error code on failure
+     */
     int SetImageMode(uint8_t modeNumber);
+
+    /**
+     * @brief Get the current imaging mode
+     * @param result Pointer to store the mode number
+     * @return 0 on success, negative error code on failure
+     */
     int GetImageMode(uint8_t *result);
+
+    /**
+     * @brief Start video streaming
+     * @return 0 on success, negative error code on failure
+     */
     int StartStream();
+
+    /**
+     * @brief Stop video streaming
+     * @return 0 on success, negative error code on failure
+     */
     int StopStream();
+
+    /**
+     * @brief Set the frame rate
+     * @param fps Frames per second
+     * @return 0 on success, negative error code on failure
+     */
     int SetFps(int fps);
+
+    /**
+     * @brief Get the current frame rate
+     * @param result Pointer to store the FPS value
+     * @return 0 on success, negative error code on failure
+     */
     int GetFps(uint8_t *result);
+
+    /**
+     * @brief Read CCB data and save to file
+     * @param filename Output filename
+     * @return 0 on success, negative error code on failure
+     */
     int ReadCCB(const char *filename);
+
+    /**
+     * @brief Read the chip ID
+     * @param result Pointer to store the chip ID
+     * @return 0 on success, negative error code on failure
+     */
     int ReadChipId(uint8_t *result);
 
+    /**
+     * @brief Configure device drivers and V4L2 interface
+     * @return 0 on success, negative error code on failure
+     */
     int ConfigureDeviceDrivers();
+
+    /**
+     * @brief Configure ADSD3500 with INI file parameters
+     * @return 0 on success, negative error code on failure
+     */
     int ConfigureAdsd3500WithIniParams();
+
+    /**
+     * @brief Configure depth compute library with INI parameters
+     * @return 0 on success, negative error code on failure
+     */
     int ConfigureDepthComputeLibraryWithIniParams();
+
+    /**
+     * @brief Set the frame type based on current mode
+     * @return 0 on success, negative error code on failure
+     */
     int SetFrameType();
+
+    /**
+     * @brief Request and capture a frame
+     * @param buffer Pointer to buffer for frame data
+     * @return 0 on success, negative error code on failure
+     */
     int RequestFrame(uint16_t *buffer);
+
+    /**
+     * @brief Get imager type and CCB version from device
+     * @return 0 on success, negative error code on failure
+     */
     int GetImagerTypeAndCCB();
+
+    /**
+     * @brief Read and parse INI key-value pairs
+     * @param iniFileName Path to INI file
+     * @return 0 on success, negative error code on failure
+     */
     int GetIniKeyValuePair(const char *iniFileName);
+
+    /**
+     * @brief Get intrinsics and dealias parameters
+     * @return 0 on success, negative error code on failure
+     */
     int GetIntrinsicsAndDealiasParams();
+
+    /**
+     * @brief Parse raw frame data using Depth Compute Library
+     * @param buffer Pointer to raw frame buffer
+     * @return 0 on success, negative error code on failure
+     */
     int ParseRawDataWithDCL(uint16_t *buffer);
+
+    /**
+     * @brief Setup interrupt support for frame notifications
+     * @return 0 on success, negative error code on failure
+     */
     int SetupInterruptSupport();
+
+    /**
+     * @brief Handle interrupt signals
+     * @param signalValue Signal value received
+     * @return 0 on success, negative error code on failure
+     */
     int HandleInterrupts(int signalValue);
+
+    /**
+     * @brief Subscribe sensor to interrupt notifier
+     * @return 0 on success, negative error code on failure
+     */
     int SubscribeSensorToNotifier();
+
+    /**
+     * @brief Store frame metadata
+     * @param header_buffer Pointer to header data
+     * @param num_frames Number of frames
+     * @return 0 on success, negative error code on failure
+     */
     int StoreFrameMetaData(uint8_t *header_buffer, int num_frames);
 
   private:
