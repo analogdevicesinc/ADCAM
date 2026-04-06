@@ -228,6 +228,12 @@ class ADIController {
     aditof::Status setPreviewRate(uint32_t frameRate, uint32_t previewRate = 1);
 
     /**
+     * @brief Get preview rate status
+     * @return Status indicating preview mode on or off
+     */
+    bool getPreviewStatus();
+
+    /**
      * @brief Set queue overflow behavior at runtime
      * @param[in] enable True: drop oldest frame when queue is full, False: keep legacy unbounded enqueue
      */
@@ -313,6 +319,9 @@ class ADIController {
     std::deque<FrameSample> m_frame_history;
     const double m_frame_drop_window_ms = 2000.0; // 2-second observation window
     const double m_frame_drop_threshold = 0.10;   // 10% drop triggers alert
+
+  public:
+    static const uint32_t PREVIEW_FRAME_RATE = 3;
 };
 } // namespace adicontroller
 #endif

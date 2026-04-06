@@ -217,8 +217,8 @@ void ADIMainWindow::PrepareCamera(uint8_t mode) {
     status = GetActiveCamera()->adsd3500GetFrameRate(m_fps_expected);
 
     if (m_enable_preview) {
-        m_view_instance->m_ctrl->setPreviewRate(m_fps_expected,
-                                                PREVIEW_FRAME_RATE);
+        m_view_instance->m_ctrl->setPreviewRate(
+            m_fps_expected, m_view_instance->m_ctrl->PREVIEW_FRAME_RATE);
     } else {
         m_view_instance->m_ctrl->setPreviewRate(m_fps_expected, m_fps_expected);
     }
@@ -517,8 +517,8 @@ void ADIMainWindow::RefreshDevices() {
             m_cameras_list.insert(m_cameras_list.end(), networkCameras.begin(),
                                   networkCameras.end());
         }
-#endif //HAS_NETWORK
-        // Build the connected devices list once after collecting all cameras
+#endif //HAS_NETWORK                                                           \
+    // Build the connected devices list once after collecting all cameras
         for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
             m_connected_devices.emplace_back(ix, "ToF Camera " +
                                                      std::to_string(ix));

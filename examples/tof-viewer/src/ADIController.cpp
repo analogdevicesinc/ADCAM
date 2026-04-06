@@ -149,6 +149,9 @@ void ADIController::enqueueFrameWithOverflowPolicy(
     const std::shared_ptr<aditof::Frame> &frame) {
     if (m_dropOldestWhenQueueFull.load(std::memory_order_relaxed) &&
         m_queue.size() >= ADI_CONTROLLER_MAX_FRAME_QUEUE_SIZE) {
+        setPreviewRate(
+            m_frame_rate,
+            PREVIEW_FRAME_RATE); // Update preview rate to reflect frame drops
         std::shared_ptr<aditof::Frame> droppedFrame;
         m_queue.try_dequeue(droppedFrame);
         m_frames_lost++;
@@ -310,6 +313,11 @@ aditof::Status ADIController::setPreviewRate(uint32_t frameRate,
     m_frame_rate = frameRate;
 
     return aditof::Status::OK;
+}
+
+bool ADIController::getPreviewStatus() {
+
+    return m_preview_rate != m_frame_rate;
 }
 
 aditof::Status ADIController::requestFrameOffline(uint32_t index) {
