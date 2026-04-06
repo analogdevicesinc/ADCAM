@@ -116,9 +116,5 @@ Generated PNG files:
 - `frame_000_ab.png` - Active Brightness (grayscale)
 - `frame_000_conf.png` - Confidence map (grayscale)
 
-## References
 
-- [ADCAM SDK Documentation](../../README.md)
-- [ADSD3500 Datasheet](https://www.analog.com/ADSD3500)
-- [ADTF3175D Datasheet](https://www.analog.com/ADTF3175D)
 
