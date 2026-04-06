@@ -99,14 +99,18 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("Preview Mode");
             ImGui::TableSetColumnIndex(1);
-            if (m_enable_preview) {
+            if (m_enable_preview ||
+                m_view_instance->m_ctrl->getPreviewStatus()) {
                 ImGui::PushStyleColor(ImGuiCol_Text,
                                       IM_COL32(255, 0, 0, 255)); // RGBA for red
             } else {
                 ImGui::PushStyleColor(
                     ImGuiCol_Text, IM_COL32(0, 255, 0, 255)); // RGBA for green
             }
-            ImGui::Text("%s", m_enable_preview ? "On" : "Off");
+            ImGui::Text("%s", (m_enable_preview ||
+                               m_view_instance->m_ctrl->getPreviewStatus())
+                                  ? "On"
+                                  : "Off");
             ImGui::PopStyleColor();
 
             ImGui::TableNextRow();
