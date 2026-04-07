@@ -91,6 +91,40 @@ This repository depends on the following components:
 
 Note, prior to committing to the repo it is important to format the source code, see the [code formatting](doc/code-formatting.md) document.
 
+### Kernel Pieces
+
+Updating Linux with the ToF pieces is required before the eval kit is built. To build the kernel you will need a connection to the Internet.
+
+#### NVIDIA Jetson Orin Nano Dev Kit with JetPack 6.2.1
+
+##### Building
+
+Note, this will take sometime to build.
+```
+cd sdcard-images-utils/nvidia
+./setup.sh
+./runme.sh 7.0.0-a.1 rel-7.0.0-a.1
+```
+
+##### Installing
+
+TODO
+
+#### Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
+
+##### Building
+
+Note, this will take sometime to build.
+```
+cd sdcard-images-utils/rpi
+./setup.sh
+./runme.sh 7.0.0-a.1 rel-7.0.0-a.1
+```
+
+##### Installing
+
+TODO
+
 ### Standard Build
 
 ### Pre-requisites
