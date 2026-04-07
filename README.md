@@ -125,9 +125,9 @@ cd sdcard-images-utils/rpi
 
 TODO
 
-### Standard Build
+### Eval Kit Build
 
-### Pre-requisites
+#### Pre-requisites
 * CMake
 * g++
 * Python 3
@@ -138,7 +138,7 @@ TODO
 
 #### Installing the pre-requisites
 
-#### NVIDIA Jeston Orin Nano Dev Kit with JetPack 6.2.1
+##### NVIDIA Jeston Orin Nano Dev Kit with JetPack 6.2.1
 ```console
 sudo apt update
 sudo apt install cmake g++ \
@@ -152,7 +152,7 @@ sudo apt install cmake g++ \
      python3.10-dev
 ```
 
-#### Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
+##### Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
 ```console
 sudo apt update
 sudo apt install cmake g++ \
@@ -190,9 +190,9 @@ There are two options for pointing these libraries:
 └── libtofi_config.so
 ```
 
-### Building the ADCAM Software
+#### Build
 
-#### On Device Build: Jetson Orin Nano Dev Kit or Raspberry Pi 5
+##### On Device Build: Jetson Orin Nano Dev Kit or Raspberry Pi 5
 Let's start with a standard build. Where we need:
 1. Clone the repo.
 2. Update the required submodules.
@@ -213,7 +213,7 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j 6
 ```
 
-#### CMake options
+##### CMake options
 
 There are a number of build options available via the root CMakeLists.txt file: https://github.com/analogdevicesinc/ADCAM/blob/6e5b722b5c36923065c4a3be96ad0553d387e699/CMakeLists.txt#L20C1-L24C109
 ```
