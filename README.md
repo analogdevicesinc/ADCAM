@@ -135,7 +135,7 @@ sudo apt install cmake g++ \
 
 In addition the depth compute libraries are required. 
 
-You can get the two library from the ADCAM release software, but please note in which case it is under an evaluation license.
+You can get the two libraries from the ADCAM release software, but please note in which case it is under an evaluation license.
 
 For a non-eval license please contact us at *tof@analog.com*.
 
