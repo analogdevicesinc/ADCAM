@@ -26,6 +26,7 @@
 #define SAFEQUEUE_H
 
 #include <condition_variable>
+#include <cstddef>
 #include <mutex>
 #include <queue>
 
@@ -50,6 +51,17 @@ class SafeQueue {
         return element;
     }
 
+    bool try_dequeue(T &element) {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_queue.empty()) {
+            return false;
+        }
+
+        element = m_queue.front();
+        m_queue.pop();
+        return true;
+    }
+
     bool erase() {
         std::unique_lock<std::mutex> lock(m_mutex);
         while (!m_queue.empty()) {
@@ -59,6 +71,11 @@ class SafeQueue {
     }
 
     bool empty() const { return m_queue.empty(); }
+
+    size_t size() {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_queue.size();
+    }
 
   private:
     std::queue<T> m_queue;

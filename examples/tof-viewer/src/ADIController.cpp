@@ -30,6 +30,8 @@
 #include <memory>
 #include <unordered_map>
 
+#define ADI_CONTROLLER_MAX_FRAME_QUEUE_SIZE 8
+
 using namespace adicontroller;
 
 ADIController::ADIController(
@@ -62,6 +64,8 @@ void ADIController::StartCapture(const uint32_t frameRate) {
         return;
     }
 
+    setDropOldestWhenQueueFull(
+        true); // Default to dropping oldest frames when queue is full
     m_fps_startTime = std::chrono::system_clock::now();
     m_last_frame_time = std::chrono::steady_clock::time_point();
     m_fps_ema_initialized = false;
@@ -117,6 +121,17 @@ bool ADIController::requestFrame() {
 
 bool ADIController::hasCamera() const { return !m_cameras.empty(); }
 
+void ADIController::setDropOldestWhenQueueFull(bool enable) {
+    m_dropOldestWhenQueueFull.store(enable, std::memory_order_relaxed);
+    LOG(INFO) << "Queue overflow policy updated: dropOldestWhenQueueFull="
+              << (enable ? "true" : "false")
+              << ", maxQueueSize=" << ADI_CONTROLLER_MAX_FRAME_QUEUE_SIZE;
+}
+
+bool ADIController::getDropOldestWhenQueueFull() const {
+    return m_dropOldestWhenQueueFull.load(std::memory_order_relaxed);
+}
+
 void ADIController::calculateFrameLoss(const uint32_t frameNumber,
                                        uint32_t &prevFrameNumber,
                                        uint32_t &currentFrameNumber) {
@@ -128,6 +143,19 @@ void ADIController::calculateFrameLoss(const uint32_t frameNumber,
     if (currentFrameNumber - prevFrameNumber > 1) {
         m_frames_lost += (currentFrameNumber - prevFrameNumber - 1);
     }
+}
+
+void ADIController::enqueueFrameWithOverflowPolicy(
+    const std::shared_ptr<aditof::Frame> &frame) {
+    if (m_dropOldestWhenQueueFull.load(std::memory_order_relaxed) &&
+        m_queue.size() >= ADI_CONTROLLER_MAX_FRAME_QUEUE_SIZE) {
+        setPreviewRate(m_frame_rate, (m_preview_rate * 95) / 100);
+        std::shared_ptr<aditof::Frame> droppedFrame;
+        m_queue.try_dequeue(droppedFrame);
+        m_frames_lost++;
+    }
+
+    m_queue.enqueue(frame);
 }
 
 void ADIController::captureFrames() {
@@ -154,7 +182,7 @@ void ADIController::captureFrames() {
                 panicStop = true;
             }
 
-            m_queue.enqueue(frame);
+            enqueueFrameWithOverflowPolicy(frame);
             m_frameRequested = false;
             panicCount++;
             LOG(INFO) << "Trying to request frame... ";
@@ -200,7 +228,7 @@ void ADIController::captureFrames() {
         }
 
         if (!shouldDropFrame(m_frame_counter)) {
-            m_queue.enqueue(frame);
+            enqueueFrameWithOverflowPolicy(frame);
         }
 
         m_frameRequested = false;
@@ -279,10 +307,22 @@ aditof::Status ADIController::getFramesReceived(uint32_t &framesRecevied) {
 aditof::Status ADIController::setPreviewRate(uint32_t frameRate,
                                              uint32_t previewRate) {
 
+    if (frameRate == 0 || previewRate == 0) {
+        LOG(ERROR) << "Frame rate and preview rate cannot be zero.";
+        return aditof::Status::GENERIC_ERROR;
+    }
     m_preview_rate = previewRate;
     m_frame_rate = frameRate;
 
+    LOG(INFO) << "Preview rate set to " << m_preview_rate
+              << " FPS (Frame rate: " << m_frame_rate << " FPS)";
+
     return aditof::Status::OK;
+}
+
+bool ADIController::getPreviewStatus() {
+
+    return m_preview_rate != m_frame_rate;
 }
 
 aditof::Status ADIController::requestFrameOffline(uint32_t index) {
@@ -310,7 +350,7 @@ aditof::Status ADIController::requestFrameOffline(uint32_t index) {
                            m_current_frame_number);
     }
 
-    m_queue.enqueue(frame);
+    enqueueFrameWithOverflowPolicy(frame);
     m_frameRequested = false;
 
     return aditof::Status::OK;
