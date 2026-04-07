@@ -228,6 +228,24 @@ class ADIController {
     aditof::Status setPreviewRate(uint32_t frameRate, uint32_t previewRate = 1);
 
     /**
+     * @brief Get preview rate status
+     * @return Status indicating preview mode on or off
+     */
+    bool getPreviewStatus();
+
+    /**
+     * @brief Set queue overflow behavior at runtime
+     * @param[in] enable True: drop oldest frame when queue is full, False: keep legacy unbounded enqueue
+     */
+    void setDropOldestWhenQueueFull(bool enable);
+
+    /**
+     * @brief Get queue overflow behavior
+     * @return True if drop-oldest-on-full behavior is enabled
+     */
+    bool getDropOldestWhenQueueFull() const;
+
+    /**
      * @brief Get number of frames lost during capture
      * @param[out] framesLost Reference to store lost frame count
      * @return Status indicating success or failure
@@ -262,9 +280,17 @@ class ADIController {
      */
     bool shouldDropFrame(uint32_t frameNum);
 
+    /**
+     * @brief Enqueue frame using currently selected overflow policy
+     * @param[in] frame Frame to enqueue
+     */
+    void
+    enqueueFrameWithOverflowPolicy(const std::shared_ptr<aditof::Frame> &frame);
+
   private:
     std::thread m_workerThread;
     std::atomic<bool> m_stopFlag;
+    std::atomic<bool> m_dropOldestWhenQueueFull = false;
     SafeQueue<std::shared_ptr<aditof::Frame>> m_queue;
     std::mutex m_mutex;
     std::mutex m_requestMutex;
@@ -293,6 +319,9 @@ class ADIController {
     std::deque<FrameSample> m_frame_history;
     const double m_frame_drop_window_ms = 2000.0; // 2-second observation window
     const double m_frame_drop_threshold = 0.10;   // 10% drop triggers alert
+
+  public:
+    static const uint32_t PREVIEW_FRAME_RATE = 3;
 };
 } // namespace adicontroller
 #endif
