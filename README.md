@@ -91,41 +91,63 @@ This repository depends on the following components:
 
 Note, prior to committing to the repo it is important to format the source code, see the [code formatting](doc/code-formatting.md) document.
 
-### Kernel Pieces
+Requirements:
+* An internet connect is mandatory.
+
+### 1. Cloning the Repo
+
+```console
+git clone https://github.com/analogdevicesinc/ADCAM.git
+cd ADCAM
+git submodule update --init
+git checkout 0.2.0-a.1
+pushd libaditof
+git checkout 7.0.0-a.1
+popd
+pushd ToF-drivers
+git checkout 7.0.0-a.1
+popd
+```
+
+### 2. Kernel Pieces
 
 Updating Linux with the ToF pieces is required before the eval kit is built. To build the kernel you will need a connection to the Internet.
 
-#### NVIDIA Jetson Orin Nano Dev Kit with JetPack 6.2.1
+If you are building on an SSD make sure the SSD has airflow since it is beneath the Jetson Orin Nano Dev Kit and may over heat as a result.
 
-##### Building
+The example below using file name **NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26.zip** and path of **NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26**. Substitute with the **NVIDIA_ToF_ADSD3500_REL_PATCH_*** created by your build.
 
 Note, this will take sometime to build.
+
+#### NVIDIA Jetson Orin Nano Dev Kit with JetPack 6.2.1
+
+##### Building & Installing
+
 ```
-cd sdcard-images-utils/nvidia
+cd ADCAM/sdcard-images-utils/nvidia
 ./setup.sh
 ./runme.sh 7.0.0-a.1 rel-7.0.0-a.1
+unzip NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26.zip
+cd NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26
+sudo ./apply_patch.sh
+sudo reboot
 ```
-
-##### Installing
-
-TODO
 
 #### Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
 
-##### Building
+##### Building & Installing
 
 Note, this will take sometime to build.
-```
-cd sdcard-images-utils/rpi
+```console
+cd ADCAM/sdcard-images-utils/rpi
 ./setup.sh
 ./runme.sh 7.0.0-a.1 rel-7.0.0-a.1
+cd NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26
+sudo ./apply_patch.sh
+sudo reboot
 ```
 
-##### Installing
-
-TODO
-
-### Eval Kit Build
+### 3. Eval Kit Build
 
 #### Pre-requisites
 * CMake
@@ -200,13 +222,7 @@ Let's start with a standard build. Where we need:
 4. Build the code.
 
 ```console
-git clone https://github.com/analogdevicesinc/ADCAM.git
-cd ADCAM
-git submodule update --init
-git checkout <branch or tag>
-cd libaditof
-git checkout <branch or tag>
-cd ..
+cd ADCAM/
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -238,10 +254,11 @@ An example build showing how to change an option during the build process. For t
 
 Starting in the root of the cloned ADCAM folder:
 ```console
+cd ADCAM
 git checkout rel-0.2.0-a.1
-cd libaditof
+pushd libaditof
 git checkout rel-7.0.0-a.1
-cd ..
+popd
 mkdir build
 cd build
 cmake -DWITH_PYTHON=OFF -DCMAKE_BUILD_TYPE=Release ..
