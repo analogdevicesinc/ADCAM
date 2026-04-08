@@ -94,61 +94,6 @@ Note, prior to committing to the repo it is important to format the source code,
 Requirements:
 * An internet connect is mandatory.
 
-### 1. Cloning the Repo
-
-```console
-git clone https://github.com/analogdevicesinc/ADCAM.git
-cd ADCAM
-git submodule update --init
-git checkout 0.2.0-a.1
-pushd libaditof
-git checkout 7.0.0-a.1
-popd
-pushd ToF-drivers
-git checkout 7.0.0-a.1
-popd
-```
-
-### 2. Kernel Pieces
-
-Updating Linux with the ToF pieces is required before the eval kit is built. To build the kernel you will need a connection to the Internet.
-
-If you are building on an SSD make sure the SSD has airflow since it is beneath the Jetson Orin Nano Dev Kit and may over heat as a result.
-
-The example below using file name **NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26.zip** and path of **NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26**. Substitute with the **NVIDIA_ToF_ADSD3500_REL_PATCH_*** created by your build.
-
-Note, this will take sometime to build.
-
-#### NVIDIA Jetson Orin Nano Dev Kit with JetPack 6.2.1
-
-##### Building & Installing
-
-```
-cd ADCAM/sdcard-images-utils/nvidia
-./setup.sh
-./runme.sh 7.0.0-a.1 rel-7.0.0-a.1
-unzip NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26.zip
-cd NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26
-sudo ./apply_patch.sh
-sudo reboot
-```
-
-#### Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
-
-##### Building & Installing
-
-Note, this will take sometime to build.
-```console
-cd ADCAM/sdcard-images-utils/rpi
-./setup.sh
-./runme.sh 7.0.0-a.1 rel-7.0.0-a.1
-cd NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26
-sudo ./apply_patch.sh
-sudo reboot
-```
-
-### 3. Eval Kit Build
-
 #### Pre-requisites
 * CMake
 * g++
@@ -211,6 +156,61 @@ There are two options for pointing these libraries:
 ├── libtofi_compute.so
 └── libtofi_config.so
 ```
+
+### 1. Cloning the Repo
+
+```console
+git clone https://github.com/analogdevicesinc/ADCAM.git
+cd ADCAM
+git submodule update --init
+git checkout 0.2.0-a.1
+pushd libaditof
+git checkout 7.0.0-a.1
+popd
+pushd ToF-drivers
+git checkout 7.0.0-a.1
+popd
+```
+
+### 2. Kernel Pieces
+
+Updating Linux with the ToF pieces is required before the eval kit is built. To build the kernel you will need a connection to the Internet.
+
+If you are building on an SSD make sure the SSD has airflow since it is beneath the Jetson Orin Nano Dev Kit and may over heat as a result.
+
+The example below using file name **NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26.zip** and path of **NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26**. Substitute with the **NVIDIA_ToF_ADSD3500_REL_PATCH_*** created by your build.
+
+Note, this will take sometime to build.
+
+#### NVIDIA Jetson Orin Nano Dev Kit with JetPack 6.2.1
+
+##### Building & Installing
+
+```
+cd ADCAM/sdcard-images-utils/nvidia
+./setup.sh
+./runme.sh 7.0.0-a.1 rel-7.0.0-a.1
+unzip NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26.zip
+cd NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26
+sudo ./apply_patch.sh
+sudo reboot
+```
+
+#### Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
+
+##### Building & Installing
+
+Note, this will take sometime to build.
+```console
+cd ADCAM/sdcard-images-utils/rpi
+./setup.sh
+./runme.sh 7.0.0-a.1 rel-7.0.0-a.1
+cd NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26
+sudo ./apply_patch.sh
+sudo reboot
+```
+
+### 3. Eval Kit Build
 
 #### Build
 
