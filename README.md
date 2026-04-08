@@ -92,12 +92,15 @@ This repository depends on the following components:
 Note, prior to committing to the repo it is important to format the source code, see the [code formatting](doc/code-formatting.md) document.
 
 Steps below:
-1. Cloning the Repo
-2. Kernel Pieces
-3. Eval Kit Build
+1. Install the Pre-requisites
+2. Cloning the Repo
+3. Kernel Pieces
+4. Eval Kit Build
 
 Requirements:
 * An internet connect is mandatory.
+
+### 1. Install the Pre-requisites
 
 #### Pre-requisites
 * CMake
@@ -162,7 +165,7 @@ There are two options for pointing these libraries:
 └── libtofi_config.so
 ```
 
-### 1. Cloning the Repo
+### 2. Cloning the Repo
 
 ```console
 git clone https://github.com/analogdevicesinc/ADCAM.git
@@ -177,7 +180,7 @@ git checkout 7.0.0-a.1
 popd
 ```
 
-### 2. Kernel Pieces
+### 3. Kernel Pieces
 
 Updating Linux with the ToF pieces is required before the eval kit is built. To build the kernel you will need a connection to the Internet.
 
@@ -215,7 +218,7 @@ sudo ./apply_patch.sh
 sudo reboot
 ```
 
-### 3. Eval Kit Build
+### 4. Eval Kit Build
 
 #### Build
 
