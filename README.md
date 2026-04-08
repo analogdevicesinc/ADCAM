@@ -255,10 +255,6 @@ An example build showing how to change an option during the build process. For t
 Starting in the root of the cloned ADCAM folder:
 ```console
 cd ADCAM
-git checkout rel-0.2.0-a.1
-pushd libaditof
-git checkout rel-7.0.0-a.1
-popd
 mkdir build
 cd build
 cmake -DWITH_PYTHON=OFF -DCMAKE_BUILD_TYPE=Release ..
