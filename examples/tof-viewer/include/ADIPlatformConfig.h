@@ -29,12 +29,13 @@
 
 // Compile-time validation: Ensure exactly one platform is defined
 #if !defined(NVIDIA) && !defined(RPI) && !defined(WSL2)
-#warning                                                                         \
+#warning                                                                       \
     "No valid platform defined! CMAKE must define one: -DNVIDIA=ON, -DRPI=ON, or -DWSL2=ON"
 #endif
 
-#if (defined(NVIDIA) && defined(RPI)) || (defined(NVIDIA) && defined(WSL2)) || (defined(RPI) && defined(WSL2))
-#warning                                                                         \
+#if (defined(NVIDIA) && defined(RPI)) || (defined(NVIDIA) && defined(WSL2)) || \
+    (defined(RPI) && defined(WSL2))
+#warning                                                                       \
     "Multiple platforms defined! CMAKE should only define one: -DNVIDIA=ON, -DRPI=ON, or -DWSL2=ON"
 #endif
 
@@ -51,7 +52,7 @@ namespace adiviewer {
 enum class Platform {
     JETSON_ORIN_NANO, /**< NVIDIA Jetson Orin Nano (OpenGL 3.3+ core profile) */
     RASPBERRY_PI_5,   /**< Raspberry Pi 5 (OpenGL 3.0 compatibility profile) */
-    WSL2_PLATFORM,    /**< Windows Subsystem for Linux 2 (OpenGL 3.3+ core profile) */
+    WSL2_PLATFORM, /**< Windows Subsystem for Linux 2 (OpenGL 3.3+ core profile) */
 };
 
 /**

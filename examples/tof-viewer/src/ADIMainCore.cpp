@@ -1306,9 +1306,10 @@ void ADIMainWindow::ShowStartWizard() {
 
                 NewLine(10.0f);
 
-                if (ImGuiExtensions::ADIComboBox(
-                        "Select Mode", "Selected Mode", ImGuiSelectableFlags_None,
-                        m_cameraModesDropDown, &m_mode_selection, true)) {
+                if (ImGuiExtensions::ADIComboBox("Select Mode", "Selected Mode",
+                                                 ImGuiSelectableFlags_None,
+                                                 m_cameraModesDropDown,
+                                                 &m_mode_selection, true)) {
                     m_ini_params.clear();
                 }
                 ImGuiExtensions::ADIShowTooltipFor("WizardOnlineSelectMode");

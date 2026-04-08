@@ -177,13 +177,6 @@ def configure_camera(camera, config, tof_module):
     if status != tof_module.Status.Ok:
         sys.exit("Could not initialize camera!")
 
-    sensor_config = "standard"
-    status = camera.setSensorConfiguration(sensor_config)
-    if status != tof_module.Status.Ok:
-        sys.exit("Could not configure camera with " + sensor_config)
-    else:
-        print("Configure camera with ", sensor_config)
-
     cam_details = tof_module.CameraDetails()
     status = camera.getDetails(cam_details)
     if status != tof_module.Status.Ok:

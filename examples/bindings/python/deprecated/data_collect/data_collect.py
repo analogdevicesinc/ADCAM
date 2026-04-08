@@ -160,12 +160,6 @@ if __name__ == '__main__':
     status = camera1.initialize()
     if status != tof.Status.Ok:
         sys.exit("Could not initialize camera!")
-
-    status = camera1.setSensorConfiguration(args.ic)
-    if status != tof.Status.Ok:
-        print("Could not configure camera with ", args.ic)
-    else:
-        print("Configure camera with ", args.ic)  
     
     if saveconfigurationFile:
         status = camera1.saveDepthParamsToJsonFile(saveConfigFileName)

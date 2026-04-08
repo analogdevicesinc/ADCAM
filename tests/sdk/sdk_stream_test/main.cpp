@@ -19,8 +19,8 @@
 #include <aditof/log.h>
 #include <cstring>
 #define __STDC_FORMAT_MACROS 1
-#include <inttypes.h>
 #include <algorithm>
+#include <inttypes.h>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -286,15 +286,6 @@ int main(int argc, char *argv[]) {
             LOG(ERROR) << "@@," << argv[0] << ",FAIL"
                        << ",LN" << __LINE__
                        << ",DN:Could not initialize camera:TST:" << summary;
-            return -2;
-        }
-
-        status = camera->setSensorConfiguration(configuration);
-        if (status != Status::OK) {
-            LOG(ERROR) << "@@," << argv[0] << ",FAIL"
-                       << ",LN" << __LINE__
-                       << ",DN:Could not configure camera with "
-                       << configuration << ":TST:" << summary;
             return -2;
         }
 
