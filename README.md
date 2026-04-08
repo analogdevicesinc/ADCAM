@@ -81,11 +81,11 @@ This repository depends on the following components:
 | dependencies | Contains third-party and owned libraries |
 | doc | Documentation |
 | examples | Example code for the supported programming languages |
+| libaditof *(submodule)*| Submodule with SDK source code |
 | scripts | Useful development scripts |
+| sdcard-images-utils | Linux image build tools |
 | tools | Standalone applications |
 | ToF-drivers *(submodule)*| ADSD3500 V4L2 Camera Sensor device driver |
-| libaditof *(submodule)*| Submodule with SDK source code |
-| sdcard-images-utils | Linux image build tools |
 
 ## Building the Eval Kit
 
