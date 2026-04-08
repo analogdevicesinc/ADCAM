@@ -83,7 +83,7 @@ static const char kUsagePublic[] =
     R"(Data Collect.
     Usage:
       data_collect 
-      data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--m <mode>] [--ccb FILE] [--ip <ip>] [--fw <firmware>] [--ic <imager-configuration>] [-scf <save-configuration-file>] [-lcf <load-configuration-file>]
+      data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--m <mode>] [--ccb FILE] [--ip <ip>] [--fw <firmware>] [-scf <save-configuration-file>] [-lcf <load-configuration-file>]
       data_collect (-h | --help)
 
     Options:
@@ -95,8 +95,6 @@ static const char kUsagePublic[] =
       --ccb <FILE>       The path to store CCB content
       --ip <ip>          Camera IP
       --fw <firmware>    Adsd3500 fw file
-      --ic <imager-configuration>   Select imager configuration: standard, standard-raw,
-                         custom, custom-raw. By default is standard.
       --scf <save-configuration-file>    Save current configuration to json file
       --lcf <load-configuration-file>    Load configuration from json file
 
@@ -122,7 +120,6 @@ int main(int argc, char *argv[]) {
         {"-ip", {"--ip", false, "", "", true}},
         {"-fw", {"--fw", false, "", "", true}},
         {"-ccb", {"--ccb", false, "", "", true}},
-        {"-ic", {"--ic", false, "", "", true}},
         {"-scf", {"--scf", false, "", "", true}},
         {"-lcf", {"--lcf", false, "", "", true}}};
 
@@ -184,7 +181,6 @@ int main(int argc, char *argv[]) {
     uint8_t mode = 0;
     std::string ip;
     std::string firmware;
-    std::string configuration = "standard";
 
     google::InitGoogleLogging(argv[0]);
     FLAGS_alsologtostderr = 1;
@@ -232,21 +228,6 @@ int main(int argc, char *argv[]) {
         ccbFilePath = command_map["-ccb"].value;
     }
 
-    // Parsing configuration option
-    std::vector<std::string> configurationlist = {"standard", "standard-raw",
-                                                  "custom", "custom-raw"};
-
-    std::string configurationValue = command_map["-ic"].value;
-    if (!configurationValue.empty()) {
-        unsigned int pos =
-            std::find(configurationlist.begin(), configurationlist.end(),
-                      configurationValue) -
-            configurationlist.begin();
-        if (pos < configurationlist.size()) {
-            configuration = configurationValue;
-        }
-    }
-
     bool saveconfigurationFile = false;
     std::string saveconfigurationFileValue = command_map["-scf"].value;
     if (!saveconfigurationFileValue.empty()) {
@@ -261,7 +242,6 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Mode: " << command_map["-m"].value;
     LOG(INFO) << "Number of frames: " << n_frames;
     LOG(INFO) << "Json file: " << json_file_path;
-    LOG(INFO) << "Configuration is: " << configuration;
 
     if (!ip.empty()) {
         LOG(INFO) << "Ip address is: " << ip;
@@ -296,13 +276,6 @@ int main(int argc, char *argv[]) {
     if (status != Status::OK) {
         LOG(ERROR) << "Could not initialize camera!";
         return -1;
-    }
-
-    status = camera->setSensorConfiguration(configuration);
-    if (status != Status::OK) {
-        LOG(INFO) << "Could not configure camera with " << configuration;
-    } else {
-        LOG(INFO) << "Configure camera with " << configuration;
     }
 
     if (saveconfigurationFile) {

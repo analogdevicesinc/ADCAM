@@ -752,7 +752,8 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
             protoContent->set_metadata_size(frameDetails.metadataSize);
             protoContent->set_is_pcm(frameDetails.isPCM);
             protoContent->set_number_of_phases(frameDetails.numberOfPhases);
-            protoContent->set_number_of_frequencies(frameDetails.numberOfFrequencies);
+            protoContent->set_number_of_frequencies(
+                frameDetails.numberOfFrequencies);
             for (size_t i = 0; i < frameDetails.frameContent.size(); i++) {
                 protoContent->add_frame_content(
                     frameDetails.frameContent.at(i));
@@ -945,14 +946,6 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
             aditof::Status status =
                 camDepthSensor->getControl(controlName, controlValue);
             buff_send.add_strings_payload(controlValue);
-            buff_send.set_status(static_cast<::payload::Status>(status));
-            break;
-        }
-
-        case SET_SENSOR_CONFIGURATION: {
-            std::string sensorConf = buff_recv.func_strings_param(0);
-            aditof::Status status =
-                camDepthSensor->setSensorConfiguration(sensorConf);
             buff_send.set_status(static_cast<::payload::Status>(status));
             break;
         }
@@ -1220,7 +1213,6 @@ void Initialize() {
     s_map_api_Values["GetAvailableControls"] = GET_AVAILABLE_CONTROLS;
     s_map_api_Values["SetControl"] = SET_CONTROL;
     s_map_api_Values["GetControl"] = GET_CONTROL;
-    s_map_api_Values["SetSensorConfiguration"] = SET_SENSOR_CONFIGURATION;
     s_map_api_Values["InitTargetDepthCompute"] = INIT_TARGET_DEPTH_COMPUTE;
     s_map_api_Values["Adsd3500ReadCmd"] = ADSD3500_READ_CMD;
     s_map_api_Values["Adsd3500WriteCmd"] = ADSD3500_WRITE_CMD;
