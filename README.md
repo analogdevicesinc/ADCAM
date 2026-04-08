@@ -92,15 +92,15 @@ This repository depends on the following components:
 Note, prior to committing to the repo it is important to format the source code, see the [code formatting](doc/code-formatting.md) document.
 
 Steps below:
-1. Install the Pre-requisites
+1. Installing the Pre-requisites
 2. Cloning the Repo
-3. Kernel Pieces
-4. Eval Kit Build
+3. Building and Installing the Kernel Pieces
+4. Building the Eval Kit
 
 Requirements:
 * An internet connect is mandatory.
 
-### 1. Install the Pre-requisites
+### 1. Installing the Pre-requisites
 
 #### Pre-requisites
 * CMake
@@ -141,6 +141,8 @@ sudo apt install cmake g++ \
      python3.13-dev
 ```
 
+#### Obtaining and Installing the Depth Compute Library
+
 In addition the depth compute libraries are required. 
 
 You can get the two libraries from the ADCAM release software, but please note in which case it is under an evaluation license.
@@ -180,7 +182,7 @@ git checkout 7.0.0-a.1
 popd
 ```
 
-### 3. Kernel Pieces
+### 3. Building and Installing the Kernel Pieces
 
 Updating Linux with the ToF pieces is required before the eval kit is built. To build the kernel you will need a connection to the Internet.
 
@@ -218,7 +220,7 @@ sudo ./apply_patch.sh
 sudo reboot
 ```
 
-### 4. Eval Kit Build
+### 4. Building the Eval Kit
 
 #### Build
 
