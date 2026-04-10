@@ -4,7 +4,9 @@ project(examples)
 add_subdirectory(first-frame)
 add_subdirectory(data_collect)
 add_subdirectory(tof-viewer)
-add_subdirectory(adsd3500_sample_program)
+if(ON_TARGET)
+    add_subdirectory(adsd3500_sample_program)
+endif()
 
 include(GNUInstallDirs)
 
@@ -12,5 +14,10 @@ install(PROGRAMS
     $<TARGET_FILE:first-frame>
     $<TARGET_FILE:data_collect>
     $<TARGET_FILE:ADIToFGUI>
-    $<TARGET_FILE:adsd3500_sample_program>
     DESTINATION ${CMAKE_INSTALL_BINDIR} )
+
+if(ON_TARGET)
+    install(PROGRAMS
+        $<TARGET_FILE:adsd3500_sample_program>
+        DESTINATION ${CMAKE_INSTALL_BINDIR} )
+endif()
