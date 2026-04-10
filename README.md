@@ -1,7 +1,7 @@
 ----
 ![Static Badge](https://img.shields.io/badge/Important-FFD700?style=flat-square) 
 
-This page is in preparation for the next release. See the ADCAM tag [v0.1.0-a.1](https://github.com/analogdevicesinc/ADCAM/tree/v0.1.0-a.1) for the latest release.
+This page is in preparation for the release 1.0.0. See the ADCAM tag [v0.1.0-a.1](https://github.com/analogdevicesinc/ADCAM/tree/v0.1.0-a.1) for the latest release.
 
 ----
 
@@ -65,7 +65,6 @@ This repository depends on the following components:
 | first-frame | <a href="examples/first-frame"> C++ </a> | A C++ that example that shows the steps required to get to the point where camera frames can be captured. |
 | first-frame | <br> <a href="examples/bindings/python/first_frame"> Python </a> | A Python that example that shows the steps required to get to the point where camera frames can be captured. |
 | streaming example | <br> <a href="examples/bindings/python/streaming"> Python </a> | A Python example that shows streaming depth frames. |
-| adsd3500_sample_program | <a href="examples/adsd3500_sample_program"> C++ </a> | Standalone low-level example for direct ADSD3500 control via V4L2 (NVIDIA Jetson only) |
 
 ### Other Examples
 | Example | Language | Description |
@@ -82,19 +81,28 @@ This repository depends on the following components:
 | dependencies | Contains third-party and owned libraries |
 | doc | Documentation |
 | examples | Example code for the supported programming languages |
+| libaditof *(submodule)*| Submodule with SDK source code |
 | scripts | Useful development scripts |
+| sdcard-images-utils | Linux image build tools |
 | tools | Standalone applications |
 | ToF-drivers *(submodule)*| ADSD3500 V4L2 Camera Sensor device driver |
-| libaditof *(submodule)*| Submodule with SDK source code |
-| sdcard-images-utils | Linux image build tools |
 
 ## Building the Eval Kit
 
 Note, prior to committing to the repo it is important to format the source code, see the [code formatting](doc/code-formatting.md) document.
 
-### Standard Build
+Steps below:
+1. Installing the Pre-requisites
+2. Cloning the Repo
+3. Building and Installing the Kernel Pieces
+4. Building the Eval Kit
 
-### Pre-requisites
+Requirements:
+* An internet connect is mandatory.
+
+### 1. Installing the Pre-requisites
+
+#### Pre-requisites
 * CMake
 * g++
 * Python 3
@@ -105,7 +113,7 @@ Note, prior to committing to the repo it is important to format the source code,
 
 #### Installing the pre-requisites
 
-#### NVIDIA Jeston Orin Nano Dev Kit with JetPack 6.2.1
+##### NVIDIA Jeston Orin Nano Dev Kit with JetPack 6.2.1
 ```console
 sudo apt update
 sudo apt install cmake g++ \
@@ -119,7 +127,7 @@ sudo apt install cmake g++ \
      python3.10-dev
 ```
 
-#### Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
+##### Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
 ```console
 sudo apt update
 sudo apt install cmake g++ \
@@ -132,6 +140,8 @@ sudo apt install cmake g++ \
      libxrandr-dev \
      python3.13-dev
 ```
+
+#### Obtaining and Installing the Depth Compute Library
 
 In addition the depth compute libraries are required. 
 
@@ -157,9 +167,64 @@ There are two options for pointing these libraries:
 └── libtofi_config.so
 ```
 
-### Building the ADCAM Software
+### 2. Cloning the Repo
 
-#### On Device Build: Jetson Orin Nano Dev Kit or Raspberry Pi 5
+```console
+git clone https://github.com/analogdevicesinc/ADCAM.git
+cd ADCAM
+git submodule update --init
+git checkout main
+pushd libaditof
+git checkout main
+popd
+pushd ToF-drivers
+git checkout main
+popd
+```
+
+### 3. Building and Installing the Kernel Pieces
+
+Updating Linux with the ToF pieces is required before the eval kit is built. To build the kernel you will need a connection to the Internet.
+
+If you are building on an SSD make sure the SSD has airflow since it is beneath the Jetson Orin Nano Dev Kit and may over heat as a result.
+
+The example below using file name **NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26.zip** and path of **NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26**. Substitute with the **NVIDIA_ToF_ADSD3500_REL_PATCH_*** created by your build.
+
+Note, this will take sometime to build.
+
+#### NVIDIA Jetson Orin Nano Dev Kit with JetPack 6.2.1
+
+##### Building & Installing
+
+```
+cd ADCAM/sdcard-images-utils/nvidia
+./setup.sh
+./runme.sh 7.1.0 main
+unzip NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26.zip
+cd NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26
+sudo ./apply_patch.sh
+sudo reboot
+```
+
+#### Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
+
+##### Building & Installing
+
+Note, this will take sometime to build.
+```console
+cd ADCAM/sdcard-images-utils/rpi
+./setup.sh
+./runme.sh 7.1.0 main
+cd NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26
+sudo ./apply_patch.sh
+sudo reboot
+```
+
+### 4. Building the Eval Kit
+
+#### Build
+
+##### On Device Build: Jetson Orin Nano Dev Kit or Raspberry Pi 5
 Let's start with a standard build. Where we need:
 1. Clone the repo.
 2. Update the required submodules.
@@ -167,20 +232,14 @@ Let's start with a standard build. Where we need:
 4. Build the code.
 
 ```console
-git clone https://github.com/analogdevicesinc/ADCAM.git
-cd ADCAM
-git submodule update --init
-git checkout <branch or tag>
-cd libaditof
-git checkout <branch or tag>
-cd ..
+cd ADCAM/
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j 6
 ```
 
-#### CMake options
+##### CMake options
 
 There are a number of build options available via the root CMakeLists.txt file: https://github.com/analogdevicesinc/ADCAM/blob/6e5b722b5c36923065c4a3be96ad0553d387e699/CMakeLists.txt#L20C1-L24C109
 ```
@@ -205,10 +264,7 @@ An example build showing how to change an option during the build process. For t
 
 Starting in the root of the cloned ADCAM folder:
 ```console
-git checkout rel-0.2.0-a.1
-cd libaditof
-git checkout rel-7.0.0-a.1
-cd ..
+cd ADCAM
 mkdir build
 cd build
 cmake -DWITH_PYTHON=OFF -DCMAKE_BUILD_TYPE=Release ..
