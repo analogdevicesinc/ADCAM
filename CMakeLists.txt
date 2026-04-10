@@ -37,6 +37,11 @@ set(WSL2 OFF CACHE BOOL "Set to ON when building on Windows Subsystem for Linux 
 # Include platform detection
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/platform_detection.cmake)
 
+if(WSL2)
+        set(WITH_NETWORK ON CACHE BOOL "Build network interface?" FORCE)
+        message(STATUS "WSL2 detected: forcing WITH_NETWORK=ON")
+endif()
+
 if (WITH_NETWORK)
         option(WITH_SUBMODULES "Use submodules to build the library" ON)
         option(WITH_PROTOBUF_DEPENDENCY "Build with PROTOBUF dependency?" ON)
