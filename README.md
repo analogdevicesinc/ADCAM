@@ -215,7 +215,8 @@ Note, this will take sometime to build.
 cd ADCAM/sdcard-images-utils/rpi
 ./setup.sh
 ./runme.sh 7.0.0-a.1 rel-7.0.0-a.1
-cd NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26
+unzip RPI_ToF_ADSD3500_REL_PATCH_08Apr26.zip
+cd RPI_ToF_ADSD3500_REL_PATCH_08Apr26
 sudo ./apply_patch.sh
 sudo reboot
 ```
