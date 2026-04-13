@@ -22,4 +22,4 @@ v4l2-ctl --set-ctrl=ab_bits=0 -d $SUBDEV_PATH
 v4l2-ctl --set-ctrl=confidence_bits=0 -d $SUBDEV_PATH
 v4l2-ctl --set-ctrl=ab_averaging=0 -d $SUBDEV_PATH
 v4l2-ctl --set-ctrl=depth_enable=0 -d $SUBDEV_PATH
-v4l2-ctl --device /dev/video0 --set-fmt-video=width=1024,height=2304,pixelformat=RG12 --stream-mmap --stream-to=raw_mode5.bin --stream-count=$nr_frames
+v4l2-ctl --device $VIDEO_PATH --set-fmt-video=width=1024,height=2304,pixelformat=RG12 --stream-mmap --stream-to=raw_mode5.bin --stream-count=$nr_frames
