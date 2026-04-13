@@ -1,0 +1,60 @@
+From 0d90c0ff4940adc19932cb3148be457712d3b1ce Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Mon, 13 Apr 2026 14:26:03 +0530
+Subject: [PATCH] media: i2c: nv_adsd3500: Fix RAW8 Bayer format and interrupt
+ handling
+
+Correct the RAW8 media bus format from SBGGR8 to SRGGB8 in the
+mode table, and ensure interrupt configuration is performed for
+both PWM and non-PWM configuration.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/nv_adsd3500.c | 13 ++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/i2c/nv_adsd3500.c b/drivers/media/i2c/nv_adsd3500.c
+index 68d4c4ab..ba349e4f 100644
+--- a/drivers/media/i2c/nv_adsd3500.c
++++ b/drivers/media/i2c/nv_adsd3500.c
+@@ -242,20 +242,20 @@ static irqreturn_t adsd3500_irq_handler(int irq,void *priv)
+ /* Elements of the structure must be ordered ascending by width & height */
+ static const struct adsd3500_mode_info adsd3500_mode_info_data[] = {
+ 
+-	/* --- RAW 8 MEDIA_BUS_FMT_SBGGR8_1X8 --- */
++	/* --- RAW 8 MEDIA_BUS_FMT_SRGGB8_1X8 --- */
+ 
+ 	{	/* RAW8 8BPP ADSD3100 QMP RESOLUTION */
+ 		.width = 512,
+ 		.height = 512,
+ 		.pixel_rate = 488000000,
+-		.code = MEDIA_BUS_FMT_SBGGR8_1X8,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
+ 		.link_freq_idx = 0 /* an index in link_freq_tbl[] */
+ 	},
+ 	{	/* RAW8 16BPP ADSD3100 QMP RESOLUTION */
+ 		.width = 1024,
+ 		.height = 512,
+ 		.pixel_rate = 488000000,
+-		.code = MEDIA_BUS_FMT_SBGGR8_1X8,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
+ 		.link_freq_idx = 0 /* an index in link_freq_tbl[] */
+ 	},
+ 	{       /* RAW8 16BPP Phase 12BPP AB ADSD3100 - DUAL MP - (1024x1 1024x4) */
+@@ -1843,6 +1843,13 @@ static int adsd3500_probe(struct i2c_client *client,
+ 		if(ret < 0)
+ 			dev_err(&client->dev, "Failed to initalize interrupt\n");
+ 	}
++	else {
++		ret = adsd3500_configure_interrupt(priv);
++		if (ret < 0)
++			dev_err(&client->dev, "Failed to initalize interrupt\n");
++	}
++
++
+ 
+ 	priv->sd->internal_ops = &adsd3500_subdev_internal_ops;
+ 	priv->sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+-- 
+2.25.1
+
