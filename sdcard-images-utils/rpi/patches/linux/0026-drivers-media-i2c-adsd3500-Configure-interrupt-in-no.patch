@@ -1,0 +1,48 @@
+From 964726ee9ba20910f97e3a0b8f076bfe7e8b4514 Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Mon, 13 Apr 2026 16:47:34 +0530
+Subject: [PATCH] drivers: media: i2c: adsd3500: Configure interrupt in non-PWM
+ probe path
+
+Ensure adsd3500_configure_interrupt() is invoked when no PWM is
+provided, so interrupt setup is consistent across probe paths.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/adsd3500.c      | 6 ++++++
+ drivers/media/i2c/adsd3500_regs.h | 2 +-
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/i2c/adsd3500.c b/drivers/media/i2c/adsd3500.c
+index e426041d7f52..0de0d8d6b179 100755
+--- a/drivers/media/i2c/adsd3500.c
++++ b/drivers/media/i2c/adsd3500.c
+@@ -1926,6 +1926,12 @@ static int adsd3500_probe(struct i2c_client *client)
+ 		if(ret < 0)
+ 			dev_err(&client->dev, "Failed to initalize interrupt\n");
+ 	}
++	else {
++		ret = adsd3500_configure_interrupt(adsd3500);
++		if(ret < 0){
++			dev_err(&client->dev, "Failed to initalize interrupt\n");
++		}
++	}
+ 
+ 	memset(&adsd3500->fmt, 0, sizeof(adsd3500->fmt));
+ 	adsd3500->fmt.width  = adsd3500_mode_info_data[0].width;
+diff --git a/drivers/media/i2c/adsd3500_regs.h b/drivers/media/i2c/adsd3500_regs.h
+index 941a4c63b84a..630c64cd0eb6 100755
+--- a/drivers/media/i2c/adsd3500_regs.h
++++ b/drivers/media/i2c/adsd3500_regs.h
+@@ -11,7 +11,7 @@
+ 
+ #include <linux/bitfield.h>
+ 
+-#define DRIVER_VERSION                          "6.3.0"
++#define DRIVER_VERSION                          "7.0.0"
+ 
+ #define GET_CHIP_ID_CMD				0x0112
+ 
+-- 
+2.25.1
+
