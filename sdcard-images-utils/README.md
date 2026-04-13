@@ -4,3 +4,4 @@
 | Directory | Description |
 | --------- | ----------- |
 | nvidia | Utilities required to create collateral for the NVIDIA Jetson Orin Nano Dev Kit |
+| rpi    | Utilities required to create collateral for the Raspberry Pi 5 Model 8GB RAM    |
