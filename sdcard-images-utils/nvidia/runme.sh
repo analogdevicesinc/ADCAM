@@ -664,6 +664,16 @@ create_package() {
         log_warning "apply_patch.sh not found at ${apply_script}"
     fi
 
+    # Copy patch_validation.sh script
+    local validation_script="${ROOTDIR}/scripts/system_upgrade/patch_validation.sh"
+    if [[ -f "${validation_script}" ]]; then
+        cp "${validation_script}" "${PATCH_DIR}/" || log_warning "Failed to copy patch_validation.sh"
+        log_info "Copied: patch_validation.sh"
+    else
+        log_warning "patch_validation.sh not found at ${validation_script}"
+    fi
+
+
     local archive_name="NVIDIA_ToF_ADSD3500_REL_PATCH_$(date +"%d%b%y").zip"
     local patch_dir_name=$(basename "${PATCH_DIR}")
 
