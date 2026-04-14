@@ -525,8 +525,10 @@ int Adsd3500::GetIntrinsicsAndDealiasParams() {
 // Check if ISP depth computation is enabled in configuration.
 bool Adsd3500::IsISPDepthComputeEnabled() {
     auto it = iniKeyValPairs.find("depthComputeIspEnable");
-    if (it != iniKeyValPairs.end()) {
-        return (std::stoi(it->second) == 1);
+    if (it != iniKeyValPairs.end() && std::stoi(it->second) == 1) {
+        // ISP pre-computed path ONLY works for mipiRaw12_8 format (MP modes 0-1)
+        // QMP modes (2-6) use raw8 and require TofiCompute for deinterleaving
+        return (inputFormat == "mipiRaw12_8");
     }
     return false; // Default: ISP depth compute disabled
 }
