@@ -32,8 +32,9 @@ int main(int argc, char *argv[]) {
     adsd3500->mode_num = 2;      // Image mode number.
     int num_frames = 1;          // Number of frames is set to 1 by default.
     adsd3500->ccb_as_master = 0; // Enables/Disbales CCB as master.
-    adsd3500->enableMetaDatainAB = 1; // When enabled stores Metadata in the AB frame.
-    
+    adsd3500->enableMetaDatainAB =
+        1; // When enabled stores Metadata in the AB frame.
+
     // Parse Arguments from the Command line.
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "-m") == 0 && i + 1 < argc) {
@@ -182,6 +183,16 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Number of Frames requested: " << num_frames << std::endl;
 
+    // Determine processing mode based on ISP configuration
+    // When ISP pre-computes depth, we just need to deinterleave the buffer
+    bool useISPPrecomputed = adsd3500->IsISPDepthComputeEnabled();
+    if (useISPPrecomputed) {
+        std::cout << "Using ISP pre-computed depth (no TofiCompute needed)"
+                  << std::endl;
+    } else {
+        std::cout << "Using TofiCompute depth computation" << std::endl;
+    }
+
     /* 
     NOTE: The First frame collected from the NXP Eval kit (with Tembin and Crosby) would be 
     corrupted with Noise. Hence, we discard this frame and collect the subsequent frames.
@@ -200,15 +211,30 @@ int main(int argc, char *argv[]) {
         ret = adsd3500->RequestFrame(buffer);
         if (ret < 0 || buffer == nullptr) {
             std::cout << "Unable to receive frames from Adsd3500" << std::endl;
+            delete[] buffer;
+            continue;
         }
 
-        // Get Depth, AB, Confidence Data using Depth Compute Library and store them as .bin file.
-        ret = adsd3500->ParseRawDataWithDCL(buffer);
-        if (ret < 0) {
-            std::cout << "Unable to parse raw frames." << std::endl;
+        // Parse frame data: ISP pre-computed or full TofiCompute
+        if (useISPPrecomputed) {
+            // ISP already computed depth - just deinterleave the buffer
+            ret = adsd3500->ParseISPPrecomputedData(buffer);
+            if (ret < 0) {
+                std::cout << "Unable to parse ISP pre-computed frame."
+                          << std::endl;
+                delete[] buffer;
+                continue;
+            }
+        } else {
+            // Use TofiCompute for full depth computation
+            ret = adsd3500->ParseRawDataWithDCL(buffer);
+            if (ret < 0) {
+                std::cout << "Unable to parse raw frames." << std::endl;
+                delete[] buffer;
+                continue;
+            }
         }
 
-	
         if (adsd3500->enableMetaDatainAB) {
             memcpy(ab_buffer + i * total_pixels,
                    adsd3500->tofi_compute_context->p_ab_frame + buffer_width,
@@ -228,6 +254,9 @@ int main(int argc, char *argv[]) {
         memcpy(conf_buffer + i * total_pixels,
                adsd3500->tofi_compute_context->p_conf_frame,
                total_pixels * sizeof(uint8_t));
+
+        // Clean up frame buffer
+        delete[] buffer;
     }
 
     // Store AB, Depth and Confidence frames on to a .bin files.

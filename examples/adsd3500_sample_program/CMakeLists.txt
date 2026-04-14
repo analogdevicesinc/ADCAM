@@ -24,6 +24,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 11)
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/libaditof/sdk/common  # For adi/tofi headers
+    ${CMAKE_SOURCE_DIR}/libaditof/sdk/include  # For aditof headers
+    ${CMAKE_BINARY_DIR}/libaditof/sdk          # For generated platform_config.h
+    ${CMAKE_SOURCE_DIR}/libaditof/sdk/src/platform  # For Platform API
 )
 
 # Find ToFi libraries
@@ -66,8 +69,9 @@ if(NOT TOFI_COMPUTE_LIB OR NOT TOFI_CONFIG_LIB)
 endif()
 
 # Link libraries
-# Note: This example uses ToFi compute library directly, not through aditof SDK
+# Link against aditof SDK for Platform API (device discovery)
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    aditof
     ${TOFI_COMPUTE_LIB}
     ${TOFI_CONFIG_LIB}
 )

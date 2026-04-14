@@ -34,6 +34,10 @@
 #include <iostream>
 #include <vector>
 
+// Include Platform API for dynamic device discovery
+#include "platform_config.h"
+#include "platform_impl.h"
+
 // Depth Compute Library Version.
 const char ver_info[] = "VERSIONINFO:"
                         "TOF_DepthComputeEngine_ARM64-Rel4.4.0";
@@ -139,6 +143,35 @@ uint8_t getFwVersion_cmd[] = {0xAD, 0x00, 0x2C, 0x05, 0x00, 0x00, 0x00, 0x00,
 *********************************Public functions*********************************
 */
 
+// Discovers ADSD3500 device paths using Platform API.
+int discoverAdsd3500Device(VideoDev &videoDev) {
+    using namespace aditof::platform;
+
+    Platform &platform = Platform::getInstance();
+    std::vector<SensorInfo> sensors;
+
+    // Use Platform API to discover ToF sensors
+    aditof::Status status = platform.findToFSensors(sensors);
+
+    if (status != aditof::Status::OK || sensors.empty()) {
+        std::cerr << "Failed to discover ADSD3500 sensor via Platform API"
+                  << std::endl;
+        return -1;
+    }
+
+    // Use the first discovered sensor
+    const SensorInfo &sensor = sensors[0];
+    videoDev.sensorDevPath = sensor.subDevPath;  // e.g., "/dev/v4l-subdev1"
+    videoDev.captureDevPath = sensor.driverPath; // e.g., "/dev/video0"
+
+    std::cout << "Discovered ADSD3500 via Platform API:" << std::endl;
+    std::cout << "  Sensor subdev: " << videoDev.sensorDevPath << std::endl;
+    std::cout << "  Video capture: " << videoDev.captureDevPath << std::endl;
+    std::cout << "  Capture device: " << sensor.captureDev << std::endl;
+
+    return 0;
+}
+
 // Resets ADSD3500 device.
 int Adsd3500::ResetAdsd3500() {
     printf("Resetting ADSD3500 Device.\n");
@@ -162,20 +195,28 @@ int Adsd3500::ResetAdsd3500() {
 
 // Opens ADSD3500 device.
 int Adsd3500::OpenAdsd3500() {
+    // Discover device paths dynamically using Platform API
+    if (discoverAdsd3500Device(videoDevice) != 0) {
+        std::cerr << "Failed to discover ADSD3500 device paths" << std::endl;
+        return -1;
+    }
+
     // Open the ADI ToF Camera Sensor Device Driver.
     printf("Opening Camera Device.\n");
-    videoDevice.cameraSensorDeviceId = tof_open(CAMERA_SENSOR_DRIVER);
+    videoDevice.cameraSensorDeviceId =
+        tof_open(videoDevice.sensorDevPath.c_str());
     if (videoDevice.cameraSensorDeviceId < 0) {
         std::cout << "Unable to open camera sensor device: "
-                  << CAMERA_SENSOR_DRIVER << std::endl;
+                  << videoDevice.sensorDevPath << std::endl;
         return -1;
     }
 
     // Open Host device's V4L2 Video Capture Device Driver.
-    videoDevice.videoCaptureDeviceId = tof_open(VIDEO_CAPTURE_DRIVER);
+    videoDevice.videoCaptureDeviceId =
+        tof_open(videoDevice.captureDevPath.c_str());
     if (videoDevice.videoCaptureDeviceId < 0) {
         std::cout << "Unable to open video capture device:  "
-                  << VIDEO_CAPTURE_DRIVER << std::endl;
+                  << videoDevice.captureDevPath << std::endl;
         return -1;
     }
 
@@ -481,21 +522,63 @@ int Adsd3500::GetIntrinsicsAndDealiasParams() {
     return 0;
 }
 
-// Parses Raw frame to get Depth, AB and Confidence frames using Depth-Compute Library.
-int Adsd3500::ParseRawDataWithDCL(uint16_t *buffer) {
-
-    int enableXyz = 0;
-    auto it = iniKeyValPairs.find("xyzEnable");
+// Check if ISP depth computation is enabled in configuration.
+bool Adsd3500::IsISPDepthComputeEnabled() {
+    auto it = iniKeyValPairs.find("depthComputeIspEnable");
     if (it != iniKeyValPairs.end()) {
-        enableXyz = (std::stoi(it->second));
+        return (std::stoi(it->second) == 1);
+    }
+    return false; // Default: ISP depth compute disabled
+}
+
+// Parse ISP pre-computed depth frame (no TofiCompute needed).
+// V4L2 buffer layout: [depth: numPixels*2 bytes | AB: numPixels*2 bytes]
+int Adsd3500::ParseISPPrecomputedData(uint16_t *buffer) {
+
+    if (buffer == NULL) {
+        std::cerr << "ParseISPPrecomputedData: buffer is NULL" << std::endl;
+        return -1;
     }
 
     if (tofi_compute_context == NULL) {
         return -1;
     }
 
-    uint16_t *tempDepthFrame = tofi_compute_context->p_depth_frame;
-    uint16_t *tempAbFrame = tofi_compute_context->p_ab_frame;
+    uint32_t numPixels = xyzDealiasData.n_rows * xyzDealiasData.n_cols;
+
+    // Allocate output buffers if not already allocated
+    if (tofi_compute_context->p_depth_frame == NULL) {
+        tofi_compute_context->p_depth_frame = new uint16_t[numPixels];
+    }
+    if (tofi_compute_context->p_ab_frame == NULL) {
+        tofi_compute_context->p_ab_frame = new uint16_t[numPixels];
+    }
+    if (tofi_compute_context->p_conf_frame == NULL) {
+        // Allocate as float array (confidence values are floats)
+        tofi_compute_context->p_conf_frame = new float[numPixels];
+        // Zero out confidence since ISP doesn't provide it for MP modes
+        memset(tofi_compute_context->p_conf_frame, 0,
+               numPixels * sizeof(float));
+    }
+
+    // ISP pre-computed layout: depth first, then AB
+    // Copy depth frame (first half of buffer)
+    memcpy(tofi_compute_context->p_depth_frame, buffer,
+           numPixels * sizeof(uint16_t));
+
+    // Copy AB frame (second half of buffer)
+    memcpy(tofi_compute_context->p_ab_frame, buffer + numPixels,
+           numPixels * sizeof(uint16_t));
+
+    return 0;
+}
+
+// Parses Raw frame to get Depth, AB and Confidence frames using Depth-Compute Library.
+int Adsd3500::ParseRawDataWithDCL(uint16_t *buffer) {
+
+    if (tofi_compute_context == NULL) {
+        return -1;
+    }
 
     // Allocate memory to store Depth and IR frames.
     // Depth Frames.
@@ -939,7 +1022,10 @@ int Adsd3500::SetFrameType() {
                     V4L2_PIX_FMT_SRGGB8; // NVIDIA Jetson uses SRGGB, not SBGGR
             }
         } else if (inputFormat == "mipiRaw12_8") {
-            if (depthBits == 12 && abBits == 16 && confBits == 0) {
+            // Support both 12-bit and 16-bit depth for MP modes (0-1)
+            // ISP pre-computes depth on-chip, frame packing is the same
+            if ((depthBits == 12 || depthBits == 16) && abBits == 16 &&
+                confBits == 0) {
                 // NOTE: Jetson dual-ISP driver uses different frame packing than single-chip
                 // The SDK uses 1024x4096 for MP modes, not 2048x2560
                 if (mode_num == 1 || mode_num == 0) {

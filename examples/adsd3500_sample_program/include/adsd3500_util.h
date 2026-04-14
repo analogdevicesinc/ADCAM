@@ -80,9 +80,9 @@
 #define CTRL_AB_BITS (0x9819d3)                // ab_bits (same)
 #define CTRL_CONFIDENCE_BITS (0x9819d4)        // confidence_bits (same)
 
-#define MAX_SUBFRAMES_COUNT                                                    \
-    10 // maximum number of subframes that are used to create a full frame    \
-        // (maximum total_captures of all modes)
+/* Maximum number of subframes that are used to create a full frame
+ * (maximum total_captures of all modes) */
+#define MAX_SUBFRAMES_COUNT 10
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -114,6 +114,8 @@ struct VideoDev {
     struct v4l2_plane planes[8];
     enum v4l2_buf_type videoBuffersType;
     bool started;
+    std::string sensorDevPath;  // Dynamically discovered sensor device path
+    std::string captureDevPath; // Dynamically discovered capture device path
 
     VideoDev()
         : videoCaptureDeviceId(-1), cameraSensorDeviceId(-1),
@@ -492,6 +494,19 @@ class Adsd3500 : public std::enable_shared_from_this<Adsd3500> {
     int ParseRawDataWithDCL(uint16_t *buffer);
 
     /**
+     * @brief Parse ISP pre-computed depth frame (modes with ISP computation)
+     * @param buffer Pointer to ISP pre-computed frame buffer
+     * @return 0 on success, negative error code on failure
+     */
+    int ParseISPPrecomputedData(uint16_t *buffer);
+
+    /**
+     * @brief Check if ISP depth computation is enabled in config
+     * @return true if ISP pre-computes depth, false otherwise
+     */
+    bool IsISPDepthComputeEnabled();
+
+    /**
      * @brief Setup interrupt support for frame notifications
      * @return 0 on success, negative error code on failure
      */
@@ -566,7 +581,7 @@ int32_t read_cmd(int fd, uint8_t *ptr, uint16_t len, uint8_t *rcmd,
 int32_t tof_open(const char *tof_device);
 void PrintIniTableEntryFromCCB(struct INI_TABLE_ENTRY entry);
 
-// Static functions
-static uint32_t cal_crc32(uint32_t crc, unsigned char *buf, size_t len);
+// Platform API discovery function
+int discoverAdsd3500Device(VideoDev &videoDev);
 
 #endif
