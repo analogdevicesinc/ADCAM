@@ -286,7 +286,7 @@ int Adsd3500::SetImageMode(uint8_t modeNumber) {
 int Adsd3500::GetImageMode(uint8_t *result) {
 
     int32_t ret = read_cmd(videoDevice.cameraSensorDeviceId, getMode_cmd,
-                           ARRAY_SIZE(getMode_cmd), result, ARRAY_SIZE(result));
+                           ARRAY_SIZE(getMode_cmd), result, 2);
     std::cout << ((ret >= 0) ? "SUCCESS" : "FAIL") << std::endl;
     return ret;
 }
@@ -628,8 +628,8 @@ int Adsd3500::ReadChipId(uint8_t *result) {
         fd = videoDevice.cameraSensorDeviceId;
     }
 
-    int32_t ret = read_cmd(fd, getChipId_cmd, ARRAY_SIZE(getChipId_cmd), result,
-                           ARRAY_SIZE(result));
+    int32_t ret =
+        read_cmd(fd, getChipId_cmd, ARRAY_SIZE(getChipId_cmd), result, 2);
     std::cout << ((ret >= 0) ? "SUCCESS" : "FAIL") << std::endl;
 
     return ret;
@@ -714,8 +714,7 @@ int Adsd3500::GetFps(uint8_t *result) {
     } else {
         fd = videoDevice.cameraSensorDeviceId;
     }
-    int32_t ret = read_cmd(fd, getFps_cmd, ARRAY_SIZE(getFps_cmd), result,
-                           ARRAY_SIZE(result));
+    int32_t ret = read_cmd(fd, getFps_cmd, ARRAY_SIZE(getFps_cmd), result, 2);
     std::cout << ((ret >= 0) ? "SUCCESS" : "FAIL") << std::endl;
 
     return ret;
@@ -993,8 +992,6 @@ int Adsd3500::SetFrameType() {
     // Pixel format is "raw8" for lr-qnative mode.
     int num_rows = xyzDealiasData.n_rows;
     int num_cols = xyzDealiasData.n_cols;
-    uint16_t width, height;
-    __u32 pixelFormat;
     float totalBits;
 
     if (imagerType == ImagerType::IMAGER_ADSD3030) { // For ADSD3030
@@ -1173,7 +1170,7 @@ int Adsd3500::HandleInterrupts(int signalValue) {
         }
     }
 
-    int ret = adsd3500_read_cmd(0x0020, &statusRegister, 0);
+    adsd3500_read_cmd(0x0020, &statusRegister, 0);
     std::cout << "statusRegister: " << statusRegister << std::endl;
 
     return 0;
@@ -1675,8 +1672,9 @@ int Adsd3500::adsd3500_get_ini_key_value_pairs_from_ini_file(
     iniStream.seekg(0, std::ios::beg);
 
     // Check if the fileSize is representable as size_t
-    if (fileSize < 0 || static_cast<size_t>(fileSize) !=
-                            static_cast<std::streampos>(fileSize)) {
+    if (fileSize < 0 ||
+        static_cast<std::streamoff>(fileSize) !=
+            static_cast<std::streamoff>(static_cast<size_t>(fileSize))) {
         std::cerr << "File size is too large to be represented as size_t."
                   << std::endl;
         return -1;
@@ -1735,7 +1733,7 @@ int Adsd3500::adsd3500_get_ini_key_value_pairs_from_ccb() {
     PrintByteArray(readIniFromAdsd3500_cmd, 16);
 
     uint8_t data[ADSD3500_CTRL_PACKET_SIZE] = {0};
-    int i = 0;
+    size_t i = 0;
     while (i < ARRAY_SIZE(readIniFromAdsd3500_cmd)) {
         data[i + 3] = readIniFromAdsd3500_cmd[i];
         i++;
@@ -2039,12 +2037,6 @@ int Adsd3500::adsd3500_configure_dynamic_mode_switching() {
         return 0;
     }
 
-    uint8_t mode_seq0[4]; // Represents the Mode Composition sequence 0.
-    uint8_t mode_seq1[4]; // Represents the Mode Composition sequence 1.
-    uint8_t mode_repeat_count0
-        [4]; // Represents the Mode Repeat count for Mode Composition sequence 0.
-    uint8_t mode_repeat_count1
-        [4]; // Represents the Mode Repeat count for Mode Composition sequence 1.
     /*Note: 
     1. dynamicModeSeqComp0 and dynamicModeSeqComp1 represents the sequence of imaging modes to be used when multiple frames are requested from the Imager.
     For eg., if dynamicModeSeqComp0=0x1010, then the first image would be captured with mode 0 and the second image would be captured with mode 1 and so on.
@@ -2408,7 +2400,7 @@ int32_t read_cmd(int fd, uint8_t *ptr, uint16_t len, uint8_t *rcmd,
         return -2;
     }
     usleep(110 * 1000);
-    int32_t ret = v4l2_ctrl_get(fd, V4L2_CID_AD_DEV_CHIP_CONFIG, cmd_data);
+    v4l2_ctrl_get(fd, V4L2_CID_AD_DEV_CHIP_CONFIG, cmd_data);
 
     uint16_t read_len = (cmd_data[1] << 8) | cmd_data[2];
     memcpy(rcmd, &cmd_data[3], std::min(rlen, read_len));
