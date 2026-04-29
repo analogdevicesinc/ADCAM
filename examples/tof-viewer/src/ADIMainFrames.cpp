@@ -25,6 +25,7 @@
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
 #include "ADIPointCloudShaders.h"
+#include "aditof/playback_interface.h"
 #include "imoguizmo.hpp"
 #include "implot.h"
 #include <GLFW/glfw3.h>
@@ -267,8 +268,13 @@ int32_t ADIMainWindow::synchronizeVideo(std::shared_ptr<aditof::Frame> &frame) {
 bool ADIMainWindow::SaveAllFramesUpdate() {
     static std::atomic<int> save_counter(0);
     if (m_off_line && m_offline_save_all_frames) {
-        uint32_t max_frame_count;
-        GetActiveCamera()->getSensor()->getFrameCount(max_frame_count);
+        uint32_t max_frame_count = 0;
+        auto playbackSensor =
+            std::dynamic_pointer_cast<aditof::PlaybackInterface>(
+                GetActiveCamera()->getSensor());
+        if (playbackSensor) {
+            playbackSensor->getFrameCount(max_frame_count);
+        }
         if (m_off_line_frame_index < max_frame_count) {
             // FIXME: This is incorrect.
             save_counter++;

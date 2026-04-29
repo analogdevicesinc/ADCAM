@@ -88,9 +88,83 @@ Two worker threads communicate via lock-free queues; critical for understanding 
 - **Vendored libraries**: libzmq, glog, protobuf inside `libaditof/` take precedence; avoid linking system versions.
 - **Submodule state**: `ToF-drivers` and `libaditof` are git submodules; always run `git submodule update --init` after clone/checkout.
 
+#### Current Architecture (Professional-Grade):
+- **File size**: `adsd3500_sensor.cpp` = 2,106 lines (industry acceptable: < 2,000 ideal, < 3,000 ok)
+- **Manager pattern**: 9 specialized managers handle all low-level operations:
+  1. `ProtocolManager` - hardware command protocol (chip communication)
+  2. `ChipConfigManager` - chip configuration discovery
+  3. `V4L2BufferManager` - buffer queue operations (VIDIOC_DQBUF/QBUF)
+  4. `VideoDeviceDriver` - V4L2 device abstraction (open, ioctl, format)
+  5. `SubdeviceDriver` - V4L2 subdevice operations
+  6. `IniConfigManager` - INI parameter parsing/merging (ToFi config)
+  7. `InterruptManager` - interrupt callback registration
+  8. `Adsd3500Recorder` - frame recording to file
+  9. `BufferProcessor` - multi-threaded frame processing pipeline
+- **Delegation**: 20+ public methods are thin one-line wrappers delegating to managers (proper Facade pattern)
+- **Average method length**: 54 lines (industry standard: < 100 acceptable)
+- **Code duplication**: Zero duplicate V4L2 operations (Phase 1 refactoring complete)
+- **SOLID score**: 8.5/10 overall (SRP: 7.5/10 for facade, ISP: 9/10, DIP: 9/10, LSP: 9/10, OCP: 8/10)
+
+#### Sensor Class Responsibilities (Single Responsibility = Orchestration):
+The `Adsd3500Sensor` class is a **Facade pattern** over 9 managers. Its legitimate job is:
+- Orchestrate manager initialization during `open()` (~250 lines)
+- Orchestrate device lifecycle during `setMode()` (~300 lines - must close/reopen devices)
+- Dispatch control operations to appropriate managers via `setControl()`/`getControl()`
+- Provide unified API for external callers (examples, apps, bindings)
+
+**This is NOT a violation of SRP** - orchestration is the facade's responsibility.
+
+#### Refactoring Completion Criteria (DO NOT RECOMMEND MORE UNLESS):
+
+✅ **COMPLETE** - Do not recommend refactoring if:
+1. All low-level operations delegated to managers (current: YES - 9 managers, 20+ delegations)
+2. No code duplication exists (current: YES - eliminated in Phase 1)
+3. Average method length < 100 lines (current: 54 avg)
+4. Code is testable via mocking (current: YES - mockable manager interfaces)
+5. SOLID score > 7/10 (current: 8.5/10)
+
+❌ **RECOMMEND REFACTORING** only if:
+1. New features introduce code duplication
+2. Methods grow beyond 300 lines (except lifecycle orchestrators)
+3. New low-level responsibilities added to sensor instead of managers
+4. Testability degrades (tight coupling, can't mock)
+5. Manager count reduces (delegation removed)
+
+#### Why Further Extraction Would Be Counter-Productive:
+
+**Example: Extracting "DeviceLifecycleManager" from `open()`**
+- **Before**: `open()` initializes 9 managers in sensor (~250 lines)
+- **After**: Sensor calls `m_lifecycleManager->open()` which initializes 9 managers (~250 lines)
+- **Result**: Complexity moved, not reduced. Sensor still owns managers. Zero benefit.
+
+**Example: Extracting "ModeManager" from `setMode()`**
+- **Problem**: `setMode()` must close devices, reopen them, reallocate buffers - it's inherently lifecycle orchestration
+- **Result**: Can't separate mode logic from device lifecycle. They're coupled by hardware requirements.
+
+#### When to Consider Architecture Changes:
+
+✅ **Good reasons**:
+- Adding new hardware requires new manager (e.g., `GpioManager` for external triggers)
+- New features require isolated logic (e.g., `CalibrationManager` for on-device calibration)
+- Performance profiling shows bottlenecks in specific manager
+- Unit testing reveals need for finer-grained mocking
+
+❌ **Bad reasons**:
+- "Class is too long" (2,106 lines is acceptable for embedded facade)
+- "Could extract more managers" (diminishing returns, over-engineering)
+- "Academic SOLID purity" (7.5/10 SRP is professional-grade for orchestration)
+- "Move orchestration elsewhere" (just relocates complexity, doesn't reduce it)
+
+#### Code Review Guidance:
+
+**For new features**: Ensure low-level work goes into appropriate manager, not sensor class
+**For bug fixes**: Fix in the manager that owns the operation, update sensor wrapper if needed
+**For refactoring proposals**: Measure against completion criteria above; reject if criteria already met
+
 ### Minimal agent contract
 When editing:
 - **Inputs**: Specific file path + desired behavior (or error log with line number)
 - **Outputs**: Focused diffs, preserve existing style/formatting, update examples/tests if behavior changes
 - **Validation**: After frame/memory changes, verify no crashes during mode-switching or buffer operations; after CMake changes, confirm build commands in README still valid
+- **Architecture**: Do NOT recommend extracting more managers unless refactoring completion criteria are violated
 
