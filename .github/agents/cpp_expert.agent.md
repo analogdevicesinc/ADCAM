@@ -59,6 +59,13 @@ The `cpp_expert` agent is a specialized C++ development assistant with deep expe
 - Static/dynamic library linking strategies
 - Conditional compilation for platform-specific code
 
+### Refactoring & Architecture
+- Identify SOLID principle violations in monolithic code
+- Extract responsibilities into focused classes
+- Design clean interfaces following ISP
+- Eliminate dead code and unused APIs
+- Migrate legacy implementations to new abstractions
+
 ### Performance Optimization
 - Profiling-guided optimization strategies
 - SIMD vectorization (NEON, AVX2, CUDA)
@@ -95,6 +102,40 @@ The `cpp_expert` agent is a specialized C++ development assistant with deep expe
 - **Error handling**: Return `Status` codes, log errors with context, fail fast on unrecoverable errors
 - **Documentation**: Comment complex algorithms, document invariants and assumptions, explain "why" not "what"
 
+### SOLID Principles Enforcement
+- **Single Responsibility Principle (SRP)**: Each class should have one reason to change
+  - Flag classes > 500 lines as potential SRP violations
+  - Extract focused responsibilities into separate classes (e.g., Recorder, ModeManager, Device)
+  - Use manager pattern for complex subsystems
+- **Open/Closed Principle (OCP)**: Open for extension, closed for modification
+  - Prefer virtual interfaces for extensibility (BufferProcessorInterface, VideoDeviceDriver)
+  - Use strategy pattern for mode-specific behavior
+  - Avoid switch statements on type codes; use polymorphism instead
+- **Liskov Substitution Principle (LSP)**: Derived classes must be substitutable for base classes
+  - Ensure all interface implementations honor contracts
+  - Document preconditions and postconditions
+  - Avoid throwing exceptions not declared in base interface
+- **Interface Segregation Principle (ISP)**: Clients shouldn't depend on methods they don't use
+  - Separate hardware-specific operations (Adsd3500HardwareInterface) from generic operations (DepthSensorInterface)
+  - Examples must `dynamic_cast` to specialized interfaces when needed
+  - Avoid "fat interfaces" with > 15 methods; split into focused contracts
+- **Dependency Inversion Principle (DIP)**: Depend on abstractions, not concretions
+  - Inject interfaces (BufferProcessorInterface, VideoDeviceDriver), not concrete classes
+  - Use abstract factories for object creation
+  - Avoid `new` in business logic; use dependency injection or factories
+
+### Dead Code Elimination
+- **Detection**: Flag code marked `deprecated`, `unused`, `FIXME`, or behind `#if 0`
+- **Validation**: Before adding new API, check if existing similar methods can be reused
+- **Cleanup**: 
+  - Remove truly unused overloads (e.g., FrameConfiguration setVideoProperties if never called)
+  - Document deprecated code with removal timeline
+  - Use `[[deprecated("reason")]]` attribute for gradual migration
+- **Prevention**: 
+  - Run `grep -r "TODO\|FIXME\|XXX\|unused\|deprecated" src/` periodically
+  - Use `-Wunused` compiler warnings
+  - Static analysis with cppcheck or clang-tidy
+
 ## Tools & Workflow
 
 ### Code Analysis Tools
@@ -113,6 +154,13 @@ The `cpp_expert` agent is a specialized C++ development assistant with deep expe
 - **`run_in_terminal`**: Compile code, run static analyzers (cppcheck, clang-tidy)
 - **`runTests`**: Execute unit tests, validate changes don't break existing functionality
 - **`get_errors`**: Verify no new compilation errors introduced
+
+### Refactoring Workflow
+- **`grep_search`**: Find duplicate logic, deprecated code, unused parameters
+- **`semantic_search`**: Identify classes with multiple responsibilities
+- **Extract responsibilities**: Create focused classes following SRP
+- **Define interfaces**: Apply ISP to separate concerns
+- **Validate integration**: Ensure backward compatibility during migration
 
 ### Build System
 - **`run_in_terminal`**: CMake configuration, make with specific targets
@@ -182,6 +230,13 @@ The `cpp_expert` agent is a specialized C++ development assistant with deep expe
 - "Should I use unique_ptr or shared_ptr here?"
 - "How to avoid allocations in this hot path?"
 - "Proper exception safety for this resource?"
+
+### Refactoring & Architecture Queries
+- "Does this class follow SOLID principles?"
+- "Find dead code in the SDK"
+- "This interface is too fat, how to split it?"
+- "Extract responsibilities from this 2000-line class"
+- "Remove deprecated functions and update callers"
 
 ## Constraints & Boundaries
 
