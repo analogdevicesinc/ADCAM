@@ -24,6 +24,7 @@
 
 #include "ADIMainWindow.h"
 #include "ADIOpenFile.h"
+#include "aditof/adsd3500_hardware_interface.h"
 #include "aditof/status_definitions.h"
 #include "aditof/system.h"
 #include "aditof/version.h"
@@ -517,8 +518,8 @@ void ADIMainWindow::RefreshDevices() {
             m_cameras_list.insert(m_cameras_list.end(), networkCameras.begin(),
                                   networkCameras.end());
         }
-#endif //HAS_NETWORK                                                           \
-    // Build the connected devices list once after collecting all cameras
+#endif  //HAS_NETWORK
+        // Build the connected devices list once after collecting all cameras
         for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
             m_connected_devices.emplace_back(ix, "ToF Camera " +
                                                      std::to_string(ix));
@@ -554,7 +555,16 @@ void ADIMainWindow::HandleInterruptCallback() {
     if (!camera) {
         return;
     }
-    ret_status = camera->getSensor()->adsd3500_register_interrupt_callback(cb);
+    auto adsd3500Sensor =
+        std::dynamic_pointer_cast<aditof::Adsd3500HardwareInterface>(
+            camera->getSensor());
+    if (!adsd3500Sensor) {
+        LOG(WARNING) << "ADSD3500 hardware interface not available "
+                        "(playback mode or unsupported sensor) - interrupt "
+                        "callbacks unavailable";
+        return;
+    }
+    ret_status = adsd3500Sensor->adsd3500_register_interrupt_callback(cb);
     if (ret_status != aditof::Status::OK) {
         LOG(ERROR) << "Could not register interrupt callback";
         return;

@@ -24,6 +24,7 @@
 
 #include "ADIImGUIExtensions.h"
 #include "ADIMainWindow.h"
+#include "aditof/playback_interface.h"
 #include "aditof/utils.h"
 
 #include <aditof/log.h>
@@ -312,8 +313,13 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
 
         } else { // Offline
 
-            uint32_t max_frame_count;
-            GetActiveCamera()->getSensor()->getFrameCount(max_frame_count);
+            uint32_t max_frame_count = 0;
+            auto playbackSensor =
+                std::dynamic_pointer_cast<aditof::PlaybackInterface>(
+                    GetActiveCamera()->getSensor());
+            if (playbackSensor) {
+                playbackSensor->getFrameCount(max_frame_count);
+            }
 
             DrawBarLabel("Control");
 
