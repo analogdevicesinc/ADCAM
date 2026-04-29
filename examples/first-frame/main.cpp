@@ -22,15 +22,16 @@
  * SOFTWARE.
  */
 
+#include <aditof/adsd3500_hardware_interface.h>
 #include <aditof/camera.h>
 #include <aditof/depth_sensor_interface.h>
 #include <aditof/frame.h>
+#include <aditof/log.h>
 #include <aditof/system.h>
 #include <aditof/version-kit.h>
 #include <aditof/version.h>
 #include <command_parser.h>
 #include <fstream>
-#include <aditof/log.h>
 #include <ios>
 #include <iostream>
 #include <map>
@@ -196,10 +197,18 @@ int main(int argc, char *argv[]) {
                      "forwarded. ADSD3500 status = "
                   << status;
     };
-    Status registerCbStatus =
-        sensor->adsd3500_register_interrupt_callback(callback);
-    if (status != Status::OK) {
-        LOG(WARNING) << "Could not register callback";
+    Status registerCbStatus = Status::UNAVAILABLE;
+    // Cast to hardware-specific interface (ISP - Interface Segregation Principle)
+    auto adsd3500_hw =
+        std::dynamic_pointer_cast<Adsd3500HardwareInterface>(sensor);
+    if (adsd3500_hw) {
+        registerCbStatus =
+            adsd3500_hw->adsd3500_register_interrupt_callback(callback);
+        if (registerCbStatus != Status::OK) {
+            LOG(WARNING) << "Could not register callback";
+        }
+    } else {
+        LOG(WARNING) << "Sensor does not support ADSD3500 hardware interface";
     }
 
     if (!configFile.empty()) {
@@ -277,8 +286,8 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Mode: " << static_cast<unsigned int>(metadata.imagerMode);
 
     // Example on how to unregister a callback from ADSD3500 interupts
-    if (registerCbStatus == Status::OK) {
-        sensor->adsd3500_unregister_interrupt_callback(callback);
+    if (registerCbStatus == Status::OK && adsd3500_hw) {
+        adsd3500_hw->adsd3500_unregister_interrupt_callback(callback);
     }
 
     return 0;
