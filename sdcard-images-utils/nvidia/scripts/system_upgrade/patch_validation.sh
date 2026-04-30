@@ -2,8 +2,8 @@
 
 # Patch Validation Script for NVIDIA Jetson Orin Nano
 # This script validates that all patches from apply_patch.sh were applied successfully
-# Version: 1.0
-# Date: 2026-01-27
+# Version: 2.0
+# Date: 2026-04-30
 
 # Exit on error, but allow individual checks to fail gracefully
 set -o pipefail
@@ -36,6 +36,9 @@ I2C_BUS=2
 I2C_ADDRESSES=(0x38 0x58 0x68)
 GPIO_LIST=("ISP_RST" "EN_1P8" "EN_0P8" "P2" "I2CM_SEL" "ISP_BS3" "NET_HOST_IO_SEL" "ISP_BS0" "ISP_BS1" "HOST_IO_DIR" "ISP_BS4" "ISP_BS5" "FSYNC_DIR" "EN_VAUX" "EN_VAUX_LS" "EN_SYS")
 declare -gA GPIO_MAP
+
+# Kernel modules expected to be loaded after a successful patch + reboot
+KERNEL_MODULES=("nv_adsd3500")
 
 ##############################################################################
 # Logging Functions
@@ -82,6 +85,47 @@ function print_warning() {
     echo -e "${YELLOW}[WARN]${NC} ${message}"
     log_message "WARN" "${message}"
     ((WARNING_CHECKS++))
+}
+
+##############################################################################
+# Helper Functions
+##############################################################################
+
+# check_kernel_module <module_name>
+# Returns: 0 = loaded and in use, 1 = not loaded, 2 = invalid argument
+function check_kernel_module() {
+    local module="$1"
+
+    if [[ -z "${module}" ]]; then
+        print_fail "check_kernel_module: no module name provided"
+        return 2
+    fi
+
+    local mod_info
+    mod_info=$(lsmod | awk -v mod="${module}" '$1 == mod {print $0}')
+
+    if [[ -z "${mod_info}" ]]; then
+        print_fail "Kernel module '${module}' is NOT loaded"
+        log_message "FAIL" "Kernel module '${module}' not loaded"
+        return 1
+    fi
+
+    local size used
+    size=$(echo "${mod_info}" | awk '{print $2}')
+    used=$(echo "${mod_info}" | awk '{print $3}')
+
+    print_pass "Kernel module '${module}' is loaded (size: ${size} bytes, usage count: ${used})"
+    log_message "PASS" "Module '${module}': size=${size}, used=${used}"
+
+    if [[ "${used}" -gt 0 ]]; then
+        print_pass "Module '${module}' is currently in use"
+        log_message "INFO" "Module '${module}' is in use"
+    else
+        print_warning "Module '${module}' is loaded but not currently in use"
+        log_message "WARN" "Module '${module}' loaded but usage count is 0"
+    fi
+
+    return 0
 }
 
 ##############################################################################
@@ -385,6 +429,74 @@ function validate_camera_devices() {
     fi
 }
 
+function validate_loaded_kernel_modules() {
+    print_check "Loaded Kernel Modules"
+
+    if ! command -v lsmod &>/dev/null; then
+        print_warning "lsmod not available, skipping loaded module checks"
+        return 0
+    fi
+
+    local all_loaded=0
+
+    for module in "${KERNEL_MODULES[@]}"; do
+        check_kernel_module "${module}" || all_loaded=1
+    done
+
+    if [[ ${all_loaded} -eq 0 ]]; then
+        print_pass "All expected kernel modules are loaded"
+    else
+        print_fail "One or more expected kernel modules are not loaded"
+    fi
+
+    return ${all_loaded}
+}
+
+function validate_adsd3500_subdev() {
+    print_check "ADSD3500 Media Subdevice"
+
+    if ! command -v media-ctl &>/dev/null; then
+        print_warning "media-ctl not available, skipping ADSD3500 subdev check"
+        print_warning "Install with: sudo apt install v4l-utils"
+        return 0
+    fi
+
+    local found=0
+
+    for media in /dev/media*; do
+        [[ -e "${media}" ]] || continue
+
+        local dot
+        dot=$(media-ctl --device "${media}" --print-dot 2>/dev/null) || continue
+
+        if echo "${dot}" | grep -qi "adsd3500"; then
+            local subdev
+            subdev=$(echo "${dot}" | grep -i "adsd3500" -A5 | grep -o '/dev/v4l-subdev[0-9]\+' | head -n1)
+
+            print_pass "ADSD3500 found in media device: ${media}"
+            log_message "INFO" "ADSD3500 found on media device: ${media}"
+
+            if [[ -n "${subdev}" ]]; then
+                print_pass "ADSD3500 linked subdev node: ${subdev}"
+                log_message "INFO" "ADSD3500 subdev: ${subdev}"
+            else
+                print_warning "ADSD3500 found but no v4l-subdev node detected in media graph"
+                log_message "WARN" "ADSD3500 on ${media}: no v4l-subdev node found"
+            fi
+
+            found=1
+        fi
+    done
+
+    if [[ ${found} -eq 0 ]]; then
+        print_fail "ADSD3500 not found in any media device"
+        log_message "FAIL" "ADSD3500 not found in any /dev/media* device"
+        return 1
+    fi
+
+    return 0
+}
+
 ##############################################################################
 # Device Hardware Validation Functions
 ##############################################################################
@@ -678,6 +790,8 @@ function main() {
     validate_udev_rules || echo -e "${YELLOW}Udev rules check encountered issues${NC}"
     validate_shell_scripts || echo -e "${YELLOW}Shell scripts check encountered issues${NC}"
     validate_camera_devices || echo -e "${YELLOW}Camera devices check encountered issues${NC}"
+    validate_loaded_kernel_modules || echo -e "${YELLOW}Loaded kernel modules check encountered issues${NC}"
+    validate_adsd3500_subdev || echo -e "${YELLOW}ADSD3500 subdev check encountered issues${NC}"
 
     echo -e "\n${BLUE}================================================================${NC}"
     echo -e "${BLUE}  HARDWARE DEVICE VALIDATION${NC}"
