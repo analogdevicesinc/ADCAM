@@ -171,10 +171,7 @@ int main(int argc, char *argv[]) {
 
     Status status = Status::OK;
 
-    bool saveOutput = false;
-
     if (!command_map["-f"].value.empty()) {
-        saveOutput = true;
         // Parsing output folder
         err = snprintf(folder_path, sizeof(folder_path), "%s",
                        command_map["-f"].value.c_str());
@@ -338,11 +335,7 @@ int main(int argc, char *argv[]) {
         aditof::Frame frame;
         FrameDetails fDetails;
 
-        FrameHandler frameSaver;
-        if (saveOutput) {
-            frameSaver.storeFramesToSingleFile(true);
-            frameSaver.setOutputFilePath(folder_path);
-        }
+        // Frame saving removed - use Camera::startRecording() if needed
 
         //drop first frame
         status = camera->requestFrame(&frame);
@@ -473,11 +466,7 @@ int main(int argc, char *argv[]) {
 
                 frameNumber = metadata.frameNumber;
 
-                if (divisor > 0) {
-                    if (saveOutput && (frame_count % divisor) == 0) {
-                        frameSaver.saveFrameToFile(frame);
-                    }
-                }
+                // Frame saving removed - use Camera::startRecording() if needed
 
                 frame_count++;
             }

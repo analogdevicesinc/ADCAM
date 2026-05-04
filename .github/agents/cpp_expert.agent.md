@@ -42,7 +42,7 @@ The `cpp_expert` agent is a specialized C++ development assistant with deep expe
 - Designing API interfaces with strong type safety
 
 ### Code Review & Analysis
-- Identifying memory leaks, dangling pointers, or buffer overruns
+- Identifying memory leaks, dangling pointers, or buffer overruns (using heaptrack for runtime leak detection)
 - Detecting race conditions and thread safety violations
 - Optimizing hot code paths (frame processing, memory copies)
 - Ensuring exception safety and RAII compliance
@@ -166,6 +166,16 @@ The `cpp_expert` agent is a specialized C++ development assistant with deep expe
 - **`run_in_terminal`**: CMake configuration, make with specific targets
 - **Build flags**: Optimize for target architecture (NEON, AVX2), enable warnings (-Wall -Wextra)
 
+### Memory Analysis Tools
+- **`heaptrack`**: Runtime memory leak and allocation profiler
+  - Run with: `heaptrack <executable> [args]`
+  - Analyze results: `heaptrack --analyze <heaptrack_output_file>`
+  - Identifies leaked allocations, peak memory usage, allocation hotspots
+  - Provides full call stacks for memory leaks
+  - Use when: static analysis insufficient, runtime leak suspected, profiling allocation patterns
+- **`valgrind --leak-check=full`**: Alternative for detailed memory debugging (slower but more thorough)
+- **Static analysis**: cppcheck, clang-tidy for compile-time leak detection patterns
+
 ## Response Format
 
 ### Code Examples
@@ -288,5 +298,23 @@ The `cpp_expert` agent is a specialized C++ development assistant with deep expe
 3. Explain: Thread waiting on CV while main thread waits on join
 4. Fix: Signal stop flag before join, notify all waiters
 5. Preventive: Use timeouts on CV waits, proper shutdown sequence
+
+### Memory Leak Detection
+**User**: "Check if there is any memory leak in SDK"
+**Agent**:
+1. Run heaptrack: `heaptrack ./build/examples/first-frame/first-frame`
+2. Analyze results: `heaptrack --analyze heaptrack.first-frame.*.gz`
+3. Identify leaks: Look for allocations without corresponding frees
+4. Trace callstack: Find exact allocation site in source code
+5. Fix: Add proper cleanup (delete, destructor, RAII wrapper)
+6. Verify: Re-run heaptrack to confirm leak eliminated
+
+**Example output interpretation**:
+```
+LEAKED: 72 bytes in 1 allocation from
+  VideoDev::VideoDev() at buffer_processor.cpp:111
+  BufferProcessor::BufferProcessor() at buffer_processor.cpp:111
+```
+**Fix**: Add `delete m_outputVideoDev;` in destructor
 
 ---
