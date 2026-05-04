@@ -15,11 +15,11 @@ set(PROJECT_NAME "Time-of-Flight-SDK")
 set(SOURCES_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libaditof/sdk)
 set(DOCUMENTED_FILES_LIST
     "${SOURCES_SDK_DIR}/src/connections/target/gpio.cpp"
-    "${SOURCES_SDK_DIR}/src/connections/target/adsd3500_interrupt_notifier.cpp"
-    "${SOURCES_SDK_DIR}/src/connections/target/adsd3500_mode_selector.cpp"
-    "${SOURCES_SDK_DIR}/src/connections/target/sensor-tables/device_parameters.cpp"
-    "${SOURCES_SDK_DIR}/src/connections/target/adsd3500_sensor.cpp"
-    "${SOURCES_SDK_DIR}/src/connections/target/buffer_processor.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/target/adsd3500/adsd3500_interrupt_notifier.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/target/adsd3500/adsd3500_mode_selector.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/target/config/sensor-tables/device_parameters.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/target/adsd3500/adsd3500_sensor.cpp"
+    "${SOURCES_SDK_DIR}/src/connections/target/frame_pipeline/buffer_processor.cpp"
     "${SOURCES_SDK_DIR}/src/connections/offline/offline_depth_sensor.cpp"
     "${SOURCES_SDK_DIR}/src/connections/offline/offline_sensor_enumerator.cpp"
     "${SOURCES_SDK_DIR}/src/connections/network/network.cpp"
