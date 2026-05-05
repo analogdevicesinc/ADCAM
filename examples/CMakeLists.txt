@@ -4,7 +4,8 @@ project(examples)
 add_subdirectory(first-frame)
 add_subdirectory(data_collect)
 add_subdirectory(tof-viewer)
-if(ON_TARGET)
+# adsd3500_sample_program requires proprietary ToFi libraries
+if(ON_TARGET AND NOT USE_DEPTH_COMPUTE_OPENSOURCE)
     add_subdirectory(adsd3500_sample_program)
 endif()
 
@@ -16,7 +17,7 @@ install(PROGRAMS
     $<TARGET_FILE:ADIToFGUI>
     DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
-if(ON_TARGET)
+if(ON_TARGET AND NOT USE_DEPTH_COMPUTE_OPENSOURCE)
     install(PROGRAMS
         $<TARGET_FILE:adsd3500_sample_program>
         DESTINATION ${CMAKE_INSTALL_BINDIR} )
