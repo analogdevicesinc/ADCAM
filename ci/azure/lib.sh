@@ -109,11 +109,17 @@ deploy_doxygen() {
         git config --global user.email "cse-ci-notifications@analog.com"
         git config --global user.name "CSE-CI"
 
-        git fetch --depth 1 origin +refs/heads/gh-pages:gh-pages
+        # Try to fetch gh-pages branch; create it if it doesn't exist
+        if git fetch --depth 1 origin +refs/heads/gh-pages:gh-pages 2>/dev/null; then
+            echo_green "gh-pages branch exists, checking it out..."
+            git checkout gh-pages
+        else
+            echo_green "gh-pages branch doesn't exist, creating new orphan branch..."
+            git checkout --orphan gh-pages
+            git rm -rf .
+        fi
 
         rm -rf ${DEPS_DIR}
-
-        git checkout gh-pages
     
         cp -R ${WORK_DIR}/doc/build/doxygen_doc/html/* ${WORK_DIR}
 
