@@ -125,14 +125,22 @@ deploy_doxygen() {
 
         rm -rf ${WORK_DIR}/doc
 
-        GHPAGES_CURRENT_COMMIT=$(git log -1 --pretty=%B)
-        if [[ ${GHPAGES_CURRENT_COMMIT:(-7)} != ${CURRENT_COMMIT:0:7} ]]
-        then
-            git add --all .
-            git commit --allow-empty --amend -m "Update documentation to ${CURRENT_COMMIT:0:7}"
-            git push origin gh-pages -f
+        # Check if gh-pages has any commits (handles new orphan branch)
+        if git log -1 --pretty=%B &>/dev/null; then
+            GHPAGES_CURRENT_COMMIT=$(git log -1 --pretty=%B)
+            if [[ ${GHPAGES_CURRENT_COMMIT:(-7)} != ${CURRENT_COMMIT:0:7} ]]; then
+                git add --all .
+                git commit --allow-empty --amend -m "Update documentation to ${CURRENT_COMMIT:0:7}"
+                git push origin gh-pages -f
+            else
+                echo_green "Documentation already up to date!"
+            fi
         else
-            echo_green "Documentation already up to date!"
+            # First commit on new gh-pages branch
+            echo_green "Creating first commit on gh-pages..."
+            git add --all .
+            git commit -m "Update documentation to ${CURRENT_COMMIT:0:7}"
+            git push origin gh-pages
         fi
 
     else
