@@ -3,7 +3,7 @@
 # NVIDIA Jetson Orin Nano ToF ADSD3500 Build Script
 #
 # Description: Builds custom Linux kernel with ADI ToF camera support for
-#              NVIDIA Jetson Orin Nano (JetPack 6.2.1, L4T 36.4.4)
+#              NVIDIA Jetson Orin Nano (JetPack 6.2.2, L4T 36.5)
 #
 # Usage: ./runme.sh <sdk_version> <tof_branch_name>
 #        Example: ./runme.sh 0.0.2 main
@@ -19,8 +19,8 @@
 #   5 - Archive error
 #
 # Author: Analog Devices Inc.
-# Version: 2.0
-# Date: 2026-03-13
+# Version: 3.0
+# Date: 2026-05-12
 #===============================================================================
 
 set -euo pipefail
@@ -29,17 +29,17 @@ set -euo pipefail
 # CONFIGURATION
 #===============================================================================
 
-readonly SCRIPT_VERSION="2.0"
+readonly SCRIPT_VERSION="3.0"
 readonly ROOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly START_TIME=$(date +%s)
 
 # Build configuration
 readonly TOOLCHAIN_URL="https://developer.download.nvidia.com/embedded/L4T/bootlin/aarch64--glibc--stable-final.tar.gz"
-readonly JETSON_LINUX_URL="https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v4.4/release/Jetson_Linux_r36.4.4_aarch64.tbz2"
-readonly RELEASE_TAG="jetson_36.4.4"
-readonly KERNEL_VERSION="5.15.148-adi-tegra"
-readonly JETPACK_VERSION="6.2.1"
-readonly L4T_VERSION="36.4.4"
+readonly JETSON_LINUX_URL="https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v5.0/release/Jetson_Linux_r36.5.0_aarch64.tbz2"
+readonly RELEASE_TAG="jetson_36.5"
+readonly KERNEL_VERSION="5.15.185-adi-tegra"
+readonly JETPACK_VERSION="6.2.2"
+readonly L4T_VERSION="36.5"
 
 # Component list for patching
 readonly COMPONENTS="nv-public kernel-jammy-src nvidia-oot"
@@ -356,11 +356,11 @@ apply_git_format_patches() {
 
                 pushd "${nv_public_dir}" > /dev/null || error_exit "Failed to enter nv-public directory" ${EXIT_BUILD_ERROR}
 
-                log_debug "Resetting nv-public to origin/l4t/l4t-r36.4.4..."
-                git reset --hard origin/l4t/l4t-r36.4.4 || {
+                log_debug "Resetting nv-public to ${RELEASE_TAG}..."
+                git reset --hard ${RELEASE_TAG} || {
                     log_warning "Failed to reset nv-public, attempting fetch..."
-                    git fetch origin l4t/l4t-r36.4.4 || error_exit "Failed to fetch nv-public branch" ${EXIT_BUILD_ERROR}
-                    git reset --hard origin/l4t/l4t-r36.4.4 || error_exit "Failed to reset nv-public after fetch" ${EXIT_BUILD_ERROR}
+                    git fetch ${RELEASE_TAG} || error_exit "Failed to fetch nv-public branch" ${EXIT_BUILD_ERROR}
+                    git reset --hard ${RELEASE_TAG} || error_exit "Failed to reset nv-public after fetch" ${EXIT_BUILD_ERROR}
                 }
 
                 local patch_dir="${ROOTDIR}/patches/hardware/nvidia/t23x/nv-public"
@@ -380,7 +380,7 @@ apply_git_format_patches() {
                         fi
 
                         # Count applied patches
-                        local applied=$(git log --oneline origin/l4t/l4t-r36.4.4..HEAD | wc -l)
+                        local applied=$(git log --oneline ${RELEASE_TAG}..HEAD | wc -l)
                         patch_count=$((patch_count + applied))
                         log_success "Applied ${applied} patches to nv-public"
                     else
