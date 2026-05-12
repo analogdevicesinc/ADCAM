@@ -34,7 +34,7 @@ readonly BACKUP_DIR="/root/adi_tof_backup_$(date +%Y%m%d_%H%M%S)"
 
 # Boot configuration labels
 readonly DEFAULT_LABEL="ADSD3500-DUAL+ADSD3100"
-readonly KERNEL_VERSION="5.15.148-adi-tegra"
+readonly KERNEL_VERSION="5.15.185-adi-tegra"
 
 # Exit codes
 readonly EXIT_SUCCESS=0
@@ -426,10 +426,13 @@ configure_services() {
     fi
 
     # Jetson performance service
-    if systemctl list-unit-files | grep -q jetson-performance; then
-        log_info "Enabling jetson-performance service..."
-        systemctl enable jetson-performance || log_warning "Failed to enable jetson-performance"
-        systemctl start jetson-performance || log_warning "Failed to start jetson-performance"
+    if [[ -f /etc/systemd/system/jetson-performance.service ]]; then
+	log_info "Enabling jetson-performance service..."
+	systemctl enable jetson-performance.service || error_exit "Failed to enable jetson-performance service" ${EXIT_SERVICE_ERROR}
+	systemctl start jetson-performance.service || log_warning "Failed to start jetson-performance service"
+	log_success "jetson-performance service will start after reboot"
+    else
+	log_warning "jetson-performance.service not found - skipping"
     fi
 
     log_success "Services configured"

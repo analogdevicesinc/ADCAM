@@ -237,7 +237,7 @@ function validate_device_tree_overlays() {
 function validate_kernel_modules() {
     print_check "Kernel Modules"
 
-    local module_dir="/lib/modules/5.15.148-adi-tegra"
+    local module_dir="/lib/modules/5.15.185-adi-tegra"
 
     if [[ -d "${module_dir}" ]]; then
         print_pass "ADI kernel modules directory exists: ${module_dir}"
