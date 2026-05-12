@@ -1,8 +1,8 @@
-From 425538ec9e03a68e7380528e2cad0c0c97a42082 Mon Sep 17 00:00:00 2001
+From e67c1fdc12dadbcd8d65ce902c0e63cc971aba8f Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Tue, 9 Sep 2025 19:52:23 +0530
-Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: set the frame rate during
- the pwm trigger enable
+Subject: [PATCH 14/24] drivers: media: i2c: nv_adsd3500.c: set the frame rate
+ during the pwm trigger enable
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---

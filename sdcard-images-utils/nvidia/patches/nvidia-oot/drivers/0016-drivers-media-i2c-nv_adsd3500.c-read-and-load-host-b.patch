@@ -1,8 +1,8 @@
-From 09d906d3962ce5d4583b3bbbb5836158eebf27b6 Mon Sep 17 00:00:00 2001
+From 070453f29499d67c846ce8f0179a3d5cf4c15cd2 Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Fri, 10 Oct 2025 14:00:36 +0530
-Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: read and load host boot
- firmware
+Subject: [PATCH 16/24] drivers: media: i2c: nv_adsd3500.c: read and load host
+ boot firmware
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---

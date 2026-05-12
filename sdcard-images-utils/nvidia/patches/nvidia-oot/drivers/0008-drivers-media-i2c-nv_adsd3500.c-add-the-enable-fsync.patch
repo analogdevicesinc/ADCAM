@@ -1,8 +1,8 @@
-From 160aaac8403f727a8055652d3b9287154371cd4a Mon Sep 17 00:00:00 2001
+From f4f572440810c4c79ba550cb53c85cbf93f60bf4 Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Fri, 18 Apr 2025 11:23:59 +0530
-Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: add the enable fsync
- trigger control
+Subject: [PATCH 08/24] drivers: media: i2c: nv_adsd3500.c: add the enable
+ fsync trigger control
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---

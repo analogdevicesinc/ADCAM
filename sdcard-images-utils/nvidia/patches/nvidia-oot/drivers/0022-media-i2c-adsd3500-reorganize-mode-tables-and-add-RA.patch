@@ -1,8 +1,8 @@
-From 944ca38ca8547416416e821f6ddf30650b08105c Mon Sep 17 00:00:00 2001
+From a4b1eab7bf09192540711070080bf0aa00bad742 Mon Sep 17 00:00:00 2001
 From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Tue, 20 Jan 2026 13:53:32 +0530
-Subject: [PATCH] media: i2c: adsd3500: reorganize mode tables and add RAW12
- formats
+Subject: [PATCH 22/24] media: i2c: adsd3500: reorganize mode tables and add
+ RAW12 formats
 
 - Refactor ADSD3500 mode enumerations and frame format tables with explicit RAW8/RAW12 separation.
 - Add new resolutions and RAW12 modes while preserving deterministic mode indexing.

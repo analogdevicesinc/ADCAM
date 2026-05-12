@@ -1,8 +1,8 @@
-From 0d90c0ff4940adc19932cb3148be457712d3b1ce Mon Sep 17 00:00:00 2001
+From 2adb770e3f9ea5f5303ba4ac2df7f12d9b14cfda Mon Sep 17 00:00:00 2001
 From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Mon, 13 Apr 2026 14:26:03 +0530
-Subject: [PATCH] media: i2c: nv_adsd3500: Fix RAW8 Bayer format and interrupt
- handling
+Subject: [PATCH 23/24] media: i2c: nv_adsd3500: Fix RAW8 Bayer format and
+ interrupt handling
 
 Correct the RAW8 media bus format from SBGGR8 to SRGGB8 in the
 mode table, and ensure interrupt configuration is performed for

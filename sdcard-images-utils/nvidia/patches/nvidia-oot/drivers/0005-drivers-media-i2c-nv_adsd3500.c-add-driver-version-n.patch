@@ -1,8 +1,8 @@
-From 7e34fb25318d8992f4cfdd1f78e2c43724f8ee7b Mon Sep 17 00:00:00 2001
+From dc07faa20ec628d3a8fecfef6df6b26f38e16c4d Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Wed, 9 Apr 2025 15:13:21 +0530
-Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: add driver version number
- as 6.1.0
+Subject: [PATCH 05/24] drivers: media: i2c: nv_adsd3500.c: add driver version
+ number as 6.1.0
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---

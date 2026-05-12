@@ -1,8 +1,8 @@
-From ba91e5d63e5984b8c630e6fe86b5a3bcf05c6cc1 Mon Sep 17 00:00:00 2001
+From 1a5e98f2483963173ede208424ab02aab255ca6c Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Tue, 29 Apr 2025 16:32:14 +0530
-Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: set the default gpio
- state as interrupt trigger
+Subject: [PATCH 12/24] drivers: media: i2c: nv_adsd3500.c: set the default
+ gpio state as interrupt trigger
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---

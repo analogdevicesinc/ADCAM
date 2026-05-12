@@ -1,8 +1,8 @@
-From aabe89218e002b0efe19689007e5fa0e72159ac6 Mon Sep 17 00:00:00 2001
+From a444a712470f9ba29ea27fceb7c8fc2ef646fa30 Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Wed, 16 Apr 2025 16:11:12 +0530
-Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: add support to the pwm
- external fysnc
+Subject: [PATCH 06/24] drivers: media: i2c: nv_adsd3500.c: add support to the
+ pwm external fysnc
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---

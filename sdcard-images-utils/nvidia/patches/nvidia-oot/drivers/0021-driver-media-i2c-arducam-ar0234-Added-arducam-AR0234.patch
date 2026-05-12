@@ -1,8 +1,8 @@
-From 55cb3ec842d9071a8fe1b3749325476c11430339 Mon Sep 17 00:00:00 2001
+From b84cd92d09a836abd16aaa287c5d3936ae47fa14 Mon Sep 17 00:00:00 2001
 From: Kishan kava <kishan.kava@analog.com>
 Date: Fri, 31 Oct 2025 17:30:07 +0530
-Subject: [PATCH] driver: media: i2c: arducam ar0234: Added arducam AR0234 RGB
- camera v4l2 driver.
+Subject: [PATCH 21/24] driver: media: i2c: arducam ar0234: Added arducam
+ AR0234 RGB camera v4l2 driver.
 
 Signed-off-by: Kishan Kava <kishan.kava@analog.com>
 ---

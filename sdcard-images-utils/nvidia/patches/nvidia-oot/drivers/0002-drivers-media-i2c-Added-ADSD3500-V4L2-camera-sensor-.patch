@@ -1,7 +1,7 @@
-From 3b2b3aeb9aad3e5ebf54a494e29b720891461a7f Mon Sep 17 00:00:00 2001
+From a3303abad78a47637a7b1e04c1175981802ec97f Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Fri, 10 May 2024 17:11:09 +0530
-Subject: [PATCH 3/5] drivers: media: i2c: Added ADSD3500 V4L2 camera sensor
+Subject: [PATCH 02/24] drivers: media: i2c: Added ADSD3500 V4L2 camera sensor
  driver
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
@@ -16,7 +16,7 @@ Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.c
  create mode 100644 drivers/media/i2c/nv_adsd3500.c
 
 diff --git a/drivers/media/i2c/Makefile b/drivers/media/i2c/Makefile
-index 7c5913c6..20d70c5d 100644
+index a85d6e88..7960eab7 100644
 --- a/drivers/media/i2c/Makefile
 +++ b/drivers/media/i2c/Makefile
 @@ -11,6 +11,7 @@ obj-m += max96712.o
@@ -1168,5 +1168,5 @@ index 00000000..52bc50f5
 +MODULE_AUTHOR("Bogdan Togorean");
 +MODULE_LICENSE("GPL v2");
 -- 
-2.34.1
+2.25.1
 

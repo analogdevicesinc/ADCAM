@@ -1,0 +1,27 @@
+From a04c05521831f83343de065674d73538e8ce1d7e Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 12 May 2026 14:27:36 +0530
+Subject: [PATCH 24/24] drivers: media: platform: tegra: camera:
+ sensor_common.c: added v4l2 "rggb8" pixel format
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/platform/tegra/camera/sensor_common.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/media/platform/tegra/camera/sensor_common.c b/drivers/media/platform/tegra/camera/sensor_common.c
+index 501a230d..30bf494c 100644
+--- a/drivers/media/platform/tegra/camera/sensor_common.c
++++ b/drivers/media/platform/tegra/camera/sensor_common.c
+@@ -254,6 +254,8 @@ static int extract_pixel_format(
+ 		*format = V4L2_PIX_FMT_SGBRG12;
+ 	else if (strncmp(pixel_t, "bayer_grbg12", size) == 0)
+ 		*format = V4L2_PIX_FMT_SGRBG12;
++	 else if (strncmp(pixel_t, "bayer_rggb8", size) == 0)
++                *format = V4L2_PIX_FMT_SRGGB8;
+ 	else if (strncmp(pixel_t, "bayer_bggr14", size) == 0)
+ 		*format = V4L2_PIX_FMT_SBGGR14;
+ 	else if (strncmp(pixel_t, "bayer_rggb14", size) == 0)
+-- 
+2.25.1
+

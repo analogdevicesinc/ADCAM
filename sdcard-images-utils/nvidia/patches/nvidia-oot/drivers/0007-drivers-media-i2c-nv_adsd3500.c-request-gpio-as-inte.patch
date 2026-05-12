@@ -1,8 +1,8 @@
-From cae422c3328fdca45420eca1fd6ea13367c99ce1 Mon Sep 17 00:00:00 2001
+From 3a8d0b24b1d0422a4657c35d2e8969c6edfc1618 Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Thu, 17 Apr 2025 14:04:53 +0530
-Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: request gpio as interrupt
- and assign the irq handler
+Subject: [PATCH 07/24] drivers: media: i2c: nv_adsd3500.c: request gpio as
+ interrupt and assign the irq handler
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---

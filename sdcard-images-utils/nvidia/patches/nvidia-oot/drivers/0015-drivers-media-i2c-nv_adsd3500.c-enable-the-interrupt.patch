@@ -1,8 +1,8 @@
-From ef9050af3c2417058853e696670b6221e73c4b38 Mon Sep 17 00:00:00 2001
+From d70467774378ab39a64bedd87160211b522c491e Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Tue, 16 Sep 2025 14:32:43 +0530
-Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: enable the interrupt mode
- as default configuration
+Subject: [PATCH 15/24] drivers: media: i2c: nv_adsd3500.c: enable the
+ interrupt mode as default configuration
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---
