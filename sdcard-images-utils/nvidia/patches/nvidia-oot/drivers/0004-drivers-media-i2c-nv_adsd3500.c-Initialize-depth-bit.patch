@@ -1,8 +1,8 @@
-From 191dc5cc5b8e34586d07da9e84173e50098ae90f Mon Sep 17 00:00:00 2001
+From 098b8deb4f8e47c93ea655c8711053216ccbb482 Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Tue, 16 Jul 2024 10:59:55 +0530
-Subject: [PATCH 5/5] drivers: media: i2c: nv_adsd3500.c: Initialize depth bits
- to 0
+Subject: [PATCH 04/24] drivers: media: i2c: nv_adsd3500.c: Initialize depth
+ bits to 0
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---
@@ -43,5 +43,5 @@ index db5222b1..0edaf0a8 100644
  	},
  	{
 -- 
-2.34.1
+2.25.1
 

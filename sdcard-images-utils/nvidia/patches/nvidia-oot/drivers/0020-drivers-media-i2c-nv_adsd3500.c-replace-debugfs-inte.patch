@@ -1,8 +1,8 @@
-From 2af70d0cf2bd9db32a5706a87fcb7f1ce4118e9d Mon Sep 17 00:00:00 2001
+From 6d54ef1f39e54e7848820491507f31a77837caf2 Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan-Padmanaban_adi <sivasubramaniyan.padmanaban@analog.com>
 Date: Fri, 31 Oct 2025 12:22:04 +0530
-Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: replace debugfs interface
- with procfs
+Subject: [PATCH 20/24] drivers: media: i2c: nv_adsd3500.c: replace debugfs
+ interface with procfs
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

@@ -1,8 +1,8 @@
-From d26ea6091fbd0863d96071b9f18c28df97e01a18 Mon Sep 17 00:00:00 2001
+From 24880b5e878f4153e7ff7df5adf713e149e4010b Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Thu, 16 Oct 2025 14:04:49 +0530
-Subject: [PATCH 2/2] drivers: media: i2c: nv_adsd3500.c: added RAW8 and RAW12
- resolutions
+Subject: [PATCH 18/24] drivers: media: i2c: nv_adsd3500.c: added RAW8 and
+ RAW12 resolutions
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---

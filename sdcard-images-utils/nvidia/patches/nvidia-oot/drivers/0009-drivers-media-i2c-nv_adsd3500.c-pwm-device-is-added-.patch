@@ -1,8 +1,8 @@
-From 54ceef49b34f90aca601fd20eb5aa65b45c99969 Mon Sep 17 00:00:00 2001
+From 642cf3cac6738f299d6319384f10d317350bf7f2 Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Fri, 18 Apr 2025 15:29:51 +0530
-Subject: [PATCH] drivers: media: i2c: nv_adsd3500.c: pwm device is added as an
- optional property
+Subject: [PATCH 09/24] drivers: media: i2c: nv_adsd3500.c: pwm device is added
+ as an optional property
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.c
  1 file changed, 22 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/media/i2c/nv_adsd3500.c b/drivers/media/i2c/nv_adsd3500.c
-index b21c0468..1030b099 100644
+index b21c0468..96a1f171 100644
 --- a/drivers/media/i2c/nv_adsd3500.c
 +++ b/drivers/media/i2c/nv_adsd3500.c
 @@ -74,7 +74,7 @@ struct adsd3500 {

@@ -1,7 +1,7 @@
-From 75d939976a1d1ac722e8b17dcfa69db7e64edf4e Mon Sep 17 00:00:00 2001
+From f55403ac949abc00c8908b96d8bc98117660b045 Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Mon, 1 Jul 2024 16:37:03 +0530
-Subject: [PATCH 4/5] drivers: media: i2c: adsd3500.c: Add mode0,1 and raw
+Subject: [PATCH 03/24] drivers: media: i2c: adsd3500.c: Add mode0,1 and raw
  frame resolutions.
 
 Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
@@ -76,5 +76,5 @@ index 52bc50f5..db5222b1 100644
  };
  
 -- 
-2.34.1
+2.25.1
 
