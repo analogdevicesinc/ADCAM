@@ -52,7 +52,7 @@ This repository depends on the following components:
 
 ### Requirements
 
-* NVIDIA Jetson Orin Nano Developer Kit: JetPack 6.2.1
+* NVIDIA Jetson Orin Nano Developer Kit: JetPack 6.2.2
 * Raspberry Pi 5: Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
 
 ## Examples
@@ -113,7 +113,7 @@ Requirements:
 
 #### Installing the pre-requisites
 
-##### NVIDIA Jeston Orin Nano Dev Kit with JetPack 6.2.1
+##### NVIDIA Jeston Orin Nano Dev Kit with JetPack 6.2.2
 ```console
 sudo apt update
 sudo apt install cmake g++ \
