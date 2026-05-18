@@ -165,6 +165,8 @@ void stream_zmq_frame() {
 
     running = true;
 
+    LOG(INFO) << "stream_zmq_frame: Entering main loop, waiting for frames...";
+
     while (true) {
 
         if (stop_flag.load()) {
@@ -173,6 +175,7 @@ void stream_zmq_frame() {
         }
 
         // 1. Wait for frame to be captured on the other thread
+        LOG(INFO) << "stream_zmq_frame: Waiting for frameCaptured signal...";
         std::unique_lock<std::mutex> lock(frameMutex);
         if (!cvGetFrame.wait_for(lock, std::chrono::milliseconds(500), []() {
                 return frameCaptured || stop_flag.load();
@@ -194,15 +197,33 @@ void stream_zmq_frame() {
         }
         cvGetFrame.notify_one();
 
+        // Safety check: ensure buffer is allocated before sending
+        if (!buff_frame_to_send || buff_frame_length == 0) {
+            LOG(WARNING) << "Frame buffer not allocated yet, skipping frame";
+            continue;
+        }
+
         if (!server_socket) {
             LOG(ERROR) << "ZMQ server socket is not initialized!";
             break;
         }
-        zmq::message_t message(buff_frame_length);
-        memcpy(message.data(), buff_frame_to_send, buff_frame_length);
-        auto send = server_socket->send(message, zmq::send_flags::none);
-        if (!send.has_value()) {
-            LOG(INFO) << "Client is busy , dropping the frame!";
+        try {
+            zmq::message_t message(buff_frame_length);
+            memcpy(message.data(), buff_frame_to_send, buff_frame_length);
+            auto send = server_socket->send(message, zmq::send_flags::none);
+            if (!send.has_value()) {
+                LOG(INFO) << "Client is busy , dropping the frame!";
+            }
+        } catch (const zmq::error_t &e) {
+            if (e.num() == EINTR) {
+                LOG(WARNING)
+                    << "ZMQ frame send interrupted by signal: " << e.what();
+            } else if (e.num() == ETERM) {
+                LOG(INFO) << "ZMQ context terminated, exiting stream_zmq_frame";
+                break;
+            } else {
+                LOG(ERROR) << "ZMQ error in stream_zmq_frame: " << e.what();
+            }
         }
     }
 
@@ -278,6 +299,8 @@ aditof::SensorInterruptCallback callback = [](aditof::Adsd3500Status status) {
 
 // Function executed in the capturing frame thread
 static void captureFrameFromHardware() {
+    LOG(INFO) << "captureFrameFromHardware: Thread started, camDepthSensor="
+              << (void *)camDepthSensor.get();
     while (keepCaptureThreadAlive) {
 
         // 1. Wait for the signal to start capturing a new frame
@@ -296,11 +319,26 @@ static void captureFrameFromHardware() {
         // 2. The signal has been received, now go capture the frame
         goCaptureFrame = false;
 
+        // Safety check: ensure buffer is allocated before capturing
+        if (!buff_frame_to_be_captured) {
+            LOG(WARNING) << "Capture buffer not allocated yet, skipping frame";
+            continue;
+        }
+
+        LOG(INFO)
+            << "captureFrameFromHardware: About to call getFrame(), buffer="
+            << (void *)buff_frame_to_be_captured;
+
         // Send frames to PC via ZMQ socket.
         auto getFramefuture = std::async(std::launch::async, [&]() {
+            LOG(INFO) << "captureFrameFromHardware: Inside async lambda, "
+                         "calling getFrame()...";
             // Get a new frame from the sensor
-            return camDepthSensor->getFrame(
-                (uint16_t *)buff_frame_to_be_captured);
+            auto result =
+                camDepthSensor->getFrame((uint16_t *)buff_frame_to_be_captured);
+            LOG(INFO) << "captureFrameFromHardware: getFrame() returned status "
+                      << (int)result;
+            return result;
         });
 
         if (getFramefuture.wait_for(get_frame_timeout) ==
@@ -480,29 +518,48 @@ void data_transaction() {
         if (connection_mtx.try_lock_for(std::chrono::milliseconds(200))) {
 
             if (Client_Connected) {
-                if (server_cmd->recv(request, zmq::recv_flags::dontwait)) {
-                    google::protobuf::io::ArrayInputStream ais(request.data(),
-                                                               request.size());
-                    google::protobuf::io::CodedInputStream coded_input(&ais);
-                    buff_recv.ParseFromCodedStream(&coded_input);
-                    invoke_sdk_api(buff_recv);
+                try {
+                    if (server_cmd->recv(request, zmq::recv_flags::dontwait)) {
+                        google::protobuf::io::ArrayInputStream ais(
+                            request.data(), request.size());
+                        google::protobuf::io::CodedInputStream coded_input(
+                            &ais);
+                        buff_recv.ParseFromCodedStream(&coded_input);
+                        invoke_sdk_api(buff_recv);
 
-                    // Preparing to send the data
-                    unsigned int siz = buff_send.ByteSize();
-                    unsigned char *pkt = new unsigned char[siz];
+                        // Preparing to send the data
+                        unsigned int siz = buff_send.ByteSize();
+                        unsigned char *pkt = new unsigned char[siz];
 
-                    google::protobuf::io::ArrayOutputStream aos(pkt, siz);
-                    google::protobuf::io::CodedOutputStream coded_output(&aos);
-                    buff_send.SerializeToCodedStream(&coded_output);
+                        google::protobuf::io::ArrayOutputStream aos(pkt, siz);
+                        google::protobuf::io::CodedOutputStream coded_output(
+                            &aos);
+                        buff_send.SerializeToCodedStream(&coded_output);
 
-                    // Create a zmq message
-                    zmq::message_t reply(pkt, siz);
-                    if (server_cmd->send(reply, zmq::send_flags::none)) {
-#ifdef NW_DEBUG
-                        LOG(INFO) << "Data is sent ";
-#endif
+                        // Create a zmq message
+                        zmq::message_t reply(pkt, siz);
+                        if (server_cmd->send(reply, zmq::send_flags::none)) {
+                            DLOG(INFO)
+                                << "Response sent successfully, size=" << siz
+                                << " bytes";
+                        } else {
+                            LOG(ERROR) << "Failed to send response!";
+                        }
+                        delete[] pkt;
                     }
-                    delete[] pkt;
+                } catch (const zmq::error_t &e) {
+                    if (e.num() == EINTR) {
+                        LOG(WARNING) << "ZMQ operation interrupted by signal: "
+                                     << e.what();
+                    } else if (e.num() == ETERM) {
+                        LOG(INFO) << "ZMQ context terminated, exiting "
+                                     "data_transaction";
+                        connection_mtx.unlock();
+                        break;
+                    } else {
+                        LOG(ERROR)
+                            << "ZMQ error in data_transaction: " << e.what();
+                    }
                 }
             }
             connection_mtx.unlock();
@@ -663,10 +720,12 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
                 camHardwareInterface->adsd3500_register_interrupt_callback(
                     callback);
             if (registerCbStatus != aditof::Status::OK) {
-                LOG(WARNING) << "Could not register callback";
+                LOG(WARNING) << "Could not register callback, status: "
+                             << (int)registerCbStatus;
                 // TBD: not sure whether to send this error to client or not
             }
 
+            LOG(INFO) << "FindSensors: Sending OK status to client";
             buff_send.set_status(
                 static_cast<::payload::Status>(aditof::Status::OK));
             break;
@@ -689,42 +748,71 @@ void invoke_sdk_api(payload::ClientRequest buff_recv) {
                 gotStream_off =
                     false; // reset this flag to expect the stream-off after start.
             }
+
+            // DIAGNOSTIC: Check buffer state BEFORE starting device
+            LOG(INFO) << "START: buff_frame_to_send="
+                      << (void *)buff_frame_to_send
+                      << " buff_frame_to_be_captured="
+                      << (void *)buff_frame_to_be_captured
+                      << " buff_frame_length=" << buff_frame_length;
+
             aditof::Status status = camDepthSensor->start();
 
             // When in test mode, capture 2 frames. 1st might be corrupt after a ADSD3500 reset.
             // 2nd frame will be the one sent over and over again by server in test mode.
             if (sameFrameEndlessRepeat) {
-                for (int i = 0; i < 2; ++i) {
-                    status = camDepthSensor->getFrame(
-                        (uint16_t *)(buff_frame_to_send));
-                    if (status != aditof::Status::OK) {
-                        LOG(ERROR) << "Failed to get frame!";
+                if (!buff_frame_to_send || buff_frame_length == 0) {
+                    LOG(ERROR) << "buff_frame_to_send not initialized! Call "
+                                  "SetMode first.";
+                    status = aditof::Status::GENERIC_ERROR;
+                } else {
+                    for (int i = 0; i < 2; ++i) {
+                        status = camDepthSensor->getFrame(
+                            (uint16_t *)(buff_frame_to_send));
+                        if (status != aditof::Status::OK) {
+                            LOG(ERROR) << "Failed to get frame!";
+                        }
                     }
                 }
             } else { // When in normal mode, trigger the capture thread to fetch a frame
-                {
-                    std::lock_guard<std::mutex> lock(frameMutex);
-                    goCaptureFrame = true;
+                // Safety check: ensure buffers are allocated before triggering capture
+                if (!buff_frame_to_be_captured || buff_frame_length == 0) {
+                    LOG(ERROR) << "Frame buffers not initialized! Call SetMode "
+                                  "before Start.";
+                    status = aditof::Status::GENERIC_ERROR;
+                } else {
+                    {
+                        std::lock_guard<std::mutex> lock(frameMutex);
+                        goCaptureFrame = true;
+                    }
+                    cvGetFrame.notify_one();
                 }
-                cvGetFrame.notify_one();
             }
 
-            if (send_async == true) {
-                if (isConnectionClosed == false) {
-                    close_zmq_connection();
+            // Only start streaming if everything is OK (buffers allocated, etc.)
+            if (status == aditof::Status::OK) {
+                LOG(INFO) << "START: Status OK, proceeding to start streaming. "
+                             "send_async="
+                          << send_async;
+                if (send_async == true) {
+                    if (isConnectionClosed == false) {
+                        close_zmq_connection();
+                    }
+                    isConnectionClosed = false;
+                    start_stream_thread(); // Start the stream_frame thread .
+                } else {
+                    static zmq::context_t zmq_context(1);
+                    server_socket = std::make_unique<zmq::socket_t>(
+                        zmq_context, zmq::socket_type::push);
+                    server_socket->set(zmq::sockopt::sndhwm,
+                                       static_cast<int>(max_send_frames));
+                    server_socket->set(zmq::sockopt::sndtimeo,
+                                       static_cast<int>(FRAME_TIMEOUT));
+                    server_socket->bind("tcp://*:5555");
+                    LOG(INFO) << "ZMQ server socket connection established.";
                 }
-                isConnectionClosed = false;
-                start_stream_thread(); // Start the stream_frame thread .
             } else {
-                static zmq::context_t zmq_context(1);
-                server_socket = std::make_unique<zmq::socket_t>(
-                    zmq_context, zmq::socket_type::push);
-                server_socket->set(zmq::sockopt::sndhwm,
-                                   static_cast<int>(max_send_frames));
-                server_socket->set(zmq::sockopt::sndtimeo,
-                                   static_cast<int>(FRAME_TIMEOUT));
-                server_socket->bind("tcp://*:5555");
-                LOG(INFO) << "ZMQ server socket connection established.";
+                LOG(ERROR) << "Cannot start streaming, status: " << (int)status;
             }
 
             buff_send.set_status(static_cast<::payload::Status>(status));
