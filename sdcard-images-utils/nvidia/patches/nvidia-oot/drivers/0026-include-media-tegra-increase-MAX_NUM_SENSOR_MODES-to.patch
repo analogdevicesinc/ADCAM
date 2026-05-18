@@ -1,0 +1,32 @@
+From 16fcd6c547260ea822584438cab3149abf169ba2 Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Mon, 18 May 2026 14:48:44 +0530
+Subject: [PATCH] include: media: tegra: increase MAX_NUM_SENSOR_MODES to 120
+
+- Extend MAX_NUM_SENSOR_MODES from 90 to 120 to support sensors
+  exposing a larger set of operating modes.
+- Prevent potential truncation or failure when enumerating modes
+  in drivers with higher mode counts.
+- No functional change for existing sensors below the previous limit.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ include/media/tegra-v4l2-camera.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/media/tegra-v4l2-camera.h b/include/media/tegra-v4l2-camera.h
+index 240a16d6..57997c1c 100644
+--- a/include/media/tegra-v4l2-camera.h
++++ b/include/media/tegra-v4l2-camera.h
+@@ -71,7 +71,7 @@
+ 
+ #define MAX_BUFFER_SIZE			32
+ #define MAX_CID_CONTROLS		32
+-#define MAX_NUM_SENSOR_MODES		90
++#define MAX_NUM_SENSOR_MODES		120
+ #define OF_MAX_STR_LEN			256
+ #define OF_SENSORMODE_PREFIX ("mode")
+ 
+-- 
+2.25.1
+
