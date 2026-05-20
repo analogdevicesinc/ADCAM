@@ -203,7 +203,7 @@ int main(int argc, char *argv[]) {
 
     // Parsing frame rate
     uint16_t fps = std::stoi(command_map["-fps"].value);
-    if (fps == 0 || fps > 60) {
+    if (fps == 0 || fps > 30) {
         LOG(ERROR) << "Invalid frame rate: " << fps
                    << ". Valid range is 1 to 30 fps.";
         return -1;
