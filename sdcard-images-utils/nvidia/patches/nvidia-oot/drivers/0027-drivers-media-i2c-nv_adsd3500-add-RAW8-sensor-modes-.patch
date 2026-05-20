@@ -1,0 +1,178 @@
+From 0eb9ad82a14eb5640a480ec4d5a3ac7ebe728f9d Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Wed, 20 May 2026 21:52:20 +0530
+Subject: [PATCH] drivers: media: i2c: nv_adsd3500: add RAW8 sensor modes
+ support
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Introduce multiple RAW8 (MEDIA_BUS_FMT_SRGGB8_1X8) modes with new
+  resolutions and configurations in adsd3500_mode_tbls and mode info.
+- Extend enum and frame format tables to expose additional sensor
+  operating modes (modes 69–81) at 30 FPS.
+- Update mode info table with corresponding pixel rate and link
+  frequency entries to ensure proper pipeline configuration.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/adsd3500_mode_tbls.h | 30 ++++++++
+ drivers/media/i2c/nv_adsd3500.c        | 94 ++++++++++++++++++++++++++
+ 2 files changed, 124 insertions(+)
+
+diff --git a/drivers/media/i2c/adsd3500_mode_tbls.h b/drivers/media/i2c/adsd3500_mode_tbls.h
+index 8737e4b9..11f588e5 100644
+--- a/drivers/media/i2c/adsd3500_mode_tbls.h
++++ b/drivers/media/i2c/adsd3500_mode_tbls.h
+@@ -71,6 +71,19 @@ enum {
+ 	ADSD3500_MODE_1024x4096_RAW12_30FPS,
+ 	ADSD3500_MODE_2048x5376_RAW12_30FPS,
+ 	ADSD3500_MODE_2048x3584_RAW12_30FPS,
++	ADSD3500_MODE_3072x1707_30FPS,
++	ADSD3500_MODE_3072x1024_30FPS,
++	ADSD3500_MODE_3072x1366_30FPS,
++	ADSD3500_MODE_2048x1024_30FPS,
++	ADSD3500_MODE_3072x1536_30FPS,
++	ADSD3500_MODE_2048x1792_30FPS,
++	ADSD3500_MODE_1024x3584_30FPS,
++	ADSD3500_MODE_1536x854_30FPS,
++	ADSD3500_MODE_1536x683_30FPS,
++	ADSD3500_MODE_1024x768_30FPS,
++	ADSD3500_MODE_1536x768_30FPS,
++	ADSD3500_MODE_1024x896_30FPS,
++	ADSD3500_MODE_512x1792_30FPS,
+ };
+ 
+ static const int adsd3500_30fps[] = {
+@@ -154,6 +167,23 @@ static const struct camera_common_frmfmt adsd3500_frmfmt[] = {
+ 	{{1024, 4096}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x4096_RAW12_30FPS},   // mode66
+ 	{{2048, 5376}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x5376_RAW12_30FPS},   // mode67
+ 	{{2048, 3584}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x3584_RAW12_30FPS},   // mode68
++
++	/* RAW8 modes (69-81) */
++	{{3072, 1707}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x1707_30FPS},   	     // mode69
++	{{3072, 1024}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x1024_30FPS},         // mode70
++	{{3072, 1366}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x1366_30FPS},   	     // mode71
++	{{2048, 1024}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x1024_30FPS},         // mode72
++	{{3072, 1536}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x1536_30FPS},         // mode73
++	{{2048, 1792}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x1792_30FPS},         // mode74
++	{{1024, 3584}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x3584_30FPS},         // mode75
++	{{1536, 854},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1536x854_30FPS},          // mode76
++	{{1536, 683},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1536x683_30FPS},          // mode77
++	{{1024, 768},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x768_30FPS},          // mode78
++	{{1536, 768},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1536x768_30FPS},          // mode79
++	{{1024, 896},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x896_30FPS},          // mode80
++	{{512, 1792},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x1792_30FPS},          // mode81
++
++
+ 	/* Add modes with no device tree support after below */
+ };
+ 
+diff --git a/drivers/media/i2c/nv_adsd3500.c b/drivers/media/i2c/nv_adsd3500.c
+index ba349e4f..41fb9357 100644
+--- a/drivers/media/i2c/nv_adsd3500.c
++++ b/drivers/media/i2c/nv_adsd3500.c
+@@ -745,6 +745,100 @@ static const struct adsd3500_mode_info adsd3500_mode_info_data[] = {
+ 		.code = MEDIA_BUS_FMT_SRGGB12_1X12,
+ 		.link_freq_idx = 0 /* an index in link_freq_tbl[] */
+ 	},
++
++	/* --- RAW 8 MEDIA_BUS_FMT_SRGGB8_1X8 --- */
++	{       /* RAW8 ADSD3100 MP 16BPP Depth, 8BPP Conf as Interleaved and 16BPP AB as SuperFrame */
++		.width = 3072,
++		.height = 1707,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 MP 16BPP Depth, 8BPP Conf as Interleaved */
++		.width = 3072,
++		.height = 1024,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 MP 16BPP Depth, 8BPP Conf as Interleaved and 8BPP AB as SuperFrame */
++		.width = 3072,
++		.height = 1366,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 MP 12BPP Depth, 4BPP Conf as Interleaved */
++		.width = 2048,
++		.height = 1024,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 MP 16BPP Depth, 8BPP Conf as Interleaved and 12BPP AB as SuperFrame */
++		.width = 3072,
++		.height = 1536,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 MP 16BPP Depth, 4BPP Conf as Interleaved and 12BPP AB as SuperFrame */
++		.width = 2048,
++		.height = 1792,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 MP Depth and AB as Superframe (12BPP + 16BPP / 16BPP + 12BPP) */
++		.width = 1024,
++		.height = 3584,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 QMP 16BPP Depth, 8BPP Conf as Interleaved and 16BPP AB as SuperFrame */
++		.width = 1536,
++		.height = 854,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 QMP 16BPP Depth, Conf as Interleaved and 16BPP AB as SuperFrame */
++		.width = 1536,
++		.height = 683,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 QMP 12BPP Depth, 4BPP Conf as Interleaved and 8BPP AB as SuperFrame */
++		.width = 1024,
++		.height = 768,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 QMP 16BPP Depth, 8BPP Conf as Interleaved and 12BPP AB as SuperFrame*/
++		.width = 1536,
++		.height = 768,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 QMP 12BPP Depth, 4BPP Conf as Interleaved and 12BPP AB as SuperFrame */
++		.width = 1024,
++		.height = 896,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++	{       /* RAW8 ADSD3100 QMP Depth and AB as Superframe (12BPP + 16BPP / 16BPP + 12BPP)*/
++		.width = 512,
++		.height = 1792,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
++
+ };
+ 
+ static int adsd3500_set_frame_rate(struct adsd3500 *priv, s64 val);
+-- 
+2.25.1
+
