@@ -10,8 +10,8 @@ if( ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR} )
 endif()
 
 ############################### Version #######################################
-set(ADCAM_VERSION_MAJOR 0)
-set(ADCAM_VERSION_MINOR 2)
+set(ADCAM_VERSION_MAJOR 1)
+set(ADCAM_VERSION_MINOR 0)
 set(ADCAM_VERSION_PATCH 0)
 
 set(VERSION "${ADCAM_VERSION_MAJOR}.${ADCAM_VERSION_MINOR}.${ADCAM_VERSION_PATCH}")
