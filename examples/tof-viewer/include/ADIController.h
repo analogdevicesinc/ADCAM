@@ -271,6 +271,9 @@ class ADIController {
     /** @brief Emergency stop flag for immediate capture termination */
     bool panicStop = false;
 
+    /** @brief When true, SDK errors in captureFrames() are suppressed (e.g. during load-config dialog) */
+    bool ignoreSdkErrors = false;
+
     /** @brief Count of panic stop events triggered */
     size_t panicCount = 0;
 
