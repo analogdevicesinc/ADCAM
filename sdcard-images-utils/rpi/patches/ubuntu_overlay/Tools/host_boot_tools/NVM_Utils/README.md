@@ -23,11 +23,9 @@ For host-boot please check host_boot.sh
 	It takes only one parameter, a file name where the calibration read from the imager module should be saved
 		ex: ./CFG_READ imager_firmware.cfg
 
-	5. INIT_FW_WRITE - is used to write init firmware to the imager flash memory.
+	5. CCB_CRC_READ - is used to read back calibration CCB from the imager flash memory, with prior CRC integrity validation.
 !!ATTENTION!! For modules with non ADSD3500 Flash memory layout, the CRC mismatch is expected. !!ATTENTION!!
-        It takes only one parameter, path to the file which need to be written to the imager flash memory.
-                ex: ./INIT_FW_WRITE init_fw.stream
-
-
+        It takes only one parameter, a file name where the calibration read from the imager module should be saved
+                ex: ./CCB_CRC_READ calibration.ccb
 
 If module is not self-booting because Flash memory content is corrupted or does not contain ADSD3500 firmware, NVM_Utils tool can be used to fix it.
