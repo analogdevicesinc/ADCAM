@@ -19,5 +19,6 @@ add_subdirectory(NVM_WRITE)
 add_subdirectory(NVM_READ)
 add_subdirectory(CCB_WRITE)
 add_subdirectory(CCB_READ)
+add_subdirectory(CCB_CRC_READ)
 add_subdirectory(adsd3500_fw_update)
 

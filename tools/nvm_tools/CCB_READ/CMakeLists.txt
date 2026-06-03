@@ -8,8 +8,7 @@ include_directories(
 )
 
 set(SOURCES
-    ${NVM_COMMON}/compute_crc.c
-    ${NVM_COMMON}/crc_table.c
+    ${NVM_COMMON}/v4l2_common.cpp
 )
 
 add_executable(${PROJECT_NAME} CCB_READ.cpp ${SOURCES})
