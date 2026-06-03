@@ -149,7 +149,12 @@ void ADIController::enqueueFrameWithOverflowPolicy(
     const std::shared_ptr<aditof::Frame> &frame) {
     if (m_dropOldestWhenQueueFull.load(std::memory_order_relaxed) &&
         m_queue.size() >= ADI_CONTROLLER_MAX_FRAME_QUEUE_SIZE) {
-        setPreviewRate(m_frame_rate, (m_preview_rate * 95) / 100);
+        // Viewer can't keep up: throttle the display rate by 5% so
+        // shouldDropFrame() skips more frames. Clamp to 2 so m_preview_rate
+        // never reaches 1, which would switch captureFrames() into
+        // request-driven mode and stall the SDK pipeline.
+        uint32_t throttled = (m_preview_rate * 95) / 100;
+        setPreviewRate(m_frame_rate, std::max(throttled, 2u));
         std::shared_ptr<aditof::Frame> droppedFrame;
         m_queue.try_dequeue(droppedFrame);
         m_frames_lost++;
@@ -178,15 +183,17 @@ void ADIController::captureFrames() {
         auto fg = frame.get();
         aditof::Status status = camera->requestFrame(fg);
         if (status != aditof::Status::OK) {
-            if (panicCount >= 7) {
-                panicStop = true;
+            if (ignoreSdkErrors) {
+                enqueueFrameWithOverflowPolicy(frame);
+                m_frameRequested = false;
+                continue;
             }
-
+            LOG(ERROR)
+                << "requestFrame failed with SDK error, stopping stream.";
+            panicStop = true;
             enqueueFrameWithOverflowPolicy(frame);
             m_frameRequested = false;
-            panicCount++;
-            LOG(INFO) << "Trying to request frame... ";
-            continue;
+            break;
         }
 
         m_frame_counter++;
@@ -229,6 +236,11 @@ void ADIController::captureFrames() {
 
         if (!shouldDropFrame(m_frame_counter)) {
             enqueueFrameWithOverflowPolicy(frame);
+        } else if (m_preview_rate < m_frame_rate &&
+                   m_queue.size() < ADI_CONTROLLER_MAX_FRAME_QUEUE_SIZE / 2) {
+            // Viewer is keeping up (queue below half): recover immediately
+            // back to the configured frame rate.
+            setPreviewRate(m_frame_rate, m_frame_rate);
         }
 
         m_frameRequested = false;

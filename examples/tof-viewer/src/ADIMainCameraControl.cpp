@@ -170,14 +170,14 @@ void ADIMainWindow::UpdateOfflineFrameTypeAvailability() {
     }
 }
 
-void ADIMainWindow::PrepareCamera(uint8_t mode) {
+bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     aditof::Status status = aditof::Status::OK;
     std::vector<aditof::FrameDetails> frameTypes;
 
     status = GetActiveCamera()->setMode(mode);
     if (status != aditof::Status::OK) {
         LOG(ERROR) << "Could not set camera mode!";
-        return;
+        return false;
     }
 #if 0 //Andre
     if (!m_off_line) {
@@ -234,7 +234,7 @@ void ADIMainWindow::PrepareCamera(uint8_t mode) {
     status = GetActiveCamera()->start();
     if (status != aditof::Status::OK) {
         LOG(ERROR) << "Could not start camera!";
-        return;
+        return false;
     }
 
     // For offline mode, check what frame types are actually available
@@ -245,6 +245,7 @@ void ADIMainWindow::PrepareCamera(uint8_t mode) {
     LOG(INFO) << "Camera ready.";
     m_cameraWorkerDone = true;
     m_tof_image_pos_y = -1.0f;
+    return true;
 }
 
 void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
@@ -269,7 +270,11 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
                 m_view_instance->m_ctrl->StopCapture();
             }
 
-            PrepareCamera(modeSelect);
+            if (!PrepareCamera(modeSelect)) {
+                LOG(ERROR) << "PrepareCamera failed, stopping stream.";
+                CameraStop();
+                return;
+            }
             OpenGLCleanUp();
             InitOpenGLABTexture();
             InitOpenGLDepthTexture();
@@ -518,7 +523,7 @@ void ADIMainWindow::RefreshDevices() {
             m_cameras_list.insert(m_cameras_list.end(), networkCameras.begin(),
                                   networkCameras.end());
         }
-#endif  //HAS_NETWORK
+#endif // HAS_NETWORK
         // Build the connected devices list once after collecting all cameras
         for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
             m_connected_devices.emplace_back(ix, "ToF Camera " +

@@ -446,8 +446,9 @@ class ADIMainWindow {
     /**
 		* @brief			Prepares the camera with the selected mode
 		* @param	mode	Camera mode
+		* @return	true on success, false if any SDK call fails (camera will be stopped)
 		*/
-    void PrepareCamera(uint8_t mode);
+    bool PrepareCamera(uint8_t mode);
 
     /**
 		* @brief Check what frame types are available in offline mode
