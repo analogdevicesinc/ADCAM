@@ -998,16 +998,14 @@ void ADIMainWindow::ShowMainMenu() {
 
 void ADIMainWindow::ShowLoadAdsdParamsMenu() {
 
-    // Stop the controller worker thread cleanly so frame counters reset
-    // (m_frames_lost, m_prev_frame_number, m_frame_counter).  Raw
-    // camera->stop() + camera->start() bypasses StartCapture() and leaves
-    // stale counters → absurd "Frames Lost" / temperature values after reload.
-    // Using StopCapture() here, then setting m_capture_separate_enabled so
-    // CameraPlay() triggers a full PrepareCamera() (stop → reset → setMode →
-    // StartCapture) on the next render frame.
+    // Stop streaming before opening file dialog to prevent buffer starvation
     bool wasStreaming = m_is_playing;
     if (wasStreaming && m_view_instance) {
-        m_view_instance->m_ctrl->StopCapture();
+        m_view_instance->m_ctrl->ignoreSdkErrors = true;
+        auto camera =
+            m_view_instance->m_ctrl->m_cameras[static_cast<unsigned int>(
+                m_view_instance->m_ctrl->getCameraInUse())];
+        camera->stop();
     }
 
     int FilterIndex = 0;
@@ -1016,9 +1014,13 @@ void ADIMainWindow::ShowLoadAdsdParamsMenu() {
     LOG(INFO) << "Load File selected: " << fs;
 
     if (fs.empty()) {
-        // User cancelled — let CameraPlay() restart streaming on next frame
-        if (wasStreaming) {
-            m_capture_separate_enabled = true;
+        // Restart streaming if it was running and user cancelled
+        if (wasStreaming && m_view_instance) {
+            auto camera =
+                m_view_instance->m_ctrl->m_cameras[static_cast<unsigned int>(
+                    m_view_instance->m_ctrl->getCameraInUse())];
+            camera->start();
+            m_view_instance->m_ctrl->ignoreSdkErrors = false;
         }
         return;
     }
@@ -1051,11 +1053,13 @@ void ADIMainWindow::ShowLoadAdsdParamsMenu() {
         }
     }
 
-    // Trigger a full PrepareCamera() cycle on the next render frame.
-    // This runs: camera->stop() (GPIO reset + MIPI restore) → setMode()
-    // → StartCapture() — ensuring correct chip state and reset counters.
-    if (wasStreaming) {
-        m_capture_separate_enabled = true;
+    // Restart streaming if it was running before dialog
+    if (wasStreaming && m_view_instance) {
+        auto camera =
+            m_view_instance->m_ctrl->m_cameras[static_cast<unsigned int>(
+                m_view_instance->m_ctrl->getCameraInUse())];
+        camera->start();
+        m_view_instance->m_ctrl->ignoreSdkErrors = false;
     }
 }
 
