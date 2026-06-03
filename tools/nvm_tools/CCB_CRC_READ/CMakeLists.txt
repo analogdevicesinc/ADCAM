@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(NVM_READ)
+project(CCB_CRC_READ)
 
 set(NVM_COMMON ../common)
 
@@ -11,4 +11,4 @@ set(SOURCES
     ${NVM_COMMON}/v4l2_common.cpp
 )
 
-add_executable(${PROJECT_NAME} NVM_READ.cpp ${SOURCES})
+add_executable(${PROJECT_NAME} CCB_CRC_READ.cpp ${SOURCES})
