@@ -26,11 +26,11 @@ jobs:
 
       - name: Fetch dev-1.0.0 branch
         run: |
-          git fetch origin dev-1.0.0 || echo "dev-0.2.0 does not exist yet"
+          git fetch origin dev-1.0.0 || echo "dev-1.0.0 does not exist yet"
 
       - name: Checkout or create dev-1.0.0
         run: |
-          if git show-ref --verify --quiet refs/remotes/origin/dev-0.2.0; then
+          if git show-ref --verify --quiet refs/remotes/origin/dev-1.0.0; then
             git checkout -b dev-1.0.0 origin/dev-1.0.0
           else
             git checkout -b dev-1.0.0
