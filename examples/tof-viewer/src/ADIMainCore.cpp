@@ -998,12 +998,30 @@ void ADIMainWindow::ShowMainMenu() {
 
 void ADIMainWindow::ShowLoadAdsdParamsMenu() {
 
+    // Stop streaming before opening file dialog to prevent buffer starvation
+    bool wasStreaming = m_is_playing;
+    if (wasStreaming && m_view_instance) {
+        m_view_instance->m_ctrl->ignoreSdkErrors = true;
+        auto camera =
+            m_view_instance->m_ctrl->m_cameras[static_cast<unsigned int>(
+                m_view_instance->m_ctrl->getCameraInUse())];
+        camera->stop();
+    }
+
     int FilterIndex = 0;
     std::string fs =
         openADIFileName("ADI ToF Config Files\0*.json\0", nullptr, FilterIndex);
     LOG(INFO) << "Load File selected: " << fs;
 
     if (fs.empty()) {
+        // Restart streaming if it was running and user cancelled
+        if (wasStreaming && m_view_instance) {
+            auto camera =
+                m_view_instance->m_ctrl->m_cameras[static_cast<unsigned int>(
+                    m_view_instance->m_ctrl->getCameraInUse())];
+            camera->start();
+            m_view_instance->m_ctrl->ignoreSdkErrors = false;
+        }
         return;
     }
 
@@ -1034,6 +1052,15 @@ void ADIMainWindow::ShowLoadAdsdParamsMenu() {
             m_ini_params.clear();
         }
     }
+
+    // Restart streaming if it was running before dialog
+    if (wasStreaming && m_view_instance) {
+        auto camera =
+            m_view_instance->m_ctrl->m_cameras[static_cast<unsigned int>(
+                m_view_instance->m_ctrl->getCameraInUse())];
+        camera->start();
+        m_view_instance->m_ctrl->ignoreSdkErrors = false;
+    }
 }
 
 void ADIMainWindow::ShowSaveAdsdParamsMenu() {
@@ -1041,12 +1068,19 @@ void ADIMainWindow::ShowSaveAdsdParamsMenu() {
     ImGuiExtensions::ButtonColorChanger colorChangerStartRec(
         m_custom_color_play, m_is_playing);
 
+    // Saving config only reads parameters and writes to a JSON file — no need
+    // to stop the camera. The capture thread continues running during the
+    // blocking file dialog and the queue handles any backlog.
     char filename[MAX_PATH] = "";
     int FilterIndex;
     std::string fs = getADIFileName(
         nullptr, "ADI ToF Config Files\0*.json\0All Files\0*.*\0", filename,
         FilterIndex);
     LOG(INFO) << "Selecting to save configuration the file: " << fs;
+
+    if (fs.empty()) {
+        return;
+    }
 
     bool saveconfigurationFile = false;
     std::string saveconfigurationFileValue = fs;
