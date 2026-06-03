@@ -140,6 +140,11 @@ void ADIController::calculateFrameLoss(const uint32_t frameNumber,
     prevFrameNumber = currentFrameNumber;
     currentFrameNumber = frameNumber;
 
+    if (currentFrameNumber <= prevFrameNumber) {
+        // Frame counter wrapped or was reset – not real frame loss
+        return;
+    }
+
     if (currentFrameNumber - prevFrameNumber > 1) {
         m_frames_lost += (currentFrameNumber - prevFrameNumber - 1);
     }
@@ -226,9 +231,10 @@ void ADIController::captureFrames() {
         aditof::Metadata *metadata;
         status = frame->getData("metadata", (uint16_t **)&metadata);
         if (status == aditof::Status::OK && metadata != nullptr) {
-            if (metadata->frameNumber > 1) {
-                m_current_frame_number = metadata->frameNumber - 1;
-                m_prev_frame_number = m_current_frame_number - 1;
+            if (m_prev_frame_number == static_cast<uint32_t>(-1)) {
+                // First frame – seed tracking to avoid false frame-loss count
+                m_current_frame_number = metadata->frameNumber;
+                m_prev_frame_number = metadata->frameNumber - 1;
             }
             calculateFrameLoss(metadata->frameNumber, m_prev_frame_number,
                                m_current_frame_number);
