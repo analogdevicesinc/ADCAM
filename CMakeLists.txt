@@ -53,7 +53,6 @@ option(USE_DEPTH_COMPUTE_OPENSOURCE "Use an open source implementation?" OFF)
 option(CI_BUILD "Build for CI" OFF)
 option(WITH_OFFLINE "Build offline interface?" ON)
 option(WITH_COMMAND_LINE_TOOLS "Build with command line tools?" ON)
-set(SOM_TYPE "Dual" CACHE STRING "Which SoM SDK is building for?")
 
 ################################## Git ########################################
 include(FindGit OPTIONAL)
@@ -134,13 +133,6 @@ endif()
 
 if (WITH_NETWORK)
         add_definitions(-DHAS_NETWORK)
-endif()
-
-if(SOM_TYPE STREQUAL "Dual")
-        message("Building for Dual pulsatrix")
-        add_definitions(-DDUAL)
-else()
-        add_definitions(-DSINGLE)
 endif()
 
 
