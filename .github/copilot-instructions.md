@@ -58,7 +58,7 @@ Two worker threads communicate via lock-free queues; critical for understanding 
 ### Project-specific patterns
 - **Code style & formatting**: Run `scripts/format.sh` before commit; ClangFormat 14.0 enforced by CI (`doc/code-formatting.md`)
 - **Logging**: `#ifdef USE_GLOG` for glog, fallback to `aditof/log.h`; avoid stdout/stderr in SDK core
-- **Depth compute library**: Closed-source `libtofi_compute.so` + `libtofi_config.so`; placed in `../libs/` (one level above repo); wrapped with `#ifdef DUAL` for dual-ISP vs. fallback logic
+- **Depth compute library**: Closed-source `libtofi_compute.so` + `libtofi_config.so`; placed in `../libs/` (one level above repo); dual-ISP behavior is runtime-controlled via `dualPulsatrixSystemEnabled` INI parameter (no compile-time `#ifdef DUAL`)
 - **CMake organization**: Avoid in-source builds (enforced); SDK flags in `libaditof/cmake/readme.md`; top-level CMake glues submodules + apps
 - **Naming convention**: SDK core under `libaditof/sdk/src/cameras/itof-*`; sensor/driver integration under `libaditof/sdk/src/connections/target/` (e.g., `adsd3500_sensor.cpp`, `v4l_buffer_access_interface.h`)
 

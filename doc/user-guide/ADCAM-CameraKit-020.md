@@ -1494,7 +1494,7 @@ $ cd ToF-main
 
 Now refer to the main page of the associated ADCAM release for how to build the code.
 
-https://github.com/analogdevicesinc/ADCAM/tree/v0.2.0-a.1
+https://github.com/analogdevicesinc/ADCAM/tree/main
 
 Note, the script **activate_env.sh** set the environment variable **LIBTOFI_LIBDIR_PATH** to point to the depth compute libraries.
 

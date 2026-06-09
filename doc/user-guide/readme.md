@@ -1,4 +1,4 @@
-# Documentation for ADCAM Camera Kit version 0.2.0
+# Documentation for ADCAM Camera Kit version 1.0.0
 
 * Update the documentation for the version in question.
 * Convert to HTML via *pandoc* (command-line tool) or with *HTML to Markdown*.
