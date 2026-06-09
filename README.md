@@ -22,9 +22,7 @@ This page is in preparation for the release 1.0.0. See the ADCAM tag [v0.1.0-a.1
 
 ## Latest Release
 
-* [ADCAM Release 0.2.0-a.1](https://github.com/analogdevicesinc/ADCAM/releases/tag/v0.2.0-a.1)
-  * Please reference the **Quick Start Guide**, on the release page, for setting up the eval kit.
-* [ADCAM Eval Kit Documentation](doc/user-guide/ADCAM-CameraKit-020.md)
+* [ADCAM Eval Kit Documentation & Quick Start Guide](doc/user-guide/ADCAM-CameraKit-020.md)
 * The [ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki) is a jumping off point for other documentation.
 
 ## Overview
@@ -241,24 +239,29 @@ cmake --build . -j 6
 
 ##### CMake options
 
-There are a number of build options available via the root CMakeLists.txt file: https://github.com/analogdevicesinc/ADCAM/blob/6e5b722b5c36923065c4a3be96ad0553d387e699/CMakeLists.txt#L20C1-L24C109
+There are a number of build options available via the root CMakeLists.txt file:
 ```
 option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
 option(WITH_NETWORK "Build network interface?" OFF)
-set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO", "NVIDIA", "RPI" or "HOST"
+option(WITH_OFFLINE "Build offline interface?" ON)
+option(WITH_COMMAND_LINE_TOOLS "Build with command line tools?" ON)
+set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options: "AUTO", "NVIDIA", "RPI", "WSL2", or "HOST"
 ```
 
 * **WITH_EXAMPLES**: Builds all examples that are in the _examples_ folder. Default: ON - ie, build examples.
 * **WITH_DOC**: Builds the _doxygen_ documentation. Default: OFF - ie, do not build documentation.
-* **WITH_PYTHON**: Builds the Python bindings library, which is required for the Python examples (see: examples/bindings/python). Default: OB - ie, build Python bindings.
-* **WITH_NETWORK**: Its complicated, ignore for now. Default: OFF - ie, do not build with network functionality enabled.
+* **WITH_PYTHON**: Builds the Python bindings library, which is required for the Python examples (see: examples/bindings/python). Default: ON - ie, build Python bindings.
+* **WITH_NETWORK**: Builds ZMQ-based network interface (required for WSL2 networked setups). Default: OFF.
+* **WITH_OFFLINE**: Builds offline replay interface for playing back recorded `.adcam` files. Default: ON.
+* **WITH_COMMAND_LINE_TOOLS**: Builds command line tools. Default: ON.
 * **WITH_PLATFORM**: Sets the target platform for the build. Default: AUTO - ie, attempt to auto detect the platform.
-  * **AUTO**: Auto detect between the NVIDIA, Raspberry or Host device
+  * **AUTO**: Auto detect between NVIDIA, Raspberry Pi, or Host device
   * **NVIDIA**: Forces a build for NVIDIA Jetson Orin Nano Dev Kit
   * **RPI**: Forces a build for the Raspberry Pi 5
-  * **WSL2**: Forces a build for Windows WSL2 (this is **only** for a networked setup)
+  * **WSL2**: Forces a build for Windows WSL2 (networked setup only; enables WITH_NETWORK automatically)
+  * **HOST**: Forces a host-only build (no hardware target)
 
 An example build showing how to change an option during the build process. For this we will disable building the Python bindings. 
 
