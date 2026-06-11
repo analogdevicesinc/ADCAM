@@ -27,6 +27,16 @@ This page is in preparation for the release 1.0.0. See the ADCAM tag [v1.0.0](ht
 * [ADCAM Eval Kit Documentation](doc/user-guide/ADCAM-CameraKit-100.md)
 * The [ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki) is a jumping off point for other documentation.
 
+```
+ADCAM Installer v1.0.0
+|
+|- ADCAM v1.0.0
+   |- Dual ADSD3500 v8.1.0
+   |- ToF-drivers v7.0.0
+   |- libaditof v7.1.0
+      |- Depth Compute Library 5.1.0
+```
+
 ## Overview
 
 This repository contains the source code for the ADI **ADCAM Camera Kit**, which is built around the **ADTF3175D Time-of-Flight (ToF) Mega-Pixel imager** and the **ADSD3500 Depth ISP**.  
