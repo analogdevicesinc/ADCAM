@@ -78,7 +78,8 @@ class ADIView {
 		*/
     ADIView(std::shared_ptr<adicontroller::ADIController> ctrl,
             const std::string &name, bool enableAB = true,
-            bool enableDepth = true, bool enableXYZ = true);
+            bool enableDepth = true, bool enableXYZ = true,
+            bool enableRGB = true);
 
     /**
 		* @brief Destructor
@@ -212,6 +213,33 @@ class ADIView {
     int16_t *pointCloud_video_data;
     uint8_t *ab_video_data_8bit;
     uint8_t *depth_video_data_8bit;
+
+#ifdef WITH_RGB_SUPPORT
+    // RGB frame capture related members (following AB/Depth pattern)
+    bool m_rgbFrameAvailable = false;
+    bool m_rgbThreadCreated = false;
+    std::thread m_rgbImageWorker;
+
+    // RGB data buffers (double buffering to prevent flickering)
+    uint8_t *rgb_video_data_rgb = nullptr;      // Front buffer for display
+    uint8_t *rgb_video_data_rgb_back = nullptr; // Back buffer for writing
+    uint8_t *rgb_video_data_8bit = nullptr;     // For OpenGL texture upload
+
+    // RGB synchronization (separate from depth/AB)
+    std::mutex rgb_data_ready_mtx;
+    std::condition_variable rgb_data_ready_cv;
+    bool rgb_data_ready = false;
+
+    // RGB frame parameters
+    static constexpr int RGB_WIDTH = 1920;
+    static constexpr int RGB_HEIGHT = 1200;
+    static constexpr int RGB_FRAME_SIZE = 1358848; // NV12 format: typical size
+
+    // Actual RGB frame dimensions (set dynamically from frame data)
+    int rgbFrameWidth = 0;
+    int rgbFrameHeight = 0;
+#endif // WITH_RGB_SUPPORT
+
     float *normalized_vertices = nullptr;
     size_t pointcloudTableSize = 0;
 
@@ -348,6 +376,13 @@ class ADIView {
     bool ab_data_ready = false;
 
     const size_t N = 50;
+
+#ifdef WITH_RGB_SUPPORT
+    /**
+     * @brief Worker thread function for RGB image capture and conversion
+     */
+    void _displayRgbImage();
+#endif // WITH_RGB_SUPPORT
 
     // Call this before your function
     auto startTimer() { return std::chrono::high_resolution_clock::now(); }
