@@ -15,6 +15,7 @@
 
 #include <getopt.h> /* getopt_long() */
 
+
 #include <errno.h>
 #include <fcntl.h> /* low-level i/o */
 #include <malloc.h>
@@ -34,13 +35,14 @@
 #include <memory>
 #include <string>
 
-using namespace std;
+bool validate_ext(std::string FileName);
 
-bool validate_ext(std::string FileName, std::string Target);
+#define ADI_DUAL_FW_SLOT_SIZE 0x20000  // 128 KB per slot
+#define ADI_CHUNK_HEADER_SIZE 20       // ADI chunk header size in bytes
 
 class Adsd3500 {
   public:
-    Adsd3500(std::string FileName, std::string Target);
+    Adsd3500(std::string FileName, bool force = false);
 
   private:
     int xioctl(int fd, int request, void *arg);
@@ -56,21 +58,18 @@ class Adsd3500 {
 
     void open_device();
 
-    void reverse(char *temp);
-
-    int generate_mirror(int ch);
-
     bool Switch_from_Standard_to_Burst();
 
     bool Switch_from_Burst_to_Standard();
 
     bool Current_Firmware_Version(uint8_t cmd);
+    bool Current_Firmware_Version(uint8_t cmd, uint8_t out_ver[44]);
 
     bool Read_Chip_ID(uint16_t reg_addr);
 
-    bool updateAdsd3500MasterFirmware(const std::string &filePath);
+    bool updateAdsd3500MasterFirmware(uint8_t *fw_data, uint32_t fw_len, bool force, uint32_t expected_crc);
 
-    bool updateAdsd3500SlaveFirmware(const std::string &filePath);
+    bool updateAdsd3500SlaveFirmware(uint8_t *fw_data, uint32_t fw_len, bool force, uint32_t expected_crc);
 
     bool write_cmd(uint16_t cmd, uint16_t data);
 
@@ -84,6 +83,7 @@ class Adsd3500 {
     std::string deviceName = "adsd3500";
     std::string subdevPath;
     int sfd = -1;
+    bool force = false;
 };
 
 #endif //FIRMWARE_UPDATE_ADSD3500_H
