@@ -151,6 +151,17 @@ else()
     )
 endif()
 
+# Add RGB support compile definition if enabled
+if(NOT DEFINED WITH_RGB_CAMERA)
+    set(WITH_RGB_CAMERA OFF)
+endif()
+if(WITH_RGB_CAMERA)
+    target_compile_definitions(ADIToFGUI PRIVATE WITH_RGB_SUPPORT)
+    message(STATUS "RGB camera support enabled in tof-viewer")
+else()
+    message(STATUS "RGB camera support disabled in tof-viewer (original AB-only behavior)")
+endif()
+
 # Link Libraries
 if(UNIX)
 	set(OpenGL_GL_PREFERENCE "LEGACY")
