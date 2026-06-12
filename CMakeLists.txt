@@ -21,6 +21,7 @@ option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
 option(WITH_NETWORK "Build network interface?" OFF)
+option(WITH_RGB_CAMERA "Build with RGB camera support?" OFF)
 set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO", "NVIDIA", "RPI", "WSL2", or "HOST"
 
 ################################# PLATFORM DETECTION ###############################
@@ -167,6 +168,9 @@ if(${ON_TARGET})
                 if (NOT DEFINED LIBTOFI_LIBDIR_PATH)
                         set(LIBTOFI_LIBDIR_PATH "${CMAKE_SOURCE_DIR}/../libs")
                 endif()
+        endif()
+        if (WITH_RGB_CAMERA)
+                add_definitions(-DHAS_RGB_CAMERA)
         endif()
 endif()
 
