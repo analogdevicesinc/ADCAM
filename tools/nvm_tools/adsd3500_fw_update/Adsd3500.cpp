@@ -9,6 +9,8 @@
 #include "compute_crc.h"
 #include <array>
 #include <fstream>
+
+#include <iomanip>
 #include <iostream>
 #include <signal.h>
 #include <stdlib.h>
@@ -28,6 +30,7 @@
 #define ADI_STATUS_SECOND_FIRMWARE_FLASH_UPDATE 0x0027
 #define GET_MASTER_CHIP_ID_CMD 0x0112
 #define GET_SLAVE_CHIP_ID_CMD 0x0116
+#define GET_DUAL_ADSD3500_ENABLED_CMD 0x005A  // Read: 0x0001=Dual Enabled, 0x0000=Dual Disabled
 #define USER_TASK _IOW('A', 1, int32_t *)
 #define SIGETX 44
 
@@ -65,38 +68,238 @@ typedef union {
 } cmd_header_t;
 
 int debug_fd = -1;
-static int handler_done = 0;
-int signal_value = 0;
-int Update_Complete = 0;
+static volatile sig_atomic_t handler_done = 0;
+volatile sig_atomic_t signal_value = 0;
+volatile sig_atomic_t Update_Complete = 0;
 
-static uint32_t cal_crc32(uint32_t crc, unsigned char *buf, size_t len);
-Adsd3500::Adsd3500(std::string FileName, std::string Target) {
+Adsd3500::Adsd3500(std::string FileName, bool force) {
+    this->force = force;
     this->open_device();
-    if (strcmp(Target.c_str(), "master") == 0) {
-        this->updateAdsd3500MasterFirmware(FileName);
-    } else if (strcmp(Target.c_str(), "slave") == 0) {
-        this->updateAdsd3500SlaveFirmware(FileName);
+
+    std::ifstream fw_file(FileName, std::ios::binary);
+    if (!fw_file.is_open()) {
+        std::cerr << "Error: cannot open firmware file '" << FileName << "'" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
     }
+    std::vector<uint8_t> file_data(std::istreambuf_iterator<char>(fw_file), {});
+
+    if (file_data.size() < 2 * ADI_DUAL_FW_SLOT_SIZE) {
+        std::cerr << "Firmware file too small to contain both firmware slots" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Slot 0: master firmware (chunkId=0xAD, chunkType=0x54) at offset 0
+    if (file_data[0] != 0xAD || file_data[1] != 0x54) {
+        std::cerr << "Invalid Slot 0 header (expected chunkId=0xAD, chunkType=0x54)" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+    uint32_t master_len =
+        (uint32_t)file_data[8]               |
+        ((uint32_t)file_data[9]  <<  8)      |
+        ((uint32_t)file_data[10] << 16)      |
+        ((uint32_t)file_data[11] << 24);
+    if (master_len == 0 || master_len > ADI_DUAL_FW_SLOT_SIZE - ADI_CHUNK_HEADER_SIZE) {
+        std::cerr << "Invalid master firmware size in Slot 0 header: " << master_len << " bytes" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Slot 1: slave firmware (chunkId=0xAD, chunkType=0x60) at offset ADI_DUAL_FW_SLOT_SIZE
+    if (file_data[ADI_DUAL_FW_SLOT_SIZE] != 0xAD || file_data[ADI_DUAL_FW_SLOT_SIZE + 1] != 0x60) {
+        std::cerr << "Invalid Slot 1 header (expected chunkId=0xAD, chunkType=0x60)" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+    uint32_t slave_len =
+        (uint32_t)file_data[ADI_DUAL_FW_SLOT_SIZE + 8]              |
+        ((uint32_t)file_data[ADI_DUAL_FW_SLOT_SIZE + 9]  <<  8)     |
+        ((uint32_t)file_data[ADI_DUAL_FW_SLOT_SIZE + 10] << 16)     |
+        ((uint32_t)file_data[ADI_DUAL_FW_SLOT_SIZE + 11] << 24);
+    if (slave_len == 0 || slave_len > ADI_DUAL_FW_SLOT_SIZE - ADI_CHUNK_HEADER_SIZE) {
+        std::cerr << "Invalid slave firmware size in Slot 1 header: " << slave_len << " bytes" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Extract master firmware payload from Slot 0 (after 20-byte chunk header)
+    std::vector<uint8_t> master_fw(
+        file_data.begin() + ADI_CHUNK_HEADER_SIZE,
+        file_data.begin() + ADI_CHUNK_HEADER_SIZE + master_len);
+    if (master_fw.size() != master_len) {
+        std::cerr << "Master firmware buffer size mismatch: expected " << master_len
+                  << " bytes, got " << master_fw.size() << " bytes" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Guard against null/zero-filled master firmware payload
+    bool master_all_zero = true;
+    for (uint32_t i = 0; i < master_len && master_all_zero; i++)
+        if (master_fw[i] != 0x00) master_all_zero = false;
+    if (master_all_zero) {
+        std::cerr << "[ERR] Slot 0 master firmware payload is all zeros. "
+                     "The .bin file may have been generated from a null stream. Aborting." << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Extract master CRC trailer (4 bytes immediately after the page-padded payload)
+    uint32_t master_expected_crc =
+        (uint32_t)file_data[ADI_CHUNK_HEADER_SIZE + master_len]            |
+        ((uint32_t)file_data[ADI_CHUNK_HEADER_SIZE + master_len + 1] <<  8) |
+        ((uint32_t)file_data[ADI_CHUNK_HEADER_SIZE + master_len + 2] << 16) |
+        ((uint32_t)file_data[ADI_CHUNK_HEADER_SIZE + master_len + 3] << 24);
+    std::cout << "[INFO] Header Master CRC : 0x"
+              << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+              << master_expected_crc << std::dec << std::endl;
+
+    // Extract slave firmware payload from Slot 1 (after 20-byte chunk header)
+    std::vector<uint8_t> slave_fw(
+        file_data.begin() + ADI_DUAL_FW_SLOT_SIZE + ADI_CHUNK_HEADER_SIZE,
+        file_data.begin() + ADI_DUAL_FW_SLOT_SIZE + ADI_CHUNK_HEADER_SIZE + slave_len);
+    if (slave_fw.size() != slave_len) {
+        std::cerr << "Slave firmware buffer size mismatch: expected " << slave_len
+                  << " bytes, got " << slave_fw.size() << " bytes" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Guard against null/zero-filled slave firmware payload
+    bool slave_all_zero = true;
+    for (uint32_t i = 0; i < slave_len && slave_all_zero; i++)
+        if (slave_fw[i] != 0x00) slave_all_zero = false;
+    if (slave_all_zero) {
+        std::cerr << "[ERR] Slot 1 slave firmware payload is all zeros. "
+                     "The .bin file may have been generated from a null stream. Aborting." << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Extract slave CRC trailer (4 bytes immediately after the raw slave payload)
+    uint32_t slave_expected_crc =
+        (uint32_t)file_data[ADI_DUAL_FW_SLOT_SIZE + ADI_CHUNK_HEADER_SIZE + slave_len]            |
+        ((uint32_t)file_data[ADI_DUAL_FW_SLOT_SIZE + ADI_CHUNK_HEADER_SIZE + slave_len + 1] <<  8) |
+        ((uint32_t)file_data[ADI_DUAL_FW_SLOT_SIZE + ADI_CHUNK_HEADER_SIZE + slave_len + 2] << 16) |
+        ((uint32_t)file_data[ADI_DUAL_FW_SLOT_SIZE + ADI_CHUNK_HEADER_SIZE + slave_len + 3] << 24);
+    std::cout << "[INFO] Header Slave CRC  : 0x"
+              << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+              << slave_expected_crc << std::dec << std::endl;
+
+    // Version check: first 4 bytes of both firmware payloads must match
+    if (master_len < 4 || slave_len < 4) {
+        std::cerr << "Firmware payload too small to contain a version number" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+    char master_ver_str[32], slave_ver_str[32];
+    snprintf(master_ver_str, sizeof(master_ver_str), "%d.%d.%d.%d",
+             master_fw[0], master_fw[1], master_fw[2], master_fw[3]);
+    snprintf(slave_ver_str,  sizeof(slave_ver_str),  "%d.%d.%d.%d",
+             slave_fw[0],  slave_fw[1],  slave_fw[2],  slave_fw[3]);
+    std::cout << "[INFO] Master firmware version : " << master_ver_str << std::endl;
+    std::cout << "[INFO] Slave  firmware version : " << slave_ver_str  << std::endl;
+    if (master_fw[0] != slave_fw[0] || master_fw[1] != slave_fw[1] ||
+        master_fw[2] != slave_fw[2] || master_fw[3] != slave_fw[3]) {
+        std::cerr << "[ERR] Version mismatch between master (" << master_ver_str
+                  << ") and slave (" << slave_ver_str
+                  << ") firmware payloads. Aborting." << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+    std::cout << "[INFO] Firmware version match confirmed: " << master_ver_str << std::endl;
+
+    // Probe master device — mandatory
+    bool master_found = Read_Chip_ID(GET_MASTER_CHIP_ID_CMD);
+    if (!master_found) {
+        std::cerr << "No ADSD3500 master device detected. Aborting firmware update." << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Silent probe for slave — absence is expected in single-device configuration
+    uint16_t slave_chip_id = 0;
+    bool slave_found = read_cmd(GET_SLAVE_CHIP_ID_CMD, &slave_chip_id);
+    if (slave_found) {
+        std::cout << std::endl << "Slave Chip ID is: 0x" << std::hex << slave_chip_id << std::dec << std::endl;
+    } else {
+        // Slave chip ID read failed — slave may not be booted yet.
+        // Query master to confirm whether dual ADSD3500 is enabled.
+        uint16_t dual_enabled = 0;
+        bool dual_query_ok = read_cmd(GET_DUAL_ADSD3500_ENABLED_CMD, &dual_enabled);
+        if (dual_query_ok) {
+            std::cout << "[INFO] Get Is Dual ADSD3500 Enabled (0x005A): 0x"
+                      << std::hex << std::uppercase << std::setw(4) << std::setfill('0')
+                      << dual_enabled << std::dec << std::endl;
+            if (dual_enabled == 0x0001) {
+                std::cout << "[INFO] Dual ADSD3500 is enabled. Slave device confirmed via master query." << std::endl;
+                slave_found = true;
+            } else {
+                std::cout << "[INFO] Dual ADSD3500 is disabled. Single-device configuration confirmed." << std::endl;
+            }
+        } else {
+            std::cout << "[INFO] Slave chip ID read failed and dual-enable query also failed." << std::endl;
+            std::cout << "[INFO] Assuming single-device configuration." << std::endl;
+        }
+    }
+
+    if (master_found && slave_found) {
+        std::cout << std::endl;
+        std::cout << "Both ADSD3500 devices detected. Updating master and slave firmware." << std::endl;
+        if (!this->updateAdsd3500MasterFirmware(master_fw.data(), master_len, force, master_expected_crc)) {
+            std::cerr << "Master firmware update failed." << std::endl;
+            close(debug_fd);
+            close(sfd);
+            exit(EXIT_FAILURE);
+        }
+        if (!this->updateAdsd3500SlaveFirmware(slave_fw.data(), slave_len, force, slave_expected_crc)) {
+            std::cerr << "Slave firmware update failed." << std::endl;
+            close(debug_fd);
+            close(sfd);
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        std::cout << std::endl;
+        std::cout << "Single ADSD3500 device detected. Updating master firmware only." << std::endl;
+        if (!this->updateAdsd3500MasterFirmware(master_fw.data(), master_len, force, master_expected_crc)) {
+            std::cerr << "Master firmware update failed." << std::endl;
+            close(debug_fd);
+            close(sfd);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    close(debug_fd);
+    close(sfd);
 }
 
-bool validate_ext(std::string FileName, std::string Target) {
+bool validate_ext(std::string FileName) {
     const char *dot = strrchr(FileName.c_str(), '.');
     if (!dot || dot == FileName.c_str()) {
         return false;
     }
-
-    if (strcmp(Target.c_str(), "master") == 0) {
-        return strcmp(dot, ".bin") == 0;
-    } else if (strcmp(Target.c_str(), "slave") == 0) {
-        return strcmp(dot, ".stream") == 0;
-    }
-
-    return false;
+    return strcmp(dot, ".bin") == 0;
 }
 
 void ctrl_c_handler(int n, siginfo_t *info, void *unused) {
     if (n == SIGINT) {
-        std::cout << "recieved ctrl-c" << std::endl;
+        const char msg[] = "Received Ctrl-C\n";
+        write(STDERR_FILENO, msg, sizeof(msg) - 1);
         handler_done = 1;
     }
 }
@@ -190,8 +393,8 @@ bool Adsd3500::findDevicePathsAtVideo(const std::string &video,
     size_t pos;
 
     /* Run media-ctl to get the video processing pipes */
-    char cmd[64];
-    sprintf(cmd, "media-ctl -d %s --print-dot", video.c_str());
+    char cmd[128];
+    snprintf(cmd, sizeof(cmd), "media-ctl -d %s --print-dot", video.c_str());
     FILE *fp = popen(cmd, "r");
     if (!fp) {
         std::cout << "Error running media-ctl";
@@ -200,22 +403,37 @@ bool Adsd3500::findDevicePathsAtVideo(const std::string &video,
 
     /* Read the media-ctl output stream */
     buf = (char *)malloc(128 * 1024);
+    if (!buf) {
+        std::cerr << "Failed to allocate buffer for media-ctl output" << std::endl;
+        pclose(fp);
+        return false;
+    }
     while (!feof(fp)) {
-        auto sz = fread(&buf[size], 1, 1, fp);
-        size++;
+        size_t sz = fread(&buf[size], 1, 1, fp);
+        if (sz > 0) {
+            size++;
+            if (size >= (128 * 1024 - 1)) {
+                std::cerr << "media-ctl output exceeds buffer size" << std::endl;
+                pclose(fp);
+                free(buf);
+                return false;
+            }
+        }
     }
     pclose(fp);
     buf[size] = '\0';
 
     /* Search command media-ctl for device/subdevice name */
-    string str(buf);
+    std::string str(buf);
     free(buf);
 
-    if (str.find("adsd3500") != string::npos) {
+    if (str.find("adsd3500") != std::string::npos) {
         device_name = "adsd3500";
         pos = str.find("adsd3500");
-        subdev_path = str.substr(pos + strlen("adsd3500") + 9,
-                                 strlen("/dev/v4l-subdevX"));
+        subdev_path = str.substr(pos + strlen("adsd3500") + 9);
+        size_t end_pos = subdev_path.find_first_of(" \"\n");
+        if (end_pos != std::string::npos)
+            subdev_path = subdev_path.substr(0, end_pos);
     } else {
         return false;
     }
@@ -225,14 +443,14 @@ bool Adsd3500::findDevicePathsAtVideo(const std::string &video,
 void Adsd3500::open_device() {
     struct stat st;
     struct sigaction act;
-    int32_t number;
+    int32_t number = 0;
     bool status = true;
 
 #if defined(NVIDIA) || defined(NXP)
     status = findDevicePathsAtVideo(video, subdevPath, deviceName);
     if (!status) {
-        std::cout << "failed to find device paths at video: " << video;
-        return;
+        std::cerr << "Failed to find device paths at video: " << video << std::endl;
+        exit(EXIT_FAILURE);
     }
 
 #elif defined(RPI)
@@ -251,25 +469,27 @@ void Adsd3500::open_device() {
 	    exit(EXIT_FAILURE);
     }
 
+    this->subdevPath = subdevPath;
+
 #else
     #error "Unsupported platform: define NVIDIA, NXP, or RPI"
 #endif
 
     /* Open V4L2 subdevice */
     if (stat(subdevPath.c_str(), &st) == -1) {
-        fprintf(stderr, "1\n");
-        return;
+        std::cerr << "Failed to stat subdevice '" << subdevPath << "': " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
     }
 
     if (!S_ISCHR(st.st_mode)) {
-        fprintf(stderr, "1\n");
-        return;
+        std::cerr << "'" << subdevPath << "' is not a character device" << std::endl;
+        exit(EXIT_FAILURE);
     }
 
     sfd = open(subdevPath.c_str(), O_RDWR | O_NONBLOCK, 0);
     if (sfd == -1) {
-        fprintf(stderr, "1\n");
-        return;
+        std::cerr << "Failed to open subdevice '" << subdevPath << "': " << strerror(errno) << std::endl;
+        exit(EXIT_FAILURE);
     }
 
     /* install ctrl-c interrupt handler to cleanup at exit */
@@ -290,7 +510,8 @@ void Adsd3500::open_device() {
     /* Open ADSD3500 debugfs */
     debug_fd = open(debugfs_name, O_RDWR);
     if (debug_fd < 0) {
-        std::cout << "Failed to open the debug sysfs " << std::endl;
+        std::cerr << "Failed to open the debug sysfs" << std::endl;
+        close(sfd);
         exit(EXIT_FAILURE);
     }
 
@@ -303,34 +524,79 @@ void Adsd3500::open_device() {
     }
 }
 
-bool Adsd3500::updateAdsd3500MasterFirmware(const std::string &filePath) {
+bool Adsd3500::updateAdsd3500MasterFirmware(uint8_t *fw_data, uint32_t fw_len, bool force, uint32_t expected_crc) {
     bool status = true;
     uint8_t Wait_Time = 0;
-    uint16_t Status_Command;
+    uint16_t Status_Command = 0;
     uint32_t nResidualCRC = ADI_ROM_CFG_CRC_SEED_VALUE;
+
+    std::cout << std::endl;
+    std::cout << "===== updateAdsd3500MasterFirmware: Starting Master Firmware Update =====" << std::endl;
+    std::cout << "[MASTER] ";
     Read_Chip_ID(GET_MASTER_CHIP_ID_CMD);
     sleep(1);
 
     std::cout << std::dec;
 
-    Switch_from_Standard_to_Burst();
+    if (!Switch_from_Standard_to_Burst()) {
+        std::cerr << "Master: failed to switch to burst mode before firmware write" << std::endl;
+        return false;
+    }
     sleep(1);
 
     std::cout << std::endl;
-    std::cout << "Before upgrading new firmware ";
-    Current_Firmware_Version(GET_MASTER_FIRMWARE_COMMAND);
+    std::cout << "[MASTER] Before upgrading new firmware ";
+    uint8_t current_ver[44] = {0};
+    Current_Firmware_Version(GET_MASTER_FIRMWARE_COMMAND, current_ver);
     sleep(1);
 
-    // Read the firmware binary file
-    std::ifstream fw_file(filePath, std::ios::binary);
-    // copy all data into buffer
-    std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(fw_file), {});
+    // Version downgrade check
+    if (fw_len >= 4) {
+        char update_ver_str[32], current_ver_str[32];
+        snprintf(update_ver_str, sizeof(update_ver_str), "%d.%d.%d.%d",
+                 fw_data[0], fw_data[1], fw_data[2], fw_data[3]);
+        snprintf(current_ver_str, sizeof(current_ver_str), "%d.%d.%d.%d",
+                 current_ver[0], current_ver[1], current_ver[2], current_ver[3]);
+        std::cout << "[MASTER] Update firmware version  : " << update_ver_str << std::endl;
 
-    uint32_t fw_len = buffer.size();
-    uint8_t *fw_content = buffer.data();
-    char fw_data[fw_len] = {0};
+        // Minimum version check: current device firmware must be >= 8.1.0.0
+        const uint8_t min_ver[4] = {8, 1, 0, 0};
+        bool below_minimum = false;
+        for (int i = 0; i < 4; i++) {
+            if (current_ver[i] < min_ver[i]) { below_minimum = true;  break; }
+            if (current_ver[i] > min_ver[i]) { below_minimum = false; break; }
+        }
+        if (below_minimum) {
+            std::cerr << "[MASTER] ERROR: Current device firmware version " << current_ver_str
+                      << " is below the minimum required version 8.1.0.0. Aborting." << std::endl;
+            Switch_from_Burst_to_Standard();
+            close(debug_fd);
+            close(sfd);
+            exit(EXIT_FAILURE);
+        }
 
-    memcpy(fw_data, buffer.data(), buffer.size());
+        bool is_downgrade = false;
+        for (int i = 0; i < 4; i++) {
+            if (fw_data[i] < current_ver[i]) { is_downgrade = true;  break; }
+            if (fw_data[i] > current_ver[i]) { is_downgrade = false; break; }
+        }
+
+        if (is_downgrade) {
+            std::cerr << std::endl;
+            std::cerr << "[MASTER] WARNING: Downgrade detected for master firmware!" << std::endl;
+            std::cerr << "  Current version : " << current_ver_str << std::endl;
+            std::cerr << "  Update version  : " << update_ver_str << std::endl;
+            if (!force) {
+                std::cerr << "Downgrade requires explicit confirmation." << std::endl;
+                std::cerr << "Re-run with --force to proceed." << std::endl;
+                Switch_from_Burst_to_Standard();
+                close(debug_fd);
+                close(sfd);
+                exit(2);
+            }
+            std::cerr << "[MASTER] Proceeding with downgrade (--force specified)." << std::endl;
+        }
+    }
 
     cmd_header_t fw_upgrade_header;
     fw_upgrade_header.id8 = 0xAD;
@@ -350,17 +616,33 @@ bool Adsd3500::updateAdsd3500MasterFirmware(const std::string &filePath) {
     crc_params.initial_crc.crc_32bit = nResidualCRC;
     crc_params.crc_compute_flags = IS_CRC_MIRROR;
 
-    crc_output_t res = compute_crc(&crc_params, buffer.data(), buffer.size());
+    crc_output_t res = compute_crc(&crc_params, fw_data, fw_len);
     nResidualCRC = ~res.crc_32bit;
+    std::cout << "[MASTER] CRC raw result : 0x"
+              << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+              << res.crc_32bit << std::dec << std::endl;
+    std::cout << "[MASTER] nResidualCRC   : 0x"
+              << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+              << nResidualCRC << std::dec << std::endl;
+    std::cout << "[MASTER] Expected CRC   : 0x"
+              << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+              << expected_crc << std::dec << std::endl;
+    if (nResidualCRC != expected_crc) {
+        std::cerr << "[MASTER] CRC MISMATCH: computed 0x"
+                  << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+                  << nResidualCRC << " != expected 0x"
+                  << std::setw(8) << std::setfill('0')
+                  << expected_crc << std::dec << std::endl;
+        return false;
+    }
+    std::cout << "[MASTER] CRC OK: computed CRC matches expected CRC." << std::endl;
 
     fw_upgrade_header.crc_of_fw32 = (uint32_t)nResidualCRC;
-
-    uint8_t *ptr = (uint8_t *)&fw_upgrade_header;
 
     status = write_payload(fw_upgrade_header.cmd_header_byte, 16);
     if (!status) {
         std::cout << std::endl;
-        std::cerr << "Failed to send fw upgrade header" << std::endl;
+        std::cerr << "[MASTER] Failed to send fw upgrade header" << std::endl;
         return status;
     }
 
@@ -374,15 +656,15 @@ bool Adsd3500::updateAdsd3500MasterFirmware(const std::string &filePath) {
     uint8_t data_out[FLASH_PAGE_SIZE];
 
     std::cout << std::endl;
-    std::cout << "Writing Firmware packets..." << std::endl;
+    std::cout << "[MASTER] Writing Firmware packets..." << std::endl;
     Update_Complete = 0;
     for (int i = 0; i < packetsToSend; i++) {
         int start = FLASH_PAGE_SIZE * i;
         int end = FLASH_PAGE_SIZE * (i + 1);
 
         for (int j = start; j < end; j++) {
-            if (j < fw_len) {
-                data_out[j - start] = fw_content[j];
+            if (j < (int)fw_len) {
+                data_out[j - start] = fw_data[j];
             } else {
                 data_out[j - start] = 0x00;
             }
@@ -390,37 +672,44 @@ bool Adsd3500::updateAdsd3500MasterFirmware(const std::string &filePath) {
         status = write_payload(data_out, FLASH_PAGE_SIZE);
 
         if (!status) {
-            std::cerr << "Failed to send packet number " << i << " out of "
+            std::cerr << "[MASTER] Failed to send packet number " << i << " out of "
                       << packetsToSend << " packets!" << std::endl;
             return status;
         }
 
-        std::cout << "Packet number: " << i + 1 << " / " << packetsToSend
+        std::cout << "[MASTER] Packet number: " << i + 1 << " / " << packetsToSend
                   << '\r';
         fflush(stdout);
     }
     std::cout << std::endl;
     std::cout << std::endl;
-    std::cout << "Adsd3500 firmware updated succesfully!" << std::endl;
+    std::cout << "[MASTER] Adsd3500 master firmware packets sent successfully!" << std::endl;
 
     std::cout << std::endl;
-    std::cout << "Waiting for the ADSD3500 kernel Driver signal " << std::endl;
+    std::cout << "[MASTER] Waiting for the ADSD3500 kernel Driver signal " << std::endl;
 
     while (1) {
+        if (handler_done) {
+            std::cerr << "\nAborted by user (Ctrl-C)" << std::endl;
+            close(debug_fd);
+            close(sfd);
+            exit(EXIT_FAILURE);
+        }
         if (Update_Complete != 0) {
-            std::cout << "Received signal from ADSD3500 kernel driver"
+            std::cout << "[MASTER] Received signal from ADSD3500 kernel driver"
                       << std::endl;
             break;
         }
         if (Wait_Time >= 30) {
-            std::cout << "ADSD3500 kernel driver signal timeout occured"
+            std::cout << "[MASTER] ADSD3500 kernel driver signal timeout occurred"
                       << std::endl;
             status = read_cmd(GET_IMAGER_STATUS_CMD, &Status_Command);
             std::cout << std::hex;
-            std::cout << "Get status Command " << Status_Command << std::endl;
+            std::cout << "[MASTER] Get status Command " << Status_Command << std::endl;
 
-            std::cout << "Firmware update failed" << std::endl;
+            std::cout << "[MASTER] Firmware update failed" << std::endl;
             close(debug_fd);
+            close(sfd);
             exit(EXIT_FAILURE);
         }
         Wait_Time++;
@@ -430,18 +719,20 @@ bool Adsd3500::updateAdsd3500MasterFirmware(const std::string &filePath) {
     std::cout << std::endl;
     for (int i = 9; i >= 0; i--) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::cout << "Waiting for " << i << " seconds" << '\r';
+        std::cout << "[MASTER] Waiting for " << i << " seconds" << '\r';
         fflush(stdout);
     }
     std::cout << std::endl;
 
     status = read_cmd(GET_IMAGER_STATUS_CMD, &Status_Command);
-    std::cout << std::hex;
-    std::cout << "Get status Command " << std::uppercase << Status_Command
-              << std::endl;
+    std::cout << "[MASTER] Get status Command 0x"
+              << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+              << Status_Command << std::dec << std::endl;
 
     if (Status_Command != ADI_STATUS_FIRMWARE_UPDATE) {
-        std::cout << "Firmware update failed" << std::endl;
+        std::cout << "[MASTER] Firmware update failed" << std::endl;
+        close(debug_fd);
+        close(sfd);
         exit(EXIT_FAILURE);
     }
 
@@ -455,69 +746,118 @@ bool Adsd3500::updateAdsd3500MasterFirmware(const std::string &filePath) {
         return status;
     } else {
         std::cout << std::endl;
-        std::cout << "Firmware soft resetting...";
+        std::cout << "[MASTER] Firmware soft resetting...";
     }
 
     std::cout << std::endl;
     for (int i = 9; i >= 0; i--) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::cout << "Waiting for " << i << " seconds" << '\r';
+        std::cout << "[MASTER] Waiting for " << i << " seconds" << '\r';
         fflush(stdout);
     }
     std::cout << std::endl;
 
+    std::cout << "[MASTER] ";
     Read_Chip_ID(GET_MASTER_CHIP_ID_CMD);
     sleep(1);
 
-    Switch_from_Standard_to_Burst();
+    if (!Switch_from_Standard_to_Burst()) {
+        std::cerr << "Master: failed to switch to burst mode during post-flash verification" << std::endl;
+        return false;
+    }
     sleep(1);
 
     std::cout << std::endl;
-    std::cout << "After upgrading new firmware ";
+    std::cout << "[MASTER] After upgrading new firmware ";
     Current_Firmware_Version(GET_MASTER_FIRMWARE_COMMAND);
     sleep(1);
 
-    Switch_from_Burst_to_Standard();
+    if (!Switch_from_Burst_to_Standard()) {
+        std::cerr << "Master: failed to switch back to standard mode after post-flash verification" << std::endl;
+        return false;
+    }
     sleep(1);
 
+    std::cout << std::endl << "[MASTER] ";
     Read_Chip_ID(GET_MASTER_CHIP_ID_CMD);
-
-    close(debug_fd);
-    close(sfd);
 
     return true;
 }
 
-bool Adsd3500::updateAdsd3500SlaveFirmware(const std::string &filePath) {
+bool Adsd3500::updateAdsd3500SlaveFirmware(uint8_t *fw_data, uint32_t fw_len, bool force, uint32_t expected_crc) {
 
     bool status = true;
     uint8_t Wait_Time = 0;
-    uint16_t Status_Command;
+    uint16_t Status_Command = 0;
     uint32_t nResidualCRC = ADI_ROM_CFG_CRC_SEED_VALUE;
 
+    std::cout << std::endl;
+    std::cout << "===== updateAdsd3500SlaveFirmware: Starting Slave Firmware Update =====" << std::endl;
+    std::cout << "[SLAVE] ";
     Read_Chip_ID(GET_SLAVE_CHIP_ID_CMD);
     sleep(1);
 
     std::cout << std::dec;
 
-    Switch_from_Standard_to_Burst();
+    if (!Switch_from_Standard_to_Burst()) {
+        std::cerr << "Slave: failed to switch to burst mode before firmware write" << std::endl;
+        return false;
+    }
     sleep(1);
 
     std::cout << std::endl;
-    std::cout << "Before upgrading new firmware ";
-    Current_Firmware_Version(GET_SLAVE_FIRMWARE_COMMAND);
+    std::cout << "[SLAVE] Before upgrading new firmware ";
+    uint8_t current_ver[44] = {0};
+    Current_Firmware_Version(GET_SLAVE_FIRMWARE_COMMAND, current_ver);
     sleep(1);
 
-    // Read the firmware binary file
-    std::ifstream fw_file(filePath, std::ios::binary);
-    // copy all data into buffer
-    std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(fw_file), {});
+    // Version downgrade check
+    if (fw_len >= 4) {
+        char update_ver_str[32], current_ver_str[32];
+        snprintf(update_ver_str, sizeof(update_ver_str), "%d.%d.%d.%d",
+                 fw_data[0], fw_data[1], fw_data[2], fw_data[3]);
+        snprintf(current_ver_str, sizeof(current_ver_str), "%d.%d.%d.%d",
+                 current_ver[0], current_ver[1], current_ver[2], current_ver[3]);
+        std::cout << "[SLAVE] Update firmware version  : " << update_ver_str << std::endl;
 
-    uint32_t fw_len = buffer.size();
-    uint8_t *fw_content = buffer.data();
-    char fw_data[fw_len] = {0};
+        // Minimum version check: current device firmware must be >= 8.1.0.0
+        const uint8_t min_ver[4] = {8, 1, 0, 0};
+        bool below_minimum = false;
+        for (int i = 0; i < 4; i++) {
+            if (current_ver[i] < min_ver[i]) { below_minimum = true;  break; }
+            if (current_ver[i] > min_ver[i]) { below_minimum = false; break; }
+        }
+        if (below_minimum) {
+            std::cerr << "[SLAVE] ERROR: Current device firmware version " << current_ver_str
+                      << " is below the minimum required version 8.1.0.0. Aborting." << std::endl;
+            Switch_from_Burst_to_Standard();
+            close(debug_fd);
+            close(sfd);
+            exit(EXIT_FAILURE);
+        }
 
-    memcpy(fw_data, buffer.data(), buffer.size());
+        bool is_downgrade = false;
+        for (int i = 0; i < 4; i++) {
+            if (fw_data[i] < current_ver[i]) { is_downgrade = true;  break; }
+            if (fw_data[i] > current_ver[i]) { is_downgrade = false; break; }
+        }
+
+        if (is_downgrade) {
+            std::cerr << std::endl;
+            std::cerr << "[SLAVE] WARNING: Downgrade detected for slave firmware!" << std::endl;
+            std::cerr << "  Current version : " << current_ver_str << std::endl;
+            std::cerr << "  Update version  : " << update_ver_str << std::endl;
+            if (!force) {
+                std::cerr << "Downgrade requires explicit confirmation." << std::endl;
+                std::cerr << "Re-run with --force to proceed." << std::endl;
+                Switch_from_Burst_to_Standard();
+                close(debug_fd);
+                close(sfd);
+                exit(2);
+            }
+            std::cerr << "[SLAVE] Proceeding with downgrade (--force specified)." << std::endl;
+        }
+    }
 
     cmd_header_t fw_upgrade_header;
     fw_upgrade_header.id8 = 0xAD;
@@ -537,17 +877,33 @@ bool Adsd3500::updateAdsd3500SlaveFirmware(const std::string &filePath) {
     crc_params.initial_crc.crc_32bit = nResidualCRC;
     crc_params.crc_compute_flags = IS_CRC_MIRROR;
 
-    crc_output_t res = compute_crc(&crc_params, buffer.data(), buffer.size());
+    crc_output_t res = compute_crc(&crc_params, fw_data, fw_len);
     nResidualCRC = ~res.crc_32bit;
+    std::cout << "[SLAVE] CRC raw result : 0x"
+              << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+              << res.crc_32bit << std::dec << std::endl;
+    std::cout << "[SLAVE] nResidualCRC   : 0x"
+              << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+              << nResidualCRC << std::dec << std::endl;
+    std::cout << "[SLAVE] Expected CRC   : 0x"
+              << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+              << expected_crc << std::dec << std::endl;
+    if (nResidualCRC != expected_crc) {
+        std::cerr << "[SLAVE] CRC MISMATCH: computed 0x"
+                  << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+                  << nResidualCRC << " != expected 0x"
+                  << std::setw(8) << std::setfill('0')
+                  << expected_crc << std::dec << std::endl;
+        return false;
+    }
+    std::cout << "[SLAVE] CRC OK: computed CRC matches expected CRC." << std::endl;
 
     fw_upgrade_header.crc_of_fw32 = (uint32_t)nResidualCRC;
-
-    uint8_t *ptr = (uint8_t *)&fw_upgrade_header;
 
     status = write_payload(fw_upgrade_header.cmd_header_byte, 16);
     if (!status) {
         std::cout << std::endl;
-        std::cerr << "Failed to send fw upgrade header" << std::endl;
+        std::cerr << "[SLAVE] Failed to send fw upgrade header" << std::endl;
         return status;
     }
 
@@ -561,15 +917,15 @@ bool Adsd3500::updateAdsd3500SlaveFirmware(const std::string &filePath) {
     uint8_t data_out[FLASH_PAGE_SIZE];
 
     std::cout << std::endl;
-    std::cout << "Writing Firmware packets..." << std::endl;
+    std::cout << "[SLAVE] Writing Firmware packets..." << std::endl;
     Update_Complete = 0;
     for (int i = 0; i < packetsToSend; i++) {
         int start = FLASH_PAGE_SIZE * i;
         int end = FLASH_PAGE_SIZE * (i + 1);
 
         for (int j = start; j < end; j++) {
-            if (j < fw_len) {
-                data_out[j - start] = fw_content[j];
+            if (j < (int)fw_len) {
+                data_out[j - start] = fw_data[j];
             } else {
                 data_out[j - start] = 0x00;
             }
@@ -577,56 +933,71 @@ bool Adsd3500::updateAdsd3500SlaveFirmware(const std::string &filePath) {
         status = write_payload(data_out, FLASH_PAGE_SIZE);
 
         if (!status) {
-            std::cerr << "Failed to send packet number " << i << " out of "
+            std::cerr << "[SLAVE] Failed to send packet number " << i << " out of "
                       << packetsToSend << " packets!" << std::endl;
             return status;
         }
 
-        std::cout << "Packet number: " << i + 1 << " / " << packetsToSend
+        std::cout << "[SLAVE] Packet number: " << i + 1 << " / " << packetsToSend
                   << '\r';
         fflush(stdout);
     }
     std::cout << std::endl;
     std::cout << std::endl;
-    std::cout << "Adsd3500 firmware updated succesfully!" << std::endl;
+    std::cout << "[SLAVE] Adsd3500 slave firmware packets sent successfully!" << std::endl;
 
     std::cout << std::endl;
-    std::cout << "Waiting for the ADSD3500 kernel Driver signal " << std::endl;
+    std::cout << "[SLAVE] Waiting for the ADSD3500 kernel Driver signal " << std::endl;
 
     while (1) {
+        if (handler_done) {
+            std::cerr << "\nAborted by user (Ctrl-C)" << std::endl;
+            close(debug_fd);
+            close(sfd);
+            exit(EXIT_FAILURE);
+        }
         if (Update_Complete != 0) {
-            std::cout << "Received signal from ADSD3500 kernel driver"
+            std::cout << "[SLAVE] Received signal from ADSD3500 kernel driver"
                       << std::endl;
             break;
         }
         if (Wait_Time >= 30) {
-            std::cout << "ADSD3500 kernel driver signal timeout occured"
+            std::cout << "[SLAVE] ADSD3500 kernel driver signal timeout occurred"
                       << std::endl;
-            status = read_cmd(0x0020, &Status_Command);
-            std::cout << std::hex;
-            std::cout << "Get status Command " << Status_Command << std::endl;
+            status = read_cmd(GET_IMAGER_STATUS_CMD, &Status_Command);
+            std::cout << "[SLAVE] Get status Command 0x"
+                      << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+                      << Status_Command << std::dec << std::endl;
 
-            std::cout << "Firmware update failed" << std::endl;
+            std::cout << "[SLAVE] Firmware update failed" << std::endl;
             close(debug_fd);
+            close(sfd);
             exit(EXIT_FAILURE);
         }
         Wait_Time++;
         sleep(1);
     }
 
-    //exit(0);
     sleep(2);
 
-    Switch_from_Burst_to_Standard();
+    if (!Switch_from_Burst_to_Standard()) {
+        std::cerr << "Slave: failed to switch back to standard mode before reading flash status" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
     sleep(1);
 
     status = read_cmd(GET_IMAGER_STATUS_CMD, &Status_Command);
-    std::cout << std::hex;
-    std::cout << "Get status Command " << std::uppercase << Status_Command
-              << std::endl;
+    std::cout << "[SLAVE] Get status Command 0x"
+              << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+              << Status_Command << std::dec << std::endl;
 
     if (Status_Command != ADI_STATUS_SECOND_FIRMWARE_FLASH_UPDATE) {
         std::cout << "Slave Firmware write failed" << std::endl;
+        close(debug_fd);
+        close(sfd);
+        exit(EXIT_FAILURE);
     } else {
         std::cout << "Slave Firmware Flash write completed and is successful."
                   << std::endl;
@@ -640,35 +1011,40 @@ bool Adsd3500::updateAdsd3500SlaveFirmware(const std::string &filePath) {
         return status;
     } else {
         std::cout << std::endl;
-        std::cout << "Firmware soft resetting..." << std::endl;
+        std::cout << "[SLAVE] Firmware soft resetting..." << std::endl;
     }
 
     std::cout << std::endl;
     for (int i = 9; i >= 0; i--) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::cout << "Waiting for " << i << " seconds" << '\r';
+        std::cout << "[SLAVE] Waiting for " << i << " seconds" << '\r';
         fflush(stdout);
     }
     std::cout << std::endl;
 
+    std::cout << "[SLAVE] ";
     Read_Chip_ID(GET_SLAVE_CHIP_ID_CMD);
     sleep(1);
 
-    Switch_from_Standard_to_Burst();
+    if (!Switch_from_Standard_to_Burst()) {
+        std::cerr << "Slave: failed to switch to burst mode during post-flash verification" << std::endl;
+        return false;
+    }
     sleep(1);
 
     std::cout << std::endl;
-    std::cout << "After upgrading new firmware ";
+    std::cout << "[SLAVE] After upgrading new firmware ";
     Current_Firmware_Version(GET_SLAVE_FIRMWARE_COMMAND);
     sleep(1);
 
-    Switch_from_Burst_to_Standard();
+    if (!Switch_from_Burst_to_Standard()) {
+        std::cerr << "Slave: failed to switch back to standard mode after post-flash verification" << std::endl;
+        return false;
+    }
     sleep(1);
 
+    std::cout << std::endl << "[SLAVE] ";
     Read_Chip_ID(GET_SLAVE_CHIP_ID_CMD);
-
-    close(debug_fd);
-    close(sfd);
 
     return true;
 }
@@ -684,7 +1060,6 @@ bool Adsd3500::Read_Chip_ID(uint16_t reg_addr) {
         return status;
     }
 
-    std::cout << std::endl;
     std::cout << "Chip ID is: " << std::hex << chip_id << std::endl;
     return status;
 }
@@ -722,6 +1097,10 @@ bool Adsd3500::Switch_from_Burst_to_Standard() {
     return status;
 }
 bool Adsd3500::Current_Firmware_Version(uint8_t cmd) {
+    return Current_Firmware_Version(cmd, nullptr);
+}
+
+bool Adsd3500::Current_Firmware_Version(uint8_t cmd, uint8_t out_ver[44]) {
 
     bool status = true;
     uint8_t Current_FW_Version[44] = {0};
@@ -737,16 +1116,21 @@ bool Adsd3500::Current_Firmware_Version(uint8_t cmd) {
                                 sizeof(current_fw_version_command[0]),
                             Current_FW_Version);
 
-    snprintf(version, sizeof(version), "%d.%d.%d.%d", Current_FW_Version[0],
-             Current_FW_Version[1], Current_FW_Version[2],
-             Current_FW_Version[3]);
-    std::cout << "Current firmware version is : " << version << std::endl;
-
     if (!status) {
         std::cout << std::endl;
         std::cerr << "Failed to Read Current Firmware" << std::endl;
         return status;
     }
+
+    if (out_ver) {
+        memcpy(out_ver, Current_FW_Version, 44);
+    }
+
+    snprintf(version, sizeof(version), "%d.%d.%d.%d", Current_FW_Version[0],
+             Current_FW_Version[1], Current_FW_Version[2],
+             Current_FW_Version[3]);
+    std::cout << "Current firmware version is : " << version << std::endl;
+
     return status;
 }
 
@@ -775,6 +1159,8 @@ bool Adsd3500::write_cmd(uint16_t cmd, uint16_t data) {
     if (xioctl(sfd, VIDIOC_S_EXT_CTRLS, &extCtrls) == -1) {
         fprintf(stderr, "Writing Adsd3500: %d error: %s\n", errno,
                 strerror(errno));
+        close(debug_fd);
+        close(sfd);
         exit(EXIT_FAILURE);
     }
     return true;
@@ -797,6 +1183,11 @@ bool Adsd3500::write_payload(uint8_t *payload, uint16_t payload_len) {
     buf[1] = uint8_t(payload_len >> 8);
     buf[2] = uint8_t(payload_len & 0xFF);
 
+    if (payload_len > (ADSD3500_CTRL_PACKET_SIZE - 3)) {
+        std::cerr << "write_payload: payload_len " << payload_len
+                  << " exceeds buffer capacity" << std::endl;
+        return false;
+    }
     memcpy(buf + 3, payload, payload_len);
     extCtrl.p_u8 = buf;
 
@@ -813,6 +1204,10 @@ bool Adsd3500::write_payload(uint8_t *payload, uint16_t payload_len) {
 }
 
 bool Adsd3500::read_cmd(uint16_t cmd, uint16_t *data) {
+    if (!data) {
+        std::cerr << "read_cmd: null data pointer" << std::endl;
+        return false;
+    }
     static struct v4l2_ext_control extCtrl;
     static struct v4l2_ext_controls extCtrls;
     static uint8_t buf[ADSD3500_CTRL_PACKET_SIZE];
@@ -863,6 +1258,10 @@ bool Adsd3500::read_cmd(uint16_t cmd, uint16_t *data) {
 
 bool Adsd3500::read_burst_cmd(uint8_t *payload, uint16_t payload_len,
                               uint8_t *data) {
+    if (!data) {
+        std::cerr << "read_burst_cmd: null data pointer" << std::endl;
+        return false;
+    }
     static struct v4l2_ext_control extCtrl;
     static struct v4l2_ext_controls extCtrls;
     static uint8_t buf[ADSD3500_CTRL_PACKET_SIZE];
@@ -877,6 +1276,11 @@ bool Adsd3500::read_burst_cmd(uint8_t *payload, uint16_t payload_len,
     buf[1] = uint8_t(payload_len >> 8);
     buf[2] = uint8_t(payload_len & 0xFF);
 
+    if (payload_len > (ADSD3500_CTRL_PACKET_SIZE - 3)) {
+        std::cerr << "read_burst_cmd: payload_len " << payload_len
+                  << " exceeds buffer capacity" << std::endl;
+        return false;
+    }
     memcpy(buf + 3, payload, payload_len);
     extCtrl.p_u8 = buf;
 
