@@ -478,6 +478,17 @@ class ADIMainWindow {
 		* @brief Displays Point Cloud Window
 		*/
     void DisplayPointCloudWindow(ImGuiWindowFlags overlayFlags);
+#ifdef WITH_RGB_SUPPORT
+    /**
+     * @brief Initialize OpenGL RGB texture
+     */
+    void InitOpenGLRGBTexture();
+
+    /**
+     * @brief Displays RGB Window (separate from AB)
+     */
+    void DisplayRGBWindow(ImGuiWindowFlags overlayFlags);
+#endif
 
     /**
      * @brief print out warning message in popup window if ini param is out of valid range
@@ -660,6 +671,11 @@ class ADIMainWindow {
     uint32_t m_gl_ab_video_texture = 0;
     uint32_t m_gl_depth_video_texture = 0;
     uint32_t m_gl_pointcloud_video_texture = 0;
+#ifdef WITH_RGB_SUPPORT
+    uint32_t m_gl_rgb_video_texture = 0;
+    bool m_set_rgb_win_position_once = true;
+    ImVec2 m_display_rgb_dimensions;
+#endif
     bool m_set_temp_win_position_once = true;
     bool m_set_ab_win_position_once = true;
     bool m_set_depth_win_position_once = true;
@@ -678,6 +694,9 @@ class ADIMainWindow {
     Rect *m_xyz_position;
     Rect *m_ab_position;
     Rect *m_depth_position;
+#ifdef WITH_RGB_SUPPORT
+    Rect *m_rgb_position;
+#endif
     uint32_t m_frame_window_position_state;
     std::shared_ptr<adiviewer::ADIView> m_view_instance = nullptr;
     AppLog m_log;
@@ -713,6 +732,7 @@ class ADIMainWindow {
     bool m_enable_ab_display = true;
     bool m_enable_depth_display = true;
     bool m_enable_xyz_display = true;
+    bool m_enable_rgb_display = true;
 
     std::string m_recording_path = ".";
 };

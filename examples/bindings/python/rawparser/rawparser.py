@@ -106,6 +106,26 @@ def generate_confidence(conf_frame, directory, base_filename, index):
     img = o3d.geometry.Image(norm_conf)
     o3d.io.write_image(safe_join(directory, f'conf_{base_filename}_{index}{PNG_EXT}'), img)
 
+def generate_rgb(rgb_data, directory, base_filename, index, width, height):
+    """Generate RGB JPG from BGR data (SDK already converted from NV12)"""
+    try:
+        # SDK returns BGR format (3 bytes per pixel)
+        if isinstance(rgb_data, np.ndarray):
+            if rgb_data.ndim == 3 and rgb_data.shape == (height, width, 3):
+                bgr_image = rgb_data
+            elif rgb_data.ndim == 2 and rgb_data.shape == (height, width):
+                bgr_image = cv.cvtColor(rgb_data, cv.COLOR_GRAY2BGR)
+            else:
+                bgr_image = rgb_data.reshape((height, width, 3))
+        else:
+            bgr_image = np.array(rgb_data, dtype=np.uint8, copy=False)
+            bgr_image = bgr_image.reshape((height, width, 3))
+        # Save as JPG (OpenCV handles BGR natively)
+        output_path = safe_join(directory, f'rgb_{base_filename}_{index}.jpg')
+        cv.imwrite(output_path, bgr_image, [cv.IMWRITE_JPEG_QUALITY, 95])
+    except Exception as e:
+        print(f"\nWarning: Failed to generate RGB frame {index}: {e}")
+
 def generate_pcloud(xyz_frame, directory, base_filename, index, height, width):
     xyz_frame = xyz_frame.view(np.int16)
     xyz_frame = xyz_frame.reshape(-1, 3)
@@ -251,6 +271,28 @@ def main():
             image_conf = np.reshape(final_conf[frameDataDetails.width*frameDataDetails.height*0:frameDataDetails.width*frameDataDetails.height*1], \
                                     [frameDataDetails.height,frameDataDetails.width])
             generate_confidence(image_conf, frame_dir, base_filename, str_frame_idx)
+
+        # Get the RGB frame
+        if "rgb" in available_types:
+            try:
+                rgb_details = tof.FrameDataDetails()
+                status_rgb = frame.getDataDetails("rgb", rgb_details)
+                if (status_rgb == tof.Status.Ok and rgb_details.width > 0 and
+                        rgb_details.height > 0):
+                    rgb_data = frame.getData("rgb")
+                    rgb_arr = np.array(rgb_data, copy=False)
+                    try:
+                        generate_rgb(
+                            rgb_arr, frame_dir, base_filename, str_frame_idx,
+                            rgb_details.width, rgb_details.height
+                        )
+                        print(f"    Saved RGB JPG")
+                    except Exception as inner_e:
+                        print(f"    Could not extract RGB: {inner_e}")
+                else:
+                    print(f"  - No RGB metadata in frame")
+            except Exception as e:
+                print(f"  Error processing RGB: {e}")
 
         # Get the confidence frame
         if "xyz" in available_types:

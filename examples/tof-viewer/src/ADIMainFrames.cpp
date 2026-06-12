@@ -83,6 +83,10 @@ void ADIMainWindow::RenderFrameHoverInfo(ImVec2 hoveredImagePixel,
         imageType = "Depth";
     } else if (format == ADI_Image_Format_t::ADI_IMAGE_FORMAT_AB16) {
         imageType = "AB";
+#ifdef WITH_RGB_SUPPORT
+    } else if (format == ADI_Image_Format_t::ADI_IMAGE_FORMAT_RGB) {
+        imageType = "RGB";
+#endif
     }
 
     if (isHovered || ImGui::IsWindowHovered()) {
@@ -194,6 +198,14 @@ int32_t ADIMainWindow::synchronizeVideo(std::shared_ptr<aditof::Frame> &frame) {
         // AND what data is actually available in the frame
         int32_t activeThreads = 0;
 
+        // Reset all frame availability flags first (they might be stale from previous frame)
+        m_view_instance->m_depthFrameAvailable = false;
+        m_view_instance->m_abFrameAvailable = false;
+        m_view_instance->m_pcFrameAvailable = false;
+#ifdef WITH_RGB_SUPPORT
+        m_view_instance->m_rgbFrameAvailable = false;
+#endif
+
         // Check if depth data is available in the frame
         if (m_view_instance->m_depthThreadCreated &&
             m_view_instance->m_capturedFrame->haveDataType("depth")) {
@@ -214,6 +226,15 @@ int32_t ADIMainWindow::synchronizeVideo(std::shared_ptr<aditof::Frame> &frame) {
             m_view_instance->m_pcFrameAvailable = true;
             activeThreads++;
         }
+
+#ifdef WITH_RGB_SUPPORT
+        // Check if RGB data is available in the frame (only if compiled with RGB support)
+        if (m_view_instance->m_rgbThreadCreated &&
+            m_view_instance->m_capturedFrame->haveDataType("rgb")) {
+            m_view_instance->m_rgbFrameAvailable = true;
+            activeThreads++;
+        }
+#endif // WITH_RGB_SUPPORT
 
         m_view_instance->numOfThreads = activeThreads;
 
@@ -398,6 +419,29 @@ void ADIMainWindow::DisplayActiveBrightnessWindow(
 
         ImGui::SetCursorPos(ImVec2(0, 0));
 
+#ifdef WITH_RGB_SUPPORT
+        // If RGB data is available and processed, show RGB instead of AB
+        if (m_view_instance->rgb_video_data_rgb != nullptr) {
+            glBindTexture(GL_TEXTURE_2D, m_gl_ab_video_texture);
+            // RGB data: stored as BGR (3 bytes per pixel) for OpenGL display
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                         m_view_instance->rgbFrameWidth,
+                         m_view_instance->rgbFrameHeight, 0, GL_BGR,
+                         GL_UNSIGNED_BYTE, m_view_instance->rgb_video_data_rgb);
+            glad_glGenerateMipmap(GL_TEXTURE_2D);
+
+            ImVec2 _displayABDimensions = m_display_ab_dimensions;
+
+            if (rotationangledegrees == 90 || rotationangledegrees == 270) {
+                std::swap(_displayABDimensions.x, _displayABDimensions.y);
+            }
+
+            ImageRotated((ImTextureID)m_gl_ab_video_texture,
+                         ImVec2(m_ab_position->width, m_ab_position->height),
+                         ImVec2(_displayABDimensions.x, _displayABDimensions.y),
+                         rotationangleradians);
+        } else
+#endif // WITH_RGB_SUPPORT
         if (m_view_instance->ab_video_data_8bit != nullptr) {
             glBindTexture(GL_TEXTURE_2D, m_gl_ab_video_texture);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_view_instance->frameWidth,
@@ -421,10 +465,20 @@ void ADIMainWindow::DisplayActiveBrightnessWindow(
         GetHoveredImagePix(hoveredImagePixel, ImGui::GetCursorScreenPos(),
                            ImGui::GetIO().MousePos, m_display_ab_dimensions,
                            m_source_depth_image_dimensions);
-        RenderFrameHoverInfo(
-            hoveredImagePixel, m_view_instance->ab_video_data,
-            m_view_instance->frameWidth, ImGui::IsWindowHovered(),
-            ADI_Image_Format_t::ADI_IMAGE_FORMAT_AB16, "Intensity");
+#ifdef WITH_RGB_SUPPORT
+        if (m_view_instance->rgb_video_data_rgb != nullptr) {
+            RenderFrameHoverInfo(
+                hoveredImagePixel, nullptr, m_view_instance->rgbFrameWidth,
+                ImGui::IsWindowHovered(),
+                ADI_Image_Format_t::ADI_IMAGE_FORMAT_RGB, "RGB Pixel");
+        } else
+#endif // WITH_RGB_SUPPORT
+        {
+            RenderFrameHoverInfo(
+                hoveredImagePixel, m_view_instance->ab_video_data,
+                m_view_instance->frameWidth, ImGui::IsWindowHovered(),
+                ADI_Image_Format_t::ADI_IMAGE_FORMAT_AB16, "Intensity");
+        }
     }
 
     ImGui::End();
@@ -1116,3 +1170,88 @@ void ADIMainWindow::MatrixMultiply(mat4x4 out, mat4x4 a, mat4x4 b) {
     mat4x4_dup(btmp, b);
     mat4x4_mul(out, a, b);
 }
+
+#ifdef WITH_RGB_SUPPORT
+//*******************************************
+//* Section: Handling of RGB Window
+//*******************************************
+
+void ADIMainWindow::InitOpenGLRGBTexture() {
+    GLuint rgb_texture;
+    glGenTextures(1, &rgb_texture);
+    glBindTexture(GL_TEXTURE_2D, rgb_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    m_gl_rgb_video_texture = rgb_texture;
+}
+
+void ADIMainWindow::DisplayRGBWindow(ImGuiWindowFlags overlayFlags) {
+    ImVec2 size;
+
+    if (m_view_instance->rgbFrameWidth > 0 &&
+        m_view_instance->rgbFrameHeight > 0) {
+        float autoscale = std::fmin(
+            (m_rgb_position->width / m_view_instance->rgbFrameWidth),
+            (m_rgb_position->height / m_view_instance->rgbFrameHeight));
+
+        size.x = m_view_instance->rgbFrameWidth * autoscale * m_dpi_scale_factor;
+        size.y = m_view_instance->rgbFrameHeight * autoscale * m_dpi_scale_factor;
+
+        if (rotationangledegrees == 90 || rotationangledegrees == 270) {
+            std::swap(size.x, size.y);
+        }
+
+        m_display_rgb_dimensions = {static_cast<float>(size.x),
+                                    static_cast<float>(size.y)};
+        size.x /= m_dpi_scale_factor;
+        size.y /= m_dpi_scale_factor;
+    }
+
+    SetWindowPosition(m_rgb_position->x, m_rgb_position->y);
+    SetWindowSize(m_rgb_position->width, m_rgb_position->height);
+
+    if (ImGui::Begin("RGB Window", nullptr,
+                     overlayFlags | ImGuiWindowFlags_NoTitleBar)) {
+
+        ImGui::SetCursorPos(ImVec2(0, 0));
+
+        if (m_view_instance->rgb_video_data_8bit != nullptr &&
+            m_view_instance->rgbFrameWidth > 0 &&
+            m_view_instance->rgbFrameHeight > 0) {
+
+            uint8_t *rgb_buffer_ptr = nullptr;
+            int rgb_width = 0, rgb_height = 0;
+            {
+                std::lock_guard<std::mutex> rgb_lock(
+                    m_view_instance->rgb_data_ready_mtx);
+                rgb_buffer_ptr = m_view_instance->rgb_video_data_8bit;
+                rgb_width = m_view_instance->rgbFrameWidth;
+                rgb_height = m_view_instance->rgbFrameHeight;
+            }
+
+            if (rgb_buffer_ptr != nullptr && rgb_width > 0 && rgb_height > 0) {
+                glBindTexture(GL_TEXTURE_2D, m_gl_rgb_video_texture);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, rgb_width, rgb_height, 0,
+                             GL_BGR, GL_UNSIGNED_BYTE, rgb_buffer_ptr);
+                glad_glGenerateMipmap(GL_TEXTURE_2D);
+
+                ImVec2 _displayRGBDimensions = m_display_rgb_dimensions;
+
+                if (rotationangledegrees == 90 || rotationangledegrees == 270) {
+                    std::swap(_displayRGBDimensions.x, _displayRGBDimensions.y);
+                }
+
+                ImageRotated(
+                    (ImTextureID)m_gl_rgb_video_texture,
+                    ImVec2(m_rgb_position->width, m_rgb_position->height),
+                    ImVec2(_displayRGBDimensions.x, _displayRGBDimensions.y),
+                    rotationangleradians);
+            }
+        }
+    }
+
+    ImGui::End();
+}
+#endif // WITH_RGB_SUPPORT

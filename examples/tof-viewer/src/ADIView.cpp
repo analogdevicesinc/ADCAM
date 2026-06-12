@@ -66,7 +66,8 @@ using namespace adiviewer;
 using namespace adicontroller;
 
 ADIView::ADIView(std::shared_ptr<ADIController> ctrl, const std::string &name,
-                 bool enableAB, bool enableDepth, bool enableXYZ)
+                 bool enableAB, bool enableDepth, bool enableXYZ,
+                 bool enableRGB)
     : m_ctrl(ctrl), m_viewName(name), m_distanceVal(0), m_smallSignal(false),
       m_crtSmallSignalState(false) {
 
@@ -143,6 +144,19 @@ ADIView::ADIView(std::shared_ptr<ADIController> ctrl, const std::string &name,
     } else {
         LOG(INFO) << "Point cloud processing disabled by config (xyzEnable=0)";
     }
+
+#ifdef WITH_RGB_SUPPORT
+    // Conditionally create RGB worker thread based on config
+    if (enableRGB) {
+        m_rgbThreadCreated = true;
+        m_rgbImageWorker =
+            std::thread(std::bind(&ADIView::_displayRgbImage, this));
+        LOG(INFO) << "RGB capture thread created (will process frames "
+                     "containing RGB data)";
+    } else {
+        LOG(INFO) << "RGB processing disabled by config (rgbCameraEnable=0)";
+    }
+#endif // WITH_RGB_SUPPORT
 }
 
 ADIView::~ADIView() {
@@ -166,6 +180,14 @@ ADIView::~ADIView() {
         m_pointCloudImageWorker.join();
     }
 
+#ifdef WITH_RGB_SUPPORT
+    // Join RGB worker thread (only if enabled at build time)
+    if (m_rgbThreadCreated && m_rgbImageWorker.joinable()) {
+        m_rgbImageWorker.join();
+        LOG(INFO) << "RGB worker thread joined successfully";
+    }
+#endif // WITH_RGB_SUPPORT
+
     vertexArraySize = 0;
     m_capturedFrame = nullptr;
 
@@ -187,6 +209,21 @@ void ADIView::cleanUp() {
         delete[] normalized_vertices;
         normalized_vertices = nullptr;
     }
+
+#ifdef WITH_RGB_SUPPORT
+    if (rgb_video_data_rgb != nullptr) {
+        delete[] rgb_video_data_rgb;
+        rgb_video_data_rgb = nullptr;
+    }
+    if (rgb_video_data_rgb_back != nullptr) {
+        delete[] rgb_video_data_rgb_back;
+        rgb_video_data_rgb_back = nullptr;
+    }
+    if (rgb_video_data_8bit != nullptr) {
+        delete[] rgb_video_data_8bit;
+        rgb_video_data_8bit = nullptr;
+    }
+#endif
 }
 
 void ADIView::setABMaxRange(std::string value) {
@@ -1230,3 +1267,113 @@ void ADIView::startCamera() {
 
 // ARM NEON implementations are in ADIView_neon.cpp (compiled separately)
 // CUDA implementations are in ADIView_cuda_wrapper.cpp and ADIView_cuda.cu (compiled separately)
+
+#ifdef WITH_RGB_SUPPORT
+
+/**
+ * @brief Worker thread for RGB image capture and conversion
+ *
+ * Synchronization Pattern (Two-Phase Locking):
+ * Phase 1: Acquire m_frameCapturedMutex, check m_rgbFrameAvailable, release lock
+ * Phase 2: Process RGB data without lock (safe because main thread blocks on barrier)
+ * Phase 3: Participate in barrier via m_waitKeyBarrier counter
+ */
+void ADIView::_displayRgbImage() {
+    while (!m_stopWorkersFlag) {
+        // ============================================================
+        // PHASE 1: Wait for new frame (SHORT LOCK)
+        // ============================================================
+        {
+            std::unique_lock<std::mutex> lock(m_frameCapturedMutex);
+            m_frameCapturedCv.wait(lock, [&]() {
+                return m_rgbFrameAvailable || m_stopWorkersFlag;
+            });
+
+            if (m_stopWorkersFlag) {
+                break;
+            }
+
+            m_rgbFrameAvailable = false;
+
+            if (m_capturedFrame == nullptr) {
+                continue;
+            }
+
+            lock.unlock();
+        }
+
+        // ============================================================
+        // PHASE 2: Process RGB data (NO LOCK)
+        // ============================================================
+        try {
+            uint8_t *bgr_data = nullptr;
+            auto status =
+                m_capturedFrame->getData("rgb", (uint16_t **)&bgr_data);
+
+            if (status != aditof::Status::OK || bgr_data == nullptr) {
+                continue;
+            }
+
+            aditof::FrameDataDetails frameRgbDetails;
+            m_capturedFrame->getDataDetails("rgb", frameRgbDetails);
+
+            int frameHeight = static_cast<int>(frameRgbDetails.height);
+            int frameWidth = static_cast<int>(frameRgbDetails.width);
+
+            if (frameHeight <= 0 || frameWidth <= 0) {
+                continue;
+            }
+
+            rgbFrameWidth = frameWidth;
+            rgbFrameHeight = frameHeight;
+
+            if (rgb_video_data_rgb == nullptr) {
+                size_t bgr_buffer_size = frameHeight * frameWidth * 3;
+                rgb_video_data_rgb = new uint8_t[bgr_buffer_size];
+                rgb_video_data_rgb_back = new uint8_t[bgr_buffer_size];
+                rgb_video_data_8bit = new uint8_t[bgr_buffer_size];
+                if (rgb_video_data_rgb == nullptr ||
+                    rgb_video_data_rgb_back == nullptr ||
+                    rgb_video_data_8bit == nullptr) {
+                    LOG(ERROR) << "RGB worker: Failed to allocate RGB buffers";
+                    continue;
+                }
+                LOG(INFO) << "RGB buffers allocated: " << frameWidth << "x"
+                          << frameHeight;
+            }
+
+            size_t bgr_size = frameHeight * frameWidth * 3;
+            std::memcpy(rgb_video_data_rgb_back, bgr_data, bgr_size);
+
+            {
+                std::lock_guard<std::mutex> data_lock(rgb_data_ready_mtx);
+                std::swap(rgb_video_data_rgb, rgb_video_data_rgb_back);
+                std::memcpy(rgb_video_data_8bit, rgb_video_data_rgb, bgr_size);
+                rgb_data_ready = true;
+            }
+            rgb_data_ready_cv.notify_one();
+
+        } catch (const std::exception &e) {
+            continue;
+        }
+
+        // ============================================================
+        // PHASE 3: Barrier synchronization
+        // ============================================================
+        {
+            std::unique_lock<std::mutex> imshow_lock(m_imshowMutex);
+            m_waitKeyBarrier++;
+            if (m_waitKeyBarrier == numOfThreads) {
+                imshow_lock.unlock();
+                m_barrierCv.notify_one();
+            }
+        }
+    }
+
+    if (rgb_video_data_rgb != nullptr) {
+        delete[] rgb_video_data_rgb;
+        rgb_video_data_rgb = nullptr;
+    }
+}
+
+#endif // WITH_RGB_SUPPORT
