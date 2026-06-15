@@ -1,14 +1,14 @@
 ----
 ![Static Badge](https://img.shields.io/badge/Important-FFD700?style=flat-square) 
 
-This page is in preparation for the release 1.0.0. See the ADCAM tag [v0.1.0-a.1](https://github.com/analogdevicesinc/ADCAM/tree/v0.1.0-a.1) for the latest release.
+This page is in preparation for the release 1.0.0. See the ADCAM tag [v1.0.0](https://github.com/analogdevicesinc/ADCAM/tree/v1.0.0) for the latest release.
 
 ----
 
 ![License](https://img.shields.io/badge/platform%20arch-ARM64-blue.svg)
 
 [![Platform: NVIDIA Jetson Orin Nano](https://img.shields.io/badge/Platform-NVIDIA%20Jetson%20Orin%20Nano-%2376B900?style=plastic&logo=nvidia&logoColor=white&logoWidth=14)](https://developer.nvidia.com/embedded/jetson-orin)
-[![OS: NVIDIA JetPack 6.2.1](https://img.shields.io/badge/OS-NVIDIA%20Jetpack%206.2.1%20(Ubuntu%2022.04)-%2376B900?style=plastic&logo=nvidia&logoColor=white&logoWidth=14)](https://developer.nvidia.com/embedded/jetson-orin)
+[![OS: NVIDIA JetPack 6.2.2](https://img.shields.io/badge/OS-NVIDIA%20Jetpack%206.2.1%20(Ubuntu%2022.04)-%2376B900?style=plastic&logo=nvidia&logoColor=white&logoWidth=14)](https://developer.nvidia.com/embedded/jetson-orin)
 
 [![Platform: Raspberry Pi 5](https://img.shields.io/badge/Platform-Raspberry%20Pi%205-%23A01339?style=plastic&logo=raspberrypi&logoColor=white)](https://www.raspberrypi.com/)
 [![OS: Raspberry Pi OS 64-bit](https://img.shields.io/static/v1?label=OS&message=Raspberry%20Pi%20OS%2064%2Dbit%202025%2D12%2D04&color=%23C51A4A&style=flat&logo=raspberrypi&logoColor=white)](https://www.raspberrypi.com/software/)
@@ -22,8 +22,19 @@ This page is in preparation for the release 1.0.0. See the ADCAM tag [v0.1.0-a.1
 
 ## Latest Release
 
-* [ADCAM Eval Kit Documentation & Quick Start Guide](doc/user-guide/ADCAM-CameraKit-020.md)
+* [ADCAM Release 1.0.0](https://github.com/analogdevicesinc/ADCAM/releases/tag/v1.0.0)
+  * Please reference the **Quick Start Guide**, on the release page, for setting up the eval kit.
+* [ADCAM Eval Kit Documentation](doc/user-guide/ADCAM-CameraKit-100.md)
 * The [ADCAM GitHub Wiki](https://github.com/analogdevicesinc/ADCAM/wiki) is a jumping off point for other documentation.
+
+```
+ADCAM Installer v1.0.0
+└─ ADCAM v1.0.0
+   ├─ Dual ADSD3500 v8.1.0
+   ├─ ToF-drivers v7.0.0
+   └─ libaditof v7.1.0
+      └─ Depth Compute Library 5.1.0
+```
 
 ## Overview
 
@@ -50,7 +61,7 @@ This repository depends on the following components:
 
 ### Requirements
 
-* NVIDIA Jetson Orin Nano Developer Kit: JetPack 6.2.1
+* NVIDIA Jetson Orin Nano Developer Kit: JetPack 6.2.2
 * Raspberry Pi 5: Raspberry Pi OS Full (64-bit) Debian Trixie, release 2025-12-04
 
 ## Examples
@@ -111,7 +122,7 @@ Requirements:
 
 #### Installing the pre-requisites
 
-##### NVIDIA Jeston Orin Nano Dev Kit with JetPack 6.2.1
+##### NVIDIA Jeston Orin Nano Dev Kit with JetPack 6.2.2
 ```console
 sudo apt update
 sudo apt install cmake g++ \
@@ -190,7 +201,7 @@ The example below using file name **NVIDIA_ToF_ADSD3500_REL_PATCH_08Apr26.zip** 
 
 Note, this will take sometime to build.
 
-#### NVIDIA Jetson Orin Nano Dev Kit with JetPack 6.2.1
+#### NVIDIA Jetson Orin Nano Dev Kit with JetPack 6.2.2
 
 ##### Building & Installing
 
