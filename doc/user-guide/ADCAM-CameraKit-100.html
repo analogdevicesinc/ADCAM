@@ -1,0 +1,1620 @@
+<h1 id="release-notes">🛑 Release Notes 🛑</h1>
+<p>Refer to the release page for release notes.</p>
+<h1 id="requirements-and-installation">Requirements and Installation</h1>
+<p>Refer to the Quick Start Guide, on the release page, for installation instructions.</p>
+<h1 id="using-the-eval-kit">Using the Eval Kit</h1>
+<p>It is assumed the <strong>ADCAM Camera Kit Quick Start Guide</strong> was followed to get ADCAM up and running.</p>
+<h2 id="python-tools">Python Tools</h2>
+<p>The Python tools rely on the included Python bindings.</p>
+<details>
+<p><summary>Setup the Virtual Environment</summary></p>
+<h4 id="setup-the-virtual-environment">Setup the Virtual Environment</h4>
+<p>The Python virtual environment step was done during the setup phase.</p>
+<p>If you have not setup the virtual environment,</p>
+<pre><code>~$ cd ~/ADI/Robotics/Camera/ADCAM/1.0.0
+~/ADI/Robotics/Camera/ADCAM/1.0.0$ source activate_env.sh
+Attempting to setup the Python environment.
+~/ADI/Robotics/Camera/ADCAM/1.0.0/setup ~/ADI/Robotics/Camera/ADCAM/1.0.0
+Package check and installation complete.
+Creating Directory Path Soft Link: /home/analog/ADI/Robotics/Camera/ADCAM/1.0.0/libs
+[sudo] password for analog:
+/home/analog/ADI/Robotics/Camera/ADCAM/1.0.0/libs/lib
+Using Python 3.10.12 at /usr/bin/python3.10
+...
+All set.
+~/ADI/Robotics/Camera/ADCAM/1.0.0
+Activating ADI ToF python env
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0$</code></pre>
+<h4 id="activate-the-virtual-environment">Activate the Virtual Environment</h4>
+<pre><code>~/ADI/Robotics/Camera/ADCAM/1.0.0$ source activate_env.sh
+Activating ADI ToF python env
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0$</code></pre>
+<h4 id="deactivate-the-virtual-environment">Deactivate the Virtual Environment</h4>
+<p>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0$ deactivate ~/ADI/Robotics/Camera/ADCAM/1.0.0$</p>
+</details>
+<details>
+<p><summary>Example: first_frame (Python)</summary></p>
+<h3 id="first_frame-python">first_frame (Python)</h3>
+<p>A basic example showing how to get a frame from the device.</p>
+<h4 id="command-line-interface">Command Line Interface</h4>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/Python$ python first_frame.py
+usage: first_frame.py [-h] -m MODE [-i IP] [-o {bin,snap,show}]
+first_frame.py: error: the following arguments are required: -m/--mode</code></pre>
+<p>Where: * <strong>-b bin</strong> saves .bin files files based on the frame contents for visualzation using files in the <em>visualization</em> folder; example below. * <strong>-b snap</strong> saves .jpg, .txt and .ply files based on the frame contents. * <strong>-b show</strong> shows the AB, depth, confidence and metadata frame contents via the active display; example below.</p>
+<h4 id="example-usage--o-show">Example Usage: -o show</h4>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/Python$ python first_frame.py -m 3 -o show
+SDK version:  7.1.0   | branch:  rel-7.1.0  | commit:  abcfcf3a
+Looking for camera on Target.
+I20260610 12:37:44.899695 5276 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:37:44.899770 5276 sensor_enumerator.cpp:163] Initialized platform: NVIDIA Jetson Orin Nano (aarch64)
+I20260610 12:37:44.902706 5276 platform_impl.cpp:409] Found ADSD3500: video=/dev/video0 subdev=/dev/v4l-subdev1
+I20260610 12:37:44.902752 5276 sensor_enumerator.cpp:192] Found 1 ToF sensor(s)
+I20260610 12:37:44.914447 5276 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:37:44.914493 5276 buffer_processor.cpp:129] BufferProcessor initialized
+I20260610 12:37:44.914525 5276 sensor_enumerator.cpp:240] Created ADSD3500 sensor at /dev/video0
+I20260610 12:37:44.914585 5276 camera_itof.cpp:235] Sensor name = adsd3500
+system.getCameraList() Status.Ok
+I20260610 12:37:44.914710 5276 camera_initialization_manager.cpp:81] Initializing camera: Online
+W20260610 12:37:44.914776 5276 camera_configuration.cpp:464] Firmware version config file not found: /tmp/ADI-ADCAM/share/aditof/firmware_version_config.json
+I20260610 12:37:44.914795 5276 camera_configuration.cpp:465] Firmware version check will be disabled
+I20260610 12:37:44.914810 5276 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:37:44.914823 5276 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:37:44.914834 5276 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:37:44.914844 5276 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:37:44.914895 5276 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:37:44.914921 5276 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:37:44.914943 5276 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:37:44.914958 5276 adsd3500_sensor.cpp:423] ADSD3500 initialization attempt 1 of 3
+I20260610 12:37:44.914972 5276 platform_impl.cpp:629] Resetting sensor via GPIO
+I20260610 12:37:44.915090 5276 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 0 ms).
+I20260610 12:37:44.915140 5276 platform_impl.cpp:722] Waiting for sensor to reset
+I20260610 12:37:44.915157 5276 platform_impl.cpp:725] .
+I20260610 12:37:45.915240 5276 platform_impl.cpp:725] .
+I20260610 12:37:46.916025 5276 platform_impl.cpp:729] Waited: 2 seconds
+I20260610 12:37:46.916066 5276 platform_impl.cpp:741] Sensor reset complete
+I20260610 12:37:47.027636 5276 adsd3500_sensor.cpp:463] ADSD3500 is ready to communicate with after 1 attempt(s)
+I20260610 12:37:47.029308 5276 adsd3500_chip_config_manager.cpp:272] CCB master is supported. Reading mode details from nvm.
+I20260610 12:37:47.036595 5276 camera_initialization_manager.cpp:322] Detected imager type: adsd3100
+I20260610 12:37:47.046190 5276 camera_initialization_manager.cpp:165] Current adsd3500 firmware version is: 8.1.0.0
+I20260610 12:37:47.046214 5276 camera_initialization_manager.cpp:166] Current adsd3500 firmware git hash is: 2e50aaf0eec4c6928d5265d0cf79fe8f53da753a
+I20260610 12:37:47.046231 5276 camera_initialization_manager.cpp:415] All modes configured for ISP depth compute - CCB data not required
+W20260610 12:37:47.046245 5276 camera_initialization_manager.cpp:447] fsyncMode is not being set by SDK.
+I20260610 12:37:47.046256 5276 camera_initialization_manager.cpp:459] Using platform MIPI output speed: 1
+I20260610 12:37:47.046270 5276 camera_initialization_manager.cpp:463] Using platform deskew setting: 1
+I20260610 12:37:47.046400 5276 camera_initialization_manager.cpp:485] MIPI output speed set to 1
+I20260610 12:37:47.046534 5276 camera_initialization_manager.cpp:497] Deskew enabled at stream on
+W20260610 12:37:47.046550 5276 camera_initialization_manager.cpp:509] enableTempCompenstation is not being set by SDK.
+W20260610 12:37:47.046561 5276 camera_initialization_manager.cpp:521] enableEdgeConfidence is not being set by SDK.
+I20260610 12:37:47.052601 5276 camera_initialization_manager.cpp:267] Module serial number: 026AM313018F0N6JAL
+I20260610 12:37:47.052620 5276 camera_initialization_manager.cpp:275] Camera initialized
+camera1.initialize() Status.Ok
+camera1.getAvailableModes() Status.Ok
+[0, 1, 2, 3]
+camera1.getDetails() Status.Ok
+camera1 details: id: /dev/video0 connection: ConnectionType.OnTarget
+I20260610 12:37:47.052945 5276 adsd3500_sensor.cpp:1177] Target mode for runtime bit config set to 3
+I20260610 12:37:47.053143 5276 camera_itof.cpp:492] Setting lens scatter compensation flag to disabled
+W20260610 12:37:47.053169 5276 sensor_control_registry.cpp:69] Unsupported control: dualPulsatrixSystemEnabled
+I20260610 12:37:47.053183 5276 camera_itof.cpp:529] Rotation from JSON config: 0
+I20260610 12:37:47.053243 5276 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:37:47.053263 5276 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:37:47.053275 5276 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:37:47.053287 5276 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:37:47.053332 5276 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:37:47.053355 5276 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:37:47.053376 5276 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:37:47.056515 5276 v4l2_video_device_driver.cpp:199] Requested 4 buffers, driver allocated 4
+I20260610 12:37:49.256906 5276 buffer_processor.cpp:249] setVideoProperties: Allocating 8 raw frame buffers, each of size 1313280 bytes (total: 10.0195 MB)
+I20260610 12:37:49.257080 5276 buffer_processor.cpp:268] setVideoProperties: Allocating 8 ToFi buffers, each of size 2097152 bytes (total: 16 MB)
+I20260610 12:37:49.458384 5276 adsd3500_controller.cpp:255] Frame rate set to 40 fps
+I20260610 12:37:49.458446 5276 camera_itof.cpp:2097] Camera FPS set from parameter list at: 40
+W20260610 12:37:49.458464 5276 depth_parameter_mapper.cpp:134] vcselDelay was not found in parameter list, not setting.
+W20260610 12:37:49.458945 5276 depth_parameter_mapper.cpp:134] enablePhaseInvalidation was not found in parameter list, not setting.
+I20260610 12:37:49.459007 5276 camera_itof.cpp:597] Using the following configuration parameters for mode 3
+I20260610 12:37:49.459026 5276 camera_itof.cpp:600] abThreshMin : 20
+I20260610 12:37:49.459039 5276 camera_itof.cpp:600] bitsInAB : 16
+I20260610 12:37:49.459050 5276 camera_itof.cpp:600] bitsInConf : 8
+I20260610 12:37:49.459061 5276 camera_itof.cpp:600] bitsInPhaseOrDepth : 16
+I20260610 12:37:49.459072 5276 camera_itof.cpp:600] confThresh : 25
+I20260610 12:37:49.459083 5276 camera_itof.cpp:600] depthComputeIspEnable : 1
+I20260610 12:37:49.459093 5276 camera_itof.cpp:600] dualPulsatrixSystemEnabled : 1
+I20260610 12:37:49.459104 5276 camera_itof.cpp:600] enableRotation : 0
+I20260610 12:37:49.459114 5276 camera_itof.cpp:600] fps : 40
+I20260610 12:37:49.459124 5276 camera_itof.cpp:600] headerSize : 128
+I20260610 12:37:49.459135 5276 camera_itof.cpp:600] inputFormat : raw8
+I20260610 12:37:49.459145 5276 camera_itof.cpp:600] interleavingEnable : 1
+I20260610 12:37:49.459155 5276 camera_itof.cpp:600] jblfABThreshold : 10
+I20260610 12:37:49.459166 5276 camera_itof.cpp:600] jblfApplyFlag : 1
+I20260610 12:37:49.459176 5276 camera_itof.cpp:600] jblfExponentialTerm : 5
+I20260610 12:37:49.459186 5276 camera_itof.cpp:600] jblfGaussianSigma : 10
+I20260610 12:37:49.459196 5276 camera_itof.cpp:600] jblfMaxEdge : 12
+I20260610 12:37:49.459207 5276 camera_itof.cpp:600] jblfWindowSize : 5
+I20260610 12:37:49.459218 5276 camera_itof.cpp:600] lensScatterCompensationEnabled : 0
+I20260610 12:37:49.459228 5276 camera_itof.cpp:600] partialDepthEnable : 0
+I20260610 12:37:49.459239 5276 camera_itof.cpp:600] phaseInvalid : 0
+I20260610 12:37:49.459249 5276 camera_itof.cpp:600] radialThreshMax : 10000
+I20260610 12:37:49.459260 5276 camera_itof.cpp:600] radialThreshMin : 100
+I20260610 12:37:49.459272 5276 camera_itof.cpp:600] xyzEnable : 1
+I20260610 12:37:49.459404 5276 camera_itof.cpp:611] Metadata in AB is enabled and it is stored in the first 128 bytes.
+I20260610 12:37:49.459446 5276 camera_itof.cpp:720] Initializing depth compute with ISP (parsed dealias data)
+I20260610 12:37:49.459467 5276 buffer_processor.cpp:488] setProcessorProperties: libtofi_compute version: TOF_DepthComputeEngine_ARM64-Rel5.1.0.1
+I20260610 12:37:49.625504 5276 adsd3500_sensor.cpp:1592] Frame Rotation: disabled
+W20260610 12:37:49.625597 5276 sensor_control_registry.cpp:74] Control &#39;depthComputeOpenSource&#39; is read-only
+I20260610 12:37:49.625620 5276 camera_itof.cpp:755] Using closed source depth compute library.
+camera1.setMode( 3 ) Status.Ok
+I20260610 12:37:49.732066 5276 adsd3500_sensor.cpp:575] Starting device 0
+I20260610 12:37:49.741340 5276 v4l2_video_device_driver.cpp:311] Started streaming on /dev/video0
+camera1.start() Status.Ok
+I20260610 12:37:49.772938 5276 camera_frame_acquisition_manager.cpp:187] Dropped first frame
+camera1.requestFrame() Status.Ok
+frame.getDataDetails() Status.Ok
+depth frame details: width: 512 height: 512 type: depth
+I20260610 12:37:52.013994 5276 buffer_processor.cpp:1337] stopThreads: Threads stopped successfully. Queue sizes - v4l2_input: 8, capture_to_process: 0, tofi_io: 8, process_done: 0
+I20260610 12:37:52.014086 5276 adsd3500_sensor.cpp:620] Stopping device
+I20260610 12:37:52.016052 5276 v4l2_video_device_driver.cpp:326] Stopped streaming on /dev/video0
+I20260610 12:37:52.016094 5276 adsd3500_sensor.cpp:1513] Waiting for interrupt.
+I20260610 12:37:52.016111 5276 adsd3500_sensor.cpp:1518] .
+I20260610 12:37:52.026577 5276 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 10 ms).
+I20260610 12:37:52.036639 5276 adsd3500_sensor.cpp:1523] Waited: 20 ms.
+I20260610 12:37:52.036665 5276 adsd3500_sensor.cpp:1530] Got the Interrupt from ADSD3500
+camera1.stop() Status.Ok
+Available frame types: [&#39;depth&#39;, &#39;ab&#39;, &#39;conf&#39;, &#39;xyz&#39;, &#39;metadata&#39;]
+Depth frame retrieved
+AB frame retrieved
+Confidence frame retrieved
+XYZ frame retrieved
+Sensor temperature from metadata:  36
+Laser temperature from metadata:  38
+Frame number from metadata:  1
+Mode from metadata:  3
+I20260610 12:38:35.346718 5276 v4l2_buffer_manager.cpp:210] Cleaned up video buffers for device
+I20260610 12:38:35.347228 5276 buffer_processor.cpp:152] freeComputeLibrary
+I20260610 12:38:35.349007 5276 adsd3500_interrupt_notifier.cpp:190] 
+Removed 1 sensor(s) from interrupt notifier. Remaining: 0</code></pre>
+<p><a href="images/first-frame-py.png"><img src="images/first-frame-py.png" width="25%"></a></p>
+<h4 id="example-usage--o-bin">Example Usage: -o bin</h4>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/Python$ python first_frame.py -m 3 -o bin
+SDK version:  7.1.0   | branch:  rel-7.1.0  | commit:  abcfcf3a
+Looking for camera on Target.
+I20260610 12:39:40.456729 5365 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:39:40.456804 5365 sensor_enumerator.cpp:163] Initialized platform: NVIDIA Jetson Orin Nano (aarch64)
+I20260610 12:39:40.459689 5365 platform_impl.cpp:409] Found ADSD3500: video=/dev/video0 subdev=/dev/v4l-subdev1
+I20260610 12:39:40.459738 5365 sensor_enumerator.cpp:192] Found 1 ToF sensor(s)
+I20260610 12:39:40.471006 5365 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:39:40.471054 5365 buffer_processor.cpp:129] BufferProcessor initialized
+I20260610 12:39:40.471089 5365 sensor_enumerator.cpp:240] Created ADSD3500 sensor at /dev/video0
+I20260610 12:39:40.471153 5365 camera_itof.cpp:235] Sensor name = adsd3500
+system.getCameraList() Status.Ok
+I20260610 12:39:40.471275 5365 camera_initialization_manager.cpp:81] Initializing camera: Online
+W20260610 12:39:40.471348 5365 camera_configuration.cpp:464] Firmware version config file not found: /tmp/ADI-ADCAM/share/aditof/firmware_version_config.json
+I20260610 12:39:40.471365 5365 camera_configuration.cpp:465] Firmware version check will be disabled
+I20260610 12:39:40.471381 5365 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:39:40.471395 5365 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:39:40.471405 5365 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:39:40.471417 5365 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:39:40.471467 5365 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:39:40.471492 5365 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:39:40.471516 5365 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:39:40.471531 5365 adsd3500_sensor.cpp:423] ADSD3500 initialization attempt 1 of 3
+I20260610 12:39:40.471545 5365 platform_impl.cpp:629] Resetting sensor via GPIO
+I20260610 12:39:40.471657 5365 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 0 ms).
+I20260610 12:39:40.471712 5365 platform_impl.cpp:722] Waiting for sensor to reset
+I20260610 12:39:40.471731 5365 platform_impl.cpp:725] .
+I20260610 12:39:41.471812 5365 platform_impl.cpp:725] .
+I20260610 12:39:42.472634 5365 platform_impl.cpp:729] Waited: 2 seconds
+I20260610 12:39:42.472685 5365 platform_impl.cpp:741] Sensor reset complete
+I20260610 12:39:42.584296 5365 adsd3500_sensor.cpp:463] ADSD3500 is ready to communicate with after 1 attempt(s)
+I20260610 12:39:42.585927 5365 adsd3500_chip_config_manager.cpp:272] CCB master is supported. Reading mode details from nvm.
+I20260610 12:39:42.593182 5365 camera_initialization_manager.cpp:322] Detected imager type: adsd3100
+I20260610 12:39:42.602892 5365 camera_initialization_manager.cpp:165] Current adsd3500 firmware version is: 8.1.0.0
+I20260610 12:39:42.602915 5365 camera_initialization_manager.cpp:166] Current adsd3500 firmware git hash is: 2e50aaf0eec4c6928d5265d0cf79fe8f53da753a
+I20260610 12:39:42.602932 5365 camera_initialization_manager.cpp:415] All modes configured for ISP depth compute - CCB data not required
+W20260610 12:39:42.602945 5365 camera_initialization_manager.cpp:447] fsyncMode is not being set by SDK.
+I20260610 12:39:42.602956 5365 camera_initialization_manager.cpp:459] Using platform MIPI output speed: 1
+I20260610 12:39:42.602967 5365 camera_initialization_manager.cpp:463] Using platform deskew setting: 1
+I20260610 12:39:42.603099 5365 camera_initialization_manager.cpp:485] MIPI output speed set to 1
+I20260610 12:39:42.603235 5365 camera_initialization_manager.cpp:497] Deskew enabled at stream on
+W20260610 12:39:42.603255 5365 camera_initialization_manager.cpp:509] enableTempCompenstation is not being set by SDK.
+W20260610 12:39:42.603268 5365 camera_initialization_manager.cpp:521] enableEdgeConfidence is not being set by SDK.
+I20260610 12:39:42.609291 5365 camera_initialization_manager.cpp:267] Module serial number: 026AM313018F0N6JAL
+I20260610 12:39:42.609312 5365 camera_initialization_manager.cpp:275] Camera initialized
+camera1.initialize() Status.Ok
+camera1.getAvailableModes() Status.Ok
+[0, 1, 2, 3]
+camera1.getDetails() Status.Ok
+camera1 details: id: /dev/video0 connection: ConnectionType.OnTarget
+I20260610 12:39:42.609642 5365 adsd3500_sensor.cpp:1177] Target mode for runtime bit config set to 3
+I20260610 12:39:42.609842 5365 camera_itof.cpp:492] Setting lens scatter compensation flag to disabled
+W20260610 12:39:42.609869 5365 sensor_control_registry.cpp:69] Unsupported control: dualPulsatrixSystemEnabled
+I20260610 12:39:42.609884 5365 camera_itof.cpp:529] Rotation from JSON config: 0
+I20260610 12:39:42.609948 5365 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:39:42.609966 5365 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:39:42.609979 5365 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:39:42.609991 5365 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:39:42.610037 5365 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:39:42.610063 5365 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:39:42.610085 5365 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:39:42.613345 5365 v4l2_video_device_driver.cpp:199] Requested 4 buffers, driver allocated 4
+I20260610 12:39:44.813821 5365 buffer_processor.cpp:249] setVideoProperties: Allocating 8 raw frame buffers, each of size 1313280 bytes (total: 10.0195 MB)
+I20260610 12:39:44.814009 5365 buffer_processor.cpp:268] setVideoProperties: Allocating 8 ToFi buffers, each of size 2097152 bytes (total: 16 MB)
+I20260610 12:39:45.015292 5365 adsd3500_controller.cpp:255] Frame rate set to 40 fps
+I20260610 12:39:45.015360 5365 camera_itof.cpp:2097] Camera FPS set from parameter list at: 40
+W20260610 12:39:45.015378 5365 depth_parameter_mapper.cpp:134] vcselDelay was not found in parameter list, not setting.
+W20260610 12:39:45.015861 5365 depth_parameter_mapper.cpp:134] enablePhaseInvalidation was not found in parameter list, not setting.
+I20260610 12:39:45.015921 5365 camera_itof.cpp:597] Using the following configuration parameters for mode 3
+I20260610 12:39:45.015940 5365 camera_itof.cpp:600] abThreshMin : 20
+I20260610 12:39:45.015952 5365 camera_itof.cpp:600] bitsInAB : 16
+I20260610 12:39:45.015964 5365 camera_itof.cpp:600] bitsInConf : 8
+I20260610 12:39:45.015975 5365 camera_itof.cpp:600] bitsInPhaseOrDepth : 16
+I20260610 12:39:45.015985 5365 camera_itof.cpp:600] confThresh : 25
+I20260610 12:39:45.015996 5365 camera_itof.cpp:600] depthComputeIspEnable : 1
+I20260610 12:39:45.016007 5365 camera_itof.cpp:600] dualPulsatrixSystemEnabled : 1
+I20260610 12:39:45.016017 5365 camera_itof.cpp:600] enableRotation : 0
+I20260610 12:39:45.016028 5365 camera_itof.cpp:600] fps : 40
+I20260610 12:39:45.016038 5365 camera_itof.cpp:600] headerSize : 128
+I20260610 12:39:45.016049 5365 camera_itof.cpp:600] inputFormat : raw8
+I20260610 12:39:45.016059 5365 camera_itof.cpp:600] interleavingEnable : 1
+I20260610 12:39:45.016070 5365 camera_itof.cpp:600] jblfABThreshold : 10
+I20260610 12:39:45.016080 5365 camera_itof.cpp:600] jblfApplyFlag : 1
+I20260610 12:39:45.016091 5365 camera_itof.cpp:600] jblfExponentialTerm : 5
+I20260610 12:39:45.016101 5365 camera_itof.cpp:600] jblfGaussianSigma : 10
+I20260610 12:39:45.016111 5365 camera_itof.cpp:600] jblfMaxEdge : 12
+I20260610 12:39:45.016122 5365 camera_itof.cpp:600] jblfWindowSize : 5
+I20260610 12:39:45.016133 5365 camera_itof.cpp:600] lensScatterCompensationEnabled : 0
+I20260610 12:39:45.016143 5365 camera_itof.cpp:600] partialDepthEnable : 0
+I20260610 12:39:45.016153 5365 camera_itof.cpp:600] phaseInvalid : 0
+I20260610 12:39:45.016164 5365 camera_itof.cpp:600] radialThreshMax : 10000
+I20260610 12:39:45.016175 5365 camera_itof.cpp:600] radialThreshMin : 100
+I20260610 12:39:45.016185 5365 camera_itof.cpp:600] xyzEnable : 1
+I20260610 12:39:45.016316 5365 camera_itof.cpp:611] Metadata in AB is enabled and it is stored in the first 128 bytes.
+I20260610 12:39:45.016361 5365 camera_itof.cpp:720] Initializing depth compute with ISP (parsed dealias data)
+I20260610 12:39:45.016382 5365 buffer_processor.cpp:488] setProcessorProperties: libtofi_compute version: TOF_DepthComputeEngine_ARM64-Rel5.1.0.1
+I20260610 12:39:45.182937 5365 adsd3500_sensor.cpp:1592] Frame Rotation: disabled
+W20260610 12:39:45.183030 5365 sensor_control_registry.cpp:74] Control &#39;depthComputeOpenSource&#39; is read-only
+I20260610 12:39:45.183053 5365 camera_itof.cpp:755] Using closed source depth compute library.
+camera1.setMode( 3 ) Status.Ok
+I20260610 12:39:45.289601 5365 adsd3500_sensor.cpp:575] Starting device 0
+I20260610 12:39:45.298950 5365 v4l2_video_device_driver.cpp:311] Started streaming on /dev/video0
+camera1.start() Status.Ok
+I20260610 12:39:45.330381 5365 camera_frame_acquisition_manager.cpp:187] Dropped first frame
+camera1.requestFrame() Status.Ok
+frame.getDataDetails() Status.Ok
+depth frame details: width: 512 height: 512 type: depth
+I20260610 12:39:47.571439 5365 buffer_processor.cpp:1337] stopThreads: Threads stopped successfully. Queue sizes - v4l2_input: 8, capture_to_process: 0, tofi_io: 8, process_done: 0
+I20260610 12:39:47.571533 5365 adsd3500_sensor.cpp:620] Stopping device
+I20260610 12:39:47.572896 5365 v4l2_video_device_driver.cpp:326] Stopped streaming on /dev/video0
+I20260610 12:39:47.572925 5365 adsd3500_sensor.cpp:1513] Waiting for interrupt.
+I20260610 12:39:47.572940 5365 adsd3500_sensor.cpp:1518] .
+I20260610 12:39:47.584014 5365 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 11 ms).
+I20260610 12:39:47.593451 5365 adsd3500_sensor.cpp:1523] Waited: 20 ms.
+I20260610 12:39:47.593473 5365 adsd3500_sensor.cpp:1530] Got the Interrupt from ADSD3500
+camera1.stop() Status.Ok
+Available frame types: [&#39;depth&#39;, &#39;ab&#39;, &#39;conf&#39;, &#39;xyz&#39;, &#39;metadata&#39;]
+Depth frame retrieved
+AB frame retrieved
+Confidence frame retrieved
+XYZ frame retrieved
+Sensor temperature from metadata:  37
+Laser temperature from metadata:  38
+Frame number from metadata:  1
+Mode from metadata:  3
+Saved: depth_mode_3.bin
+Saved: ab_mode_3.bin
+Saved: conf_mode_3.bin
+Saved: xyz_mode_3.bin
+I20260610 12:39:48.037934 5365 v4l2_buffer_manager.cpp:210] Cleaned up video buffers for device
+I20260610 12:39:48.038386 5365 buffer_processor.cpp:152] freeComputeLibrary
+I20260610 12:39:48.040096 5365 adsd3500_interrupt_notifier.cpp:190] Removed 1 sensor(s) from interrupt notifier. Remaining: 0</code></pre>
+<p>Now, let’s look at the output files. In this case we will look at the depth image specifically. However, you can find Python scripts to visualize AB, depth and point cloud saved <strong>.bin</strong> files.</p>
+<ul>
+<li>visualize_ab.py</li>
+<li>visualize_depth.py</li>
+<li>visualize_pointcloud.py</li>
+</ul>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/Python$ python visualization/visualize_depth.py depth_mode_3.bin 512 512
+Input file is:  depth_mode_3.bin</code></pre>
+<p><a href="images/first-frame-py-viz-depth-bin.png"><img src="images/first-frame-py-viz-depth-bin.png" width="25%"></a></p>
+</details>
+<details>
+<p><summary>Example: streaming (Python)</summary></p>
+<h3 id="streaming-python">streaming (Python)</h3>
+<p>This tool uses Pygame to show streaming frames from the device in real-time.</p>
+<h4 id="command-line-interface-1">Command Line Interface</h4>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/Python$ python depth-image-animation-pygame.py
+pygame 2.6.1 (SDL 2.28.4, Python 3.10.12)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+depth-image-animation-pygame.py usage:
+Target: depth-image-animation-pygame.py &lt;mode number&gt;
+Network connection: depth-image-animation-pygame.py &lt;mode number&gt; &lt;ip&gt;
+
+For example:
+python depth-image-animation-pygame.py 0 192.168.56.1</code></pre>
+<h4 id="example-usage">Example Usage</h4>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/Python$ python depth-image-animation-pygame.py 3
+pygame 2.6.1 (SDL 2.28.4, Python 3.10.12)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+SDK version:  7.1.0   | branch:  rel-7.1.0  | commit:  abcfcf3a
+Looking for camera on Target.
+I20260610 12:40:28.069542 5410 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:40:28.069630 5410 sensor_enumerator.cpp:163] Initialized platform: NVIDIA Jetson Orin Nano (aarch64)
+I20260610 12:40:28.072652 5410 platform_impl.cpp:409] Found ADSD3500: video=/dev/video0 subdev=/dev/v4l-subdev1
+I20260610 12:40:28.072706 5410 sensor_enumerator.cpp:192] Found 1 ToF sensor(s)
+I20260610 12:40:28.083966 5410 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:40:28.084019 5410 buffer_processor.cpp:129] BufferProcessor initialized
+I20260610 12:40:28.084054 5410 sensor_enumerator.cpp:240] Created ADSD3500 sensor at /dev/video0
+I20260610 12:40:28.084115 5410 camera_itof.cpp:235] Sensor name = adsd3500
+system.getCameraList() Status.Ok
+I20260610 12:40:28.084224 5410 camera_initialization_manager.cpp:81] Initializing camera: Online
+W20260610 12:40:28.084296 5410 camera_configuration.cpp:464] Firmware version config file not found: /tmp/ADI-ADCAM/share/aditof/firmware_version_config.json
+I20260610 12:40:28.084315 5410 camera_configuration.cpp:465] Firmware version check will be disabled
+I20260610 12:40:28.084330 5410 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:40:28.084343 5410 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:40:28.084354 5410 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:40:28.084365 5410 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:40:28.084421 5410 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:40:28.084446 5410 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:40:28.084469 5410 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:40:28.084484 5410 adsd3500_sensor.cpp:423] ADSD3500 initialization attempt 1 of 3
+I20260610 12:40:28.084498 5410 platform_impl.cpp:629] Resetting sensor via GPIO
+I20260610 12:40:28.084612 5410 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 0 ms).
+I20260610 12:40:28.084659 5410 platform_impl.cpp:722] Waiting for sensor to reset
+I20260610 12:40:28.084674 5410 platform_impl.cpp:725] .
+I20260610 12:40:29.084759 5410 platform_impl.cpp:725] .
+I20260610 12:40:30.085647 5410 platform_impl.cpp:729] Waited: 2 seconds
+I20260610 12:40:30.085731 5410 platform_impl.cpp:741] Sensor reset complete
+I20260610 12:40:30.197380 5410 adsd3500_sensor.cpp:463] ADSD3500 is ready to communicate with after 1 attempt(s)
+I20260610 12:40:30.199125 5410 adsd3500_chip_config_manager.cpp:272] CCB master is supported. Reading mode details from nvm.
+I20260610 12:40:30.206402 5410 camera_initialization_manager.cpp:322] Detected imager type: adsd3100
+I20260610 12:40:30.215992 5410 camera_initialization_manager.cpp:165] Current adsd3500 firmware version is: 8.1.0.0
+I20260610 12:40:30.216013 5410 camera_initialization_manager.cpp:166] Current adsd3500 firmware git hash is: 2e50aaf0eec4c6928d5265d0cf79fe8f53da753a
+I20260610 12:40:30.216029 5410 camera_initialization_manager.cpp:415] All modes configured for ISP depth compute - CCB data not required
+W20260610 12:40:30.216041 5410 camera_initialization_manager.cpp:447] fsyncMode is not being set by SDK.
+I20260610 12:40:30.216053 5410 camera_initialization_manager.cpp:459] Using platform MIPI output speed: 1
+I20260610 12:40:30.216064 5410 camera_initialization_manager.cpp:463] Using platform deskew setting: 1
+I20260610 12:40:30.216193 5410 camera_initialization_manager.cpp:485] MIPI output speed set to 1
+I20260610 12:40:30.216326 5410 camera_initialization_manager.cpp:497] Deskew enabled at stream on
+W20260610 12:40:30.216342 5410 camera_initialization_manager.cpp:509] enableTempCompenstation is not being set by SDK.
+W20260610 12:40:30.216353 5410 camera_initialization_manager.cpp:521] enableEdgeConfidence is not being set by SDK.
+I20260610 12:40:30.222369 5410 camera_initialization_manager.cpp:267] Module serial number: 026AM313018F0N6JAL
+I20260610 12:40:30.222387 5410 camera_initialization_manager.cpp:275] Camera initialized
+camera1.initialize() Status.Ok
+camera1.getAvailableModes() Status.Ok
+[0, 1, 2, 3]
+camera1.getDetails() Status.Ok
+camera1 details: id: /dev/video0 connection: ConnectionType.OnTarget
+I20260610 12:40:30.222725 5410 adsd3500_sensor.cpp:1177] Target mode for runtime bit config set to 3
+I20260610 12:40:30.222925 5410 camera_itof.cpp:492] Setting lens scatter compensation flag to disabled
+W20260610 12:40:30.222950 5410 sensor_control_registry.cpp:69] Unsupported control: dualPulsatrixSystemEnabled
+I20260610 12:40:30.222964 5410 camera_itof.cpp:529] Rotation from JSON config: 0
+I20260610 12:40:30.223028 5410 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:40:30.223047 5410 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:40:30.223060 5410 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:40:30.223071 5410 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:40:30.223119 5410 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:40:30.223143 5410 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:40:30.223165 5410 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:40:30.226328 5410 v4l2_video_device_driver.cpp:199] Requested 4 buffers, driver allocated 4
+I20260610 12:40:32.426744 5410 buffer_processor.cpp:249] setVideoProperties: Allocating 8 raw frame buffers, each of size 1313280 bytes (total: 10.0195 MB)
+I20260610 12:40:32.426922 5410 buffer_processor.cpp:268] setVideoProperties: Allocating 8 ToFi buffers, each of size 2097152 bytes (total: 16 MB)
+I20260610 12:40:32.628122 5410 adsd3500_controller.cpp:255] Frame rate set to 40 fps
+I20260610 12:40:32.628155 5410 camera_itof.cpp:2097] Camera FPS set from parameter list at: 40
+W20260610 12:40:32.628173 5410 depth_parameter_mapper.cpp:134] vcselDelay was not found in parameter list, not setting.
+W20260610 12:40:32.628652 5410 depth_parameter_mapper.cpp:134] enablePhaseInvalidation was not found in parameter list, not setting.
+I20260610 12:40:32.628710 5410 camera_itof.cpp:597] Using the following configuration parameters for mode 3
+I20260610 12:40:32.628726 5410 camera_itof.cpp:600] abThreshMin : 20
+I20260610 12:40:32.628740 5410 camera_itof.cpp:600] bitsInAB : 16
+I20260610 12:40:32.628750 5410 camera_itof.cpp:600] bitsInConf : 8
+I20260610 12:40:32.628760 5410 camera_itof.cpp:600] bitsInPhaseOrDepth : 16
+I20260610 12:40:32.628770 5410 camera_itof.cpp:600] confThresh : 25
+I20260610 12:40:32.628780 5410 camera_itof.cpp:600] depthComputeIspEnable : 1
+I20260610 12:40:32.628789 5410 camera_itof.cpp:600] dualPulsatrixSystemEnabled : 1
+I20260610 12:40:32.628798 5410 camera_itof.cpp:600] enableRotation : 0
+I20260610 12:40:32.628808 5410 camera_itof.cpp:600] fps : 40
+I20260610 12:40:32.628817 5410 camera_itof.cpp:600] headerSize : 128
+I20260610 12:40:32.628826 5410 camera_itof.cpp:600] inputFormat : raw8
+I20260610 12:40:32.628835 5410 camera_itof.cpp:600] interleavingEnable : 1
+I20260610 12:40:32.628844 5410 camera_itof.cpp:600] jblfABThreshold : 10
+I20260610 12:40:32.628854 5410 camera_itof.cpp:600] jblfApplyFlag : 1
+I20260610 12:40:32.628863 5410 camera_itof.cpp:600] jblfExponentialTerm : 5
+I20260610 12:40:32.628872 5410 camera_itof.cpp:600] jblfGaussianSigma : 10
+I20260610 12:40:32.628882 5410 camera_itof.cpp:600] jblfMaxEdge : 12
+I20260610 12:40:32.628891 5410 camera_itof.cpp:600] jblfWindowSize : 5
+I20260610 12:40:32.628900 5410 camera_itof.cpp:600] lensScatterCompensationEnabled : 0
+I20260610 12:40:32.628910 5410 camera_itof.cpp:600] partialDepthEnable : 0
+I20260610 12:40:32.628919 5410 camera_itof.cpp:600] phaseInvalid : 0
+I20260610 12:40:32.628928 5410 camera_itof.cpp:600] radialThreshMax : 10000
+I20260610 12:40:32.628938 5410 camera_itof.cpp:600] radialThreshMin : 100
+I20260610 12:40:32.628947 5410 camera_itof.cpp:600] xyzEnable : 1
+I20260610 12:40:32.629076 5410 camera_itof.cpp:611] Metadata in AB is enabled and it is stored in the first 128 bytes.
+I20260610 12:40:32.629118 5410 camera_itof.cpp:720] Initializing depth compute with ISP (parsed dealias data)
+I20260610 12:40:32.629138 5410 buffer_processor.cpp:488] setProcessorProperties: libtofi_compute version: TOF_DepthComputeEngine_ARM64-Rel5.1.0.1
+I20260610 12:40:32.795172 5410 adsd3500_sensor.cpp:1592] Frame Rotation: disabled
+W20260610 12:40:32.795258 5410 sensor_control_registry.cpp:74] Control &#39;depthComputeOpenSource&#39; is read-only
+I20260610 12:40:32.795277 5410 camera_itof.cpp:755] Using closed source depth compute library.
+camera1.setMode() Status.Ok
+I20260610 12:40:32.901737 5410 adsd3500_sensor.cpp:575] Starting device 0
+I20260610 12:40:32.911037 5410 v4l2_video_device_driver.cpp:311] Started streaming on /dev/video0
+camera1.start() Status.Ok
+I20260610 12:40:33.241897 5410 camera_frame_acquisition_manager.cpp:187] Dropped first frame
+W20260610 12:40:47.233908 5410 buffer_processor.cpp:1298] stopThreads: Queue drainage timed out. Forcing thread shutdown.
+I20260610 12:40:49.434144 5410 buffer_processor.cpp:1337] stopThreads: Threads stopped successfully. Queue sizes - v4l2_input: 8, capture_to_process: 0, tofi_io: 8, process_done: 0
+I20260610 12:40:49.434233 5410 adsd3500_sensor.cpp:620] Stopping device
+I20260610 12:40:49.435890 5410 v4l2_video_device_driver.cpp:326] Stopped streaming on /dev/video0
+I20260610 12:40:49.435919 5410 adsd3500_sensor.cpp:1513] Waiting for interrupt.
+I20260610 12:40:49.435934 5410 adsd3500_sensor.cpp:1518] .
+I20260610 12:40:49.446724 5410 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 10 ms).
+I20260610 12:40:49.456455 5410 adsd3500_sensor.cpp:1523] Waited: 20 ms.
+I20260610 12:40:49.456475 5410 adsd3500_sensor.cpp:1530] Got the Interrupt from ADSD3500
+I20260610 12:40:49.518091 5410 v4l2_buffer_manager.cpp:210] Cleaned up video buffers for device
+I20260610 12:40:49.518422 5410 buffer_processor.cpp:152] freeComputeLibrary
+I20260610 12:40:49.521172 5410 adsd3500_interrupt_notifier.cpp:190] Removed 1 sensor(s) from interrupt notifier. Remaining: 0</code></pre>
+<a href="images/depth-image-animation-pygame.png"><img src="images/depth-image-animation-pygame.png" width="25%"></a>
+</details>
+<h2 id="c-examples-and-tools">C++ Examples and Tools</h2>
+<p>We have provided examples and tools in C++ that should how to use the SDK.</p>
+<details>
+<p><summary>first_frame (C++)</summary></p>
+<h3 id="first_frame-c">first_frame (C++)</h3>
+<h4 id="command-line-interface-2">Command Line Interface</h4>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/first-frame$ ./first-frame --m 3
+I20260610 12:41:28.543528 5474 main.cpp:155] ADCAM version: 1.0.0 | SDK version: 7.1.0  | branch: rel-7.1.0 | commit: abcfcf3a
+I20260610 12:41:28.543656 5474 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:41:28.543684 5474 sensor_enumerator.cpp:163] Initialized platform: NVIDIA Jetson Orin Nano (aarch64)
+I20260610 12:41:28.546344 5474 platform_impl.cpp:409] Found ADSD3500: video=/dev/video0 subdev=/dev/v4l-subdev1
+I20260610 12:41:28.546376 5474 sensor_enumerator.cpp:192] Found 1 ToF sensor(s)
+I20260610 12:41:28.557590 5474 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:41:28.557648 5474 buffer_processor.cpp:129] BufferProcessor initialized
+I20260610 12:41:28.557690 5474 sensor_enumerator.cpp:240] Created ADSD3500 sensor at /dev/video0
+I20260610 12:41:28.557758 5474 camera_itof.cpp:235] Sensor name = adsd3500
+W20260610 12:41:28.557780 5474 main.cpp:208] Could not register callback
+I20260610 12:41:28.557794 5474 camera_initialization_manager.cpp:81] Initializing camera: Online
+W20260610 12:41:28.557874 5474 camera_configuration.cpp:464] Firmware version config file not found: /tmp/ADI-ADCAM/share/aditof/firmware_version_config.json
+I20260610 12:41:28.557892 5474 camera_configuration.cpp:465] Firmware version check will be disabled
+I20260610 12:41:28.557911 5474 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:41:28.557925 5474 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:41:28.557935 5474 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:41:28.557951 5474 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:41:28.558003 5474 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:41:28.558032 5474 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:41:28.558057 5474 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:41:28.558073 5474 adsd3500_sensor.cpp:423] ADSD3500 initialization attempt 1 of 3
+I20260610 12:41:28.558092 5474 platform_impl.cpp:629] Resetting sensor via GPIO
+I20260610 12:41:28.558208 5474 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 0 ms).
+I20260610 12:41:28.558259 5474 platform_impl.cpp:722] Waiting for sensor to reset
+I20260610 12:41:28.558274 5474 platform_impl.cpp:725] .
+I20260610 12:41:29.558352 5474 platform_impl.cpp:725] .
+I20260610 12:41:30.559151 5474 platform_impl.cpp:729] Waited: 2 seconds
+I20260610 12:41:30.559216 5474 platform_impl.cpp:741] Sensor reset complete
+I20260610 12:41:30.670756 5474 adsd3500_sensor.cpp:463] ADSD3500 is ready to communicate with after 1 attempt(s)
+I20260610 12:41:30.672367 5474 adsd3500_chip_config_manager.cpp:272] CCB master is supported. Reading mode details from nvm.
+I20260610 12:41:30.679654 5474 camera_initialization_manager.cpp:322] Detected imager type: adsd3100
+I20260610 12:41:30.689320 5474 camera_initialization_manager.cpp:165] Current adsd3500 firmware version is: 8.1.0.0
+I20260610 12:41:30.689342 5474 camera_initialization_manager.cpp:166] Current adsd3500 firmware git hash is: 2e50aaf0eec4c6928d5265d0cf79fe8f53da753a
+I20260610 12:41:30.689363 5474 camera_initialization_manager.cpp:415] All modes configured for ISP depth compute - CCB data not required
+W20260610 12:41:30.689378 5474 camera_initialization_manager.cpp:447] fsyncMode is not being set by SDK.
+I20260610 12:41:30.689391 5474 camera_initialization_manager.cpp:459] Using platform MIPI output speed: 1
+I20260610 12:41:30.689402 5474 camera_initialization_manager.cpp:463] Using platform deskew setting: 1
+I20260610 12:41:30.689562 5474 camera_initialization_manager.cpp:485] MIPI output speed set to 1
+I20260610 12:41:30.689702 5474 camera_initialization_manager.cpp:497] Deskew enabled at stream on
+W20260610 12:41:30.689718 5474 camera_initialization_manager.cpp:509] enableTempCompenstation is not being set by SDK.
+W20260610 12:41:30.689730 5474 camera_initialization_manager.cpp:521] enableEdgeConfidence is not being set by SDK.
+I20260610 12:41:30.695764 5474 camera_initialization_manager.cpp:267] Module serial number: 026AM313018F0N6JAL
+I20260610 12:41:30.695782 5474 camera_initialization_manager.cpp:275] Camera initialized
+I20260610 12:41:30.695916 5474 adsd3500_sensor.cpp:1177] Target mode for runtime bit config set to 3
+I20260610 12:41:30.696122 5474 camera_itof.cpp:492] Setting lens scatter compensation flag to disabled
+W20260610 12:41:30.696145 5474 sensor_control_registry.cpp:69] Unsupported control: dualPulsatrixSystemEnabled
+I20260610 12:41:30.696159 5474 camera_itof.cpp:529] Rotation from JSON config: 0
+I20260610 12:41:30.696228 5474 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:41:30.696247 5474 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:41:30.696259 5474 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:41:30.696270 5474 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:41:30.696315 5474 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:41:30.696341 5474 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:41:30.696363 5474 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:41:30.699357 5474 v4l2_video_device_driver.cpp:199] Requested 4 buffers, driver allocated 4
+I20260610 12:41:32.899748 5474 buffer_processor.cpp:249] setVideoProperties: Allocating 8 raw frame buffers, each of size 1313280 bytes (total: 10.0195 MB)
+I20260610 12:41:32.899944 5474 buffer_processor.cpp:268] setVideoProperties: Allocating 8 ToFi buffers, each of size 2097152 bytes (total: 16 MB)
+I20260610 12:41:33.101212 5474 adsd3500_controller.cpp:255] Frame rate set to 40 fps
+I20260610 12:41:33.101268 5474 camera_itof.cpp:2097] Camera FPS set from parameter list at: 40
+W20260610 12:41:33.101286 5474 depth_parameter_mapper.cpp:134] vcselDelay was not found in parameter list, not setting.
+W20260610 12:41:33.101808 5474 depth_parameter_mapper.cpp:134] enablePhaseInvalidation was not found in parameter list, not setting.
+I20260610 12:41:33.101864 5474 camera_itof.cpp:597] Using the following configuration parameters for mode 3
+I20260610 12:41:33.101881 5474 camera_itof.cpp:600] abThreshMin : 20
+I20260610 12:41:33.101897 5474 camera_itof.cpp:600] bitsInAB : 16
+I20260610 12:41:33.101908 5474 camera_itof.cpp:600] bitsInConf : 8
+I20260610 12:41:33.101918 5474 camera_itof.cpp:600] bitsInPhaseOrDepth : 16
+I20260610 12:41:33.101928 5474 camera_itof.cpp:600] confThresh : 25
+I20260610 12:41:33.101938 5474 camera_itof.cpp:600] depthComputeIspEnable : 1
+I20260610 12:41:33.101948 5474 camera_itof.cpp:600] dualPulsatrixSystemEnabled : 1
+I20260610 12:41:33.101959 5474 camera_itof.cpp:600] enableRotation : 0
+I20260610 12:41:33.101968 5474 camera_itof.cpp:600] fps : 40
+I20260610 12:41:33.101978 5474 camera_itof.cpp:600] headerSize : 128
+I20260610 12:41:33.101988 5474 camera_itof.cpp:600] inputFormat : raw8
+I20260610 12:41:33.101998 5474 camera_itof.cpp:600] interleavingEnable : 1
+I20260610 12:41:33.102008 5474 camera_itof.cpp:600] jblfABThreshold : 10
+I20260610 12:41:33.102018 5474 camera_itof.cpp:600] jblfApplyFlag : 1
+I20260610 12:41:33.102028 5474 camera_itof.cpp:600] jblfExponentialTerm : 5
+I20260610 12:41:33.102038 5474 camera_itof.cpp:600] jblfGaussianSigma : 10
+I20260610 12:41:33.102048 5474 camera_itof.cpp:600] jblfMaxEdge : 12
+I20260610 12:41:33.102057 5474 camera_itof.cpp:600] jblfWindowSize : 5
+I20260610 12:41:33.102067 5474 camera_itof.cpp:600] lensScatterCompensationEnabled : 0
+I20260610 12:41:33.102077 5474 camera_itof.cpp:600] partialDepthEnable : 0
+I20260610 12:41:33.102087 5474 camera_itof.cpp:600] phaseInvalid : 0
+I20260610 12:41:33.102101 5474 camera_itof.cpp:600] radialThreshMax : 10000
+I20260610 12:41:33.102113 5474 camera_itof.cpp:600] radialThreshMin : 100
+I20260610 12:41:33.102125 5474 camera_itof.cpp:600] xyzEnable : 1
+I20260610 12:41:33.102257 5474 camera_itof.cpp:611] Metadata in AB is enabled and it is stored in the first 128 bytes.
+I20260610 12:41:33.102294 5474 camera_itof.cpp:720] Initializing depth compute with ISP (parsed dealias data)
+I20260610 12:41:33.102317 5474 buffer_processor.cpp:488] setProcessorProperties: libtofi_compute version: TOF_DepthComputeEngine_ARM64-Rel5.1.0.1
+I20260610 12:41:33.268526 5474 adsd3500_sensor.cpp:1592] Frame Rotation: disabled
+W20260610 12:41:33.268606 5474 sensor_control_registry.cpp:74] Control &#39;depthComputeOpenSource&#39; is read-only
+I20260610 12:41:33.268629 5474 camera_itof.cpp:755] Using closed source depth compute library.
+I20260610 12:41:33.375349 5474 adsd3500_sensor.cpp:575] Starting device 0
+I20260610 12:41:33.384905 5474 v4l2_video_device_driver.cpp:311] Started streaming on /dev/video0
+I20260610 12:41:33.416871 5474 camera_frame_acquisition_manager.cpp:187] Dropped first frame
+I20260610 12:41:33.435966 5474 main.cpp:254] Successfully requested frame!
+I20260610 12:41:35.657350 5474 buffer_processor.cpp:1337] stopThreads: Threads stopped successfully. Queue sizes - v4l2_input: 8, capture_to_process: 0, tofi_io: 8, process_done: 0
+I20260610 12:41:35.657459 5474 adsd3500_sensor.cpp:620] Stopping device
+I20260610 12:41:35.659646 5474 v4l2_video_device_driver.cpp:326] Stopped streaming on /dev/video0
+I20260610 12:41:35.659697 5474 adsd3500_sensor.cpp:1513] Waiting for interrupt.
+I20260610 12:41:35.659714 5474 adsd3500_sensor.cpp:1518] .
+I20260610 12:41:35.669950 5474 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 10 ms).
+I20260610 12:41:35.680223 5474 adsd3500_sensor.cpp:1523] Waited: 20 ms.
+I20260610 12:41:35.680251 5474 adsd3500_sensor.cpp:1530] Got the Interrupt from ADSD3500
+I20260610 12:41:35.680271 5474 camera_itof.cpp:2357] No chip/imager errors detected.
+I20260610 12:41:35.680287 5474 main.cpp:274] Chip status error code: 41
+I20260610 12:41:35.680299 5474 main.cpp:275] Imager status error code: 0
+I20260610 12:41:35.680318 5474 main.cpp:284] Sensor Temperature: 37
+I20260610 12:41:35.680329 5474 main.cpp:285] Laser Temperature: 39
+I20260610 12:41:35.680340 5474 main.cpp:286] Frame Number: 1
+I20260610 12:41:35.680350 5474 main.cpp:287] Mode: 3
+I20260610 12:41:35.681002 5474 v4l2_buffer_manager.cpp:210] Cleaned up video buffers for device
+I20260610 12:41:35.681399 5474 buffer_processor.cpp:152] freeComputeLibrary
+I20260610 12:41:35.684081 5474 adsd3500_interrupt_notifier.cpp:190] Removed 1 sensor(s) from interrupt notifier. Remaining: 0</code></pre>
+<p>Two files should have been generated: * out_ab_mode_3.bin<br />
+* out_depth_mode_3.bin</p>
+<p>Note, for visualzation, it is assumed that the Python environment is still active.</p>
+<p>To visualize the AB output:</p>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/first-frame$ python visualization/visualize_ab.py out_ab_mode_3.bin 512 512
+Input file is:  out_ab_mode_3.bin
+</code></pre>
+<p><a href="images/first-frame-c++-visualize-ab.png"><img src="images/first-frame-c++-visualize-ab.png" width="25%"></a></p>
+<p>To visualize the depth output:</p>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/first-frame$ python visualization/visualize_depth.py out_depth_mode_3.bin 512 512
+Input file is:  out_depth_mode_3.bin</code></pre>
+<p><a href="images/first-frame-c++-visualize-depth.png"><img src="images/first-frame-c++-visualize-depth.png" width="25%"></a></p>
+<h4 id="first-frame-c-experiments">First Frame C++ Experiments</h4>
+<p>To make it easier for the user to experiment with the C++ code with have added main.cpp from first frame and Makefile.eval.</p>
+<p>The output <em>first-frame.user</em> is a user built version of <em>first-frame</em>.</p>
+<pre class="console"><code>$ make -f Makefile.eval
+$ ls first-frame*
+first-frame  first-frame.user</code></pre>
+</details>
+<details>
+<p><summary>data_collect (C++)</summary></p>
+<h3 id="data_collect-c">data_collect (C++)</h3>
+<p><strong>data_collect</strong> is use save a stream of frames to the file system of the host computer.</p>
+<h4 id="command-line-interface-3">Command Line Interface</h4>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/data_collect$ ./data_collect
+Data Collect.
+    Usage:
+      data_collect
+      data_collect [--f &lt;folder&gt;] [--fps &lt;frame rate&gt;] [--n &lt;ncapture&gt;] [--m &lt;mode&gt;] [--ccb FILE] [--ip &lt;ip&gt;] [--fw &lt;firmware&gt;] [--ic &lt;imager-configuration&gt;] [-scf &lt;save-configuration-file&gt;] [-lcf &lt;load-configuration-file&gt;]
+      data_collect (-h | --help)
+
+    Options:
+      -h --help          Show this screen.
+      --f &lt;folder&gt;       Output folder (max name 512) [default: ./]
+      --fps &lt;frame rate&gt;   Frame rate in frames per second [default: 10]
+      --n &lt;ncapture&gt;     Capture frame num. [default: 1]
+      --m &lt;mode&gt;         Mode to capture data in. [default: 0]
+      --ccb &lt;FILE&gt;       The path to store CCB content
+      --ip &lt;ip&gt;          Camera IP
+      --fw &lt;firmware&gt;    Adsd3500 fw file
+      --ic &lt;imager-configuration&gt;   Select imager configuration: standard, standard-raw,
+                         custom, custom-raw. By default is standard.
+      --scf &lt;save-configuration-file&gt;    Save current configuration to json file
+      --lcf &lt;load-configuration-file&gt;    Load configuration from json file
+
+    Note: --m argument supports index (0, 1, etc.)
+
+    Valid mode (--m) options are:
+        0: short-range native
+        1: long-range native
+        2: short-range Qnative
+        3: long-range Qnative
+        4: pcm-native
+        5: long-range mixed
+        6: short-range mixed</code></pre>
+<h4 id="example-1-basic-usage">Example 1: Basic Usage</h4>
+<ul>
+<li><em>–f output</em>: Place captured data into the folder <em>output</em>.</li>
+<li><em>–m 1</em>: Use mode 1.</li>
+<li><em>–n 100</em>: Capture 100 frames.</li>
+</ul>
+<details>
+<p><summary>data_collect –f output –m 1 –n 100</summary></p>
+<pre><code>(aditofpython_env) analog@analog-desktop:~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/data_collect$ ./data_collect --f output --m 1 --n 100
+I20260610 12:42:03.040867 5564 main.cpp:188] ADCAM version: 1.0.0 | SDK version: 7.1.0  | branch: rel-7.1.0 | commit: abcfcf3a
+I20260610 12:42:03.040986 5564 main.cpp:241] Output folder: output
+I20260610 12:42:03.041004 5564 main.cpp:242] Mode: 1
+I20260610 12:42:03.041014 5564 main.cpp:243] Number of frames: 100
+I20260610 12:42:03.041026 5564 main.cpp:244] Json file:
+I20260610 12:42:03.041043 5564 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:42:03.041061 5564 sensor_enumerator.cpp:163] Initialized platform: NVIDIA Jetson Orin Nano (aarch64)
+I20260610 12:42:03.043678 5564 platform_impl.cpp:409] Found ADSD3500: video=/dev/video0 subdev=/dev/v4l-subdev1
+I20260610 12:42:03.043707 5564 sensor_enumerator.cpp:192] Found 1 ToF sensor(s)
+I20260610 12:42:03.054840 5564 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:42:03.054901 5564 buffer_processor.cpp:129] BufferProcessor initialized
+I20260610 12:42:03.054944 5564 sensor_enumerator.cpp:240] Created ADSD3500 sensor at /dev/video0
+I20260610 12:42:03.055012 5564 camera_itof.cpp:235] Sensor name = adsd3500
+I20260610 12:42:03.055038 5564 camera_initialization_manager.cpp:81] Initializing camera: Online
+W20260610 12:42:03.055125 5564 camera_configuration.cpp:464] Firmware version config file not found: /tmp/ADI-ADCAM/share/aditof/firmware_version_config.json
+I20260610 12:42:03.055141 5564 camera_configuration.cpp:465] Firmware version check will be disabled
+I20260610 12:42:03.055160 5564 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:42:03.055173 5564 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:42:03.055184 5564 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:42:03.055197 5564 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:42:03.055253 5564 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:42:03.055282 5564 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:42:03.055305 5564 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:42:03.055323 5564 adsd3500_sensor.cpp:423] ADSD3500 initialization attempt 1 of 3
+I20260610 12:42:03.055342 5564 platform_impl.cpp:629] Resetting sensor via GPIO
+I20260610 12:42:03.055463 5564 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 0 ms).
+I20260610 12:42:03.055516 5564 platform_impl.cpp:722] Waiting for sensor to reset
+I20260610 12:42:03.055533 5564 platform_impl.cpp:725] .
+I20260610 12:42:04.055614 5564 platform_impl.cpp:725] .
+I20260610 12:42:05.056405 5564 platform_impl.cpp:729] Waited: 2 seconds
+I20260610 12:42:05.056463 5564 platform_impl.cpp:741] Sensor reset complete
+I20260610 12:42:05.168104 5564 adsd3500_sensor.cpp:463] ADSD3500 is ready to communicate with after 1 attempt(s)
+I20260610 12:42:05.169750 5564 adsd3500_chip_config_manager.cpp:272] CCB master is supported. Reading mode details from nvm.
+I20260610 12:42:05.177184 5564 camera_initialization_manager.cpp:322] Detected imager type: adsd3100
+I20260610 12:42:05.186903 5564 camera_initialization_manager.cpp:165] Current adsd3500 firmware version is: 8.1.0.0
+I20260610 12:42:05.186937 5564 camera_initialization_manager.cpp:166] Current adsd3500 firmware git hash is: 2e50aaf0eec4c6928d5265d0cf79fe8f53da753a
+I20260610 12:42:05.186959 5564 camera_initialization_manager.cpp:415] All modes configured for ISP depth compute - CCB data not required
+W20260610 12:42:05.186975 5564 camera_initialization_manager.cpp:447] fsyncMode is not being set by SDK.
+I20260610 12:42:05.186990 5564 camera_initialization_manager.cpp:459] Using platform MIPI output speed: 1
+I20260610 12:42:05.187005 5564 camera_initialization_manager.cpp:463] Using platform deskew setting: 1
+I20260610 12:42:05.187139 5564 camera_initialization_manager.cpp:485] MIPI output speed set to 1
+I20260610 12:42:05.187278 5564 camera_initialization_manager.cpp:497] Deskew enabled at stream on
+W20260610 12:42:05.187294 5564 camera_initialization_manager.cpp:509] enableTempCompenstation is not being set by SDK.
+W20260610 12:42:05.187306 5564 camera_initialization_manager.cpp:521] enableEdgeConfidence is not being set by SDK.
+I20260610 12:42:05.193464 5564 camera_initialization_manager.cpp:267] Module serial number: 026AM313018F0N6JAL
+I20260610 12:42:05.193503 5564 camera_initialization_manager.cpp:275] Camera initialized
+I20260610 12:42:05.193652 5564 adsd3500_sensor.cpp:1177] Target mode for runtime bit config set to 1
+I20260610 12:42:05.193865 5564 camera_itof.cpp:492] Setting lens scatter compensation flag to disabled
+W20260610 12:42:05.193891 5564 sensor_control_registry.cpp:69] Unsupported control: dualPulsatrixSystemEnabled
+I20260610 12:42:05.193906 5564 camera_itof.cpp:529] Rotation from JSON config: 0
+I20260610 12:42:05.193973 5564 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:42:05.193992 5564 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:42:05.194004 5564 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:42:05.194016 5564 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:42:05.194066 5564 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:42:05.194091 5564 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:42:05.194112 5564 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:42:05.199517 5564 v4l2_video_device_driver.cpp:199] Requested 4 buffers, driver allocated 4
+I20260610 12:42:07.400263 5564 buffer_processor.cpp:249] setVideoProperties: Allocating 8 raw frame buffers, each of size 4195328 bytes (total: 32.0078 MB)
+I20260610 12:42:07.400471 5564 buffer_processor.cpp:268] setVideoProperties: Allocating 8 ToFi buffers, each of size 4194304 bytes (total: 32 MB)
+I20260610 12:42:07.601716 5564 adsd3500_controller.cpp:255] Frame rate set to 10 fps
+I20260610 12:42:07.601768 5564 camera_itof.cpp:2097] Camera FPS set from parameter list at: 10
+W20260610 12:42:07.601786 5564 depth_parameter_mapper.cpp:134] vcselDelay was not found in parameter list, not setting.
+W20260610 12:42:07.602274 5564 depth_parameter_mapper.cpp:134] enablePhaseInvalidation was not found in parameter list, not setting.
+I20260610 12:42:07.602331 5564 camera_itof.cpp:597] Using the following configuration parameters for mode 1
+I20260610 12:42:07.602349 5564 camera_itof.cpp:600] abThreshMin : 20
+I20260610 12:42:07.602363 5564 camera_itof.cpp:600] bitsInAB : 16
+I20260610 12:42:07.602373 5564 camera_itof.cpp:600] bitsInConf : 0
+I20260610 12:42:07.602383 5564 camera_itof.cpp:600] bitsInPhaseOrDepth : 16
+I20260610 12:42:07.602392 5564 camera_itof.cpp:600] confThresh : 25
+I20260610 12:42:07.602403 5564 camera_itof.cpp:600] depthComputeIspEnable : 1
+I20260610 12:42:07.602412 5564 camera_itof.cpp:600] dualPulsatrixSystemEnabled : 1
+I20260610 12:42:07.602421 5564 camera_itof.cpp:600] enableRotation : 0
+I20260610 12:42:07.602430 5564 camera_itof.cpp:600] fps : 10
+I20260610 12:42:07.602439 5564 camera_itof.cpp:600] headerSize : 128
+I20260610 12:42:07.602448 5564 camera_itof.cpp:600] inputFormat : mipiRaw12_8
+I20260610 12:42:07.602458 5564 camera_itof.cpp:600] interleavingEnable : 0
+I20260610 12:42:07.602467 5564 camera_itof.cpp:600] jblfABThreshold : 10
+I20260610 12:42:07.602476 5564 camera_itof.cpp:600] jblfApplyFlag : 1
+I20260610 12:42:07.602486 5564 camera_itof.cpp:600] jblfExponentialTerm : 5
+I20260610 12:42:07.602495 5564 camera_itof.cpp:600] jblfGaussianSigma : 10
+I20260610 12:42:07.602504 5564 camera_itof.cpp:600] jblfMaxEdge : 12
+I20260610 12:42:07.602514 5564 camera_itof.cpp:600] jblfWindowSize : 5
+I20260610 12:42:07.602523 5564 camera_itof.cpp:600] lensScatterCompensationEnabled : 0
+I20260610 12:42:07.602532 5564 camera_itof.cpp:600] partialDepthEnable : 1
+I20260610 12:42:07.602541 5564 camera_itof.cpp:600] phaseInvalid : 0
+I20260610 12:42:07.602551 5564 camera_itof.cpp:600] radialThreshMax : 10000
+I20260610 12:42:07.602560 5564 camera_itof.cpp:600] radialThreshMin : 100
+I20260610 12:42:07.602570 5564 camera_itof.cpp:600] xyzEnable : 1
+I20260610 12:42:07.602700 5564 camera_itof.cpp:611] Metadata in AB is enabled and it is stored in the first 128 bytes.
+I20260610 12:42:07.602748 5564 camera_itof.cpp:720] Initializing depth compute with ISP (parsed dealias data)
+I20260610 12:42:07.602774 5564 buffer_processor.cpp:488] setProcessorProperties: libtofi_compute version: TOF_DepthComputeEngine_ARM64-Rel5.1.0.1
+I20260610 12:42:08.262815 5564 adsd3500_sensor.cpp:1592] Frame Rotation: disabled
+W20260610 12:42:08.262900 5564 sensor_control_registry.cpp:74] Control &#39;depthComputeOpenSource&#39; is read-only
+I20260610 12:42:08.262925 5564 camera_itof.cpp:755] Using closed source depth compute library.
+I20260610 12:42:08.685468 5564 adsd3500_controller.cpp:255] Frame rate set to 10 fps
+I20260610 12:42:08.685547 5564 camera_itof.cpp:2097] Camera FPS set from parameter list at: 10
+I20260610 12:42:08.685832 5564 adsd3500_sensor.cpp:575] Starting device 0
+I20260610 12:42:08.695016 5564 v4l2_video_device_driver.cpp:311] Started streaming on /dev/video0
+I20260610 12:42:08.787001 5564 camera_frame_acquisition_manager.cpp:187] Dropped first frame
+I20260610 12:42:08.871433 5564 main.cpp:381] Starting capture of 100 frames.
+I20260610 12:42:08.871524 5564 main.cpp:382] Expected capture time (ms): 10000
+I20260610 12:42:08.871545 5564 main.cpp:383] Maximum allowed capture time (ms): 600000
+I20260610 12:42:08.871558 5564 main.cpp:384] FPS: 10
+I20260610 12:42:08.871572 5564 recording_manager.cpp:58] [RECORDING] Rotation state: DISABLED
+I20260610 12:42:08.871587 5564 recording_manager.cpp:87] [RECORDING] Enable flags: depth=1 ab=1 conf=0 xyz=1
+I20260610 12:42:08.871603 5564 recording_manager.cpp:90] [RECORDING] Original frameContent has 4 items
+I20260610 12:42:08.871615 5564 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;depth&quot;
+I20260610 12:42:08.871626 5564 recording_manager.cpp:101] [RECORDING] Adding to header: depth
+I20260610 12:42:08.871636 5564 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;ab&quot;
+I20260610 12:42:08.871646 5564 recording_manager.cpp:101] [RECORDING] Adding to header: ab
+I20260610 12:42:08.871657 5564 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;xyz&quot;
+I20260610 12:42:08.871667 5564 recording_manager.cpp:101] [RECORDING] Adding to header: xyz
+I20260610 12:42:08.871677 5564 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;metadata&quot;
+I20260610 12:42:08.871687 5564 recording_manager.cpp:101] [RECORDING] Adding to header: metadata
+I20260610 12:42:08.871698 5564 recording_manager.cpp:106] [RECORDING] Total frame types in header: 4
+I20260610 12:42:08.871709 5564 recording_manager.cpp:128] [RECORDING] Building fDataDetails from frameContent...
+I20260610 12:42:08.871719 5564 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: depth
+I20260610 12:42:08.871734 5564 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: ab
+I20260610 12:42:08.871744 5564 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: xyz
+I20260610 12:42:08.871755 5564 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: metadata
+I20260610 12:42:08.871766 5564 recording_manager.cpp:182] [RECORDING] Final fDataDetails count: 4
+I20260610 12:42:08.871777 5564 recording_manager.cpp:184] [RECORDING] Writing header to file: output
+I20260610 12:42:08.871791 5564 adsd3500_sensor.cpp:2061] startRecording: Start recording
+W20260610 12:42:08.872744 5564 utils.cpp:719] Recording folder &#39;output/recordings/&#39; is not on NVMe or HDD storage. Detected type: 1 (1=mmc/SD, 2=NVMe/HDD, 0=unknown, -1=error)
+I20260610 12:42:08.872836 5564 adsd3500_recorder.cpp:56] Started recording to: output
+I20260610 12:42:08.872855 5564 camera_itof.cpp:940] [RECORDING] Started recording with rotation DISABLED
+I20260610 12:42:18.878158 5564 main.cpp:423] Capture complete. Frames captured: 100
+I20260610 12:42:18.878340 5564 buffer_processor.cpp:1418] Recording stopped. Total frames saved: 100
+I20260610 12:42:18.878366 5564 adsd3500_recorder.cpp:81] Stopped recording
+I20260610 12:42:18.878381 5564 main.cpp:432] Measured FPS: 10.0929
+I20260610 12:42:21.165110 5564 buffer_processor.cpp:1337] stopThreads: Threads stopped successfully. Queue sizes - v4l2_input: 8, capture_to_process: 0, tofi_io: 8, process_done: 0
+I20260610 12:42:21.165183 5564 adsd3500_sensor.cpp:620] Stopping device
+I20260610 12:42:21.167356 5564 v4l2_video_device_driver.cpp:326] Stopped streaming on /dev/video0
+I20260610 12:42:21.167392 5564 adsd3500_sensor.cpp:1513] Waiting for interrupt.
+I20260610 12:42:21.167407 5564 adsd3500_sensor.cpp:1518] .
+I20260610 12:42:21.177678 5564 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 10 ms).
+I20260610 12:42:21.187895 5564 adsd3500_sensor.cpp:1523] Waited: 20 ms.
+I20260610 12:42:21.187917 5564 adsd3500_sensor.cpp:1530] Got the Interrupt from ADSD3500
+I20260610 12:42:21.189260 5564 v4l2_buffer_manager.cpp:210] Cleaned up video buffers for device
+I20260610 12:42:21.190121 5564 buffer_processor.cpp:152] freeComputeLibrary
+I20260610 12:42:21.193697 5564 adsd3500_interrupt_notifier.cpp:190] Removed 1 sensor(s) from interrupt notifier. Remaining: 0</code></pre>
+</details>
+<h4 id="example-2-saving-configuration-data-to-json">Example 2: Saving Configuration Data to JSON</h4>
+<ul>
+<li><em>–scf saved_cfg.json</em>: Save the device configuration file to <em>saved_cfg.json</em>.
+<details>
+<summary>data_collect –scf saved_cfg.json</summary></li>
+</ul>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/data_collect$ ./data_collect --scf saved_cfg.json
+I20260610 12:42:41.541851 5618 main.cpp:188] ADCAM version: 1.0.0 | SDK version: 7.1.0  | branch: rel-7.1.0 | commit: abcfcf3a
+I20260610 12:42:41.541968 5618 main.cpp:241] Output folder: .
+I20260610 12:42:41.541986 5618 main.cpp:242] Mode: 0
+I20260610 12:42:41.541998 5618 main.cpp:243] Number of frames: 1
+I20260610 12:42:41.542010 5618 main.cpp:244] Json file:
+I20260610 12:42:41.542028 5618 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:42:41.542045 5618 sensor_enumerator.cpp:163] Initialized platform: NVIDIA Jetson Orin Nano (aarch64)
+I20260610 12:42:41.544635 5618 platform_impl.cpp:409] Found ADSD3500: video=/dev/video0 subdev=/dev/v4l-subdev1
+I20260610 12:42:41.544668 5618 sensor_enumerator.cpp:192] Found 1 ToF sensor(s)
+I20260610 12:42:41.555758 5618 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:42:41.555815 5618 buffer_processor.cpp:129] BufferProcessor initialized
+I20260610 12:42:41.555856 5618 sensor_enumerator.cpp:240] Created ADSD3500 sensor at /dev/video0
+I20260610 12:42:41.555924 5618 camera_itof.cpp:235] Sensor name = adsd3500
+I20260610 12:42:41.555950 5618 camera_initialization_manager.cpp:81] Initializing camera: Online
+W20260610 12:42:41.556023 5618 camera_configuration.cpp:464] Firmware version config file not found: /tmp/ADI-ADCAM/share/aditof/firmware_version_config.json
+I20260610 12:42:41.556040 5618 camera_configuration.cpp:465] Firmware version check will be disabled
+I20260610 12:42:41.556060 5618 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:42:41.556073 5618 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:42:41.556084 5618 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:42:41.556096 5618 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:42:41.556150 5618 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:42:41.556179 5618 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:42:41.556202 5618 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:42:41.556219 5618 adsd3500_sensor.cpp:423] ADSD3500 initialization attempt 1 of 3
+I20260610 12:42:41.556239 5618 platform_impl.cpp:629] Resetting sensor via GPIO
+I20260610 12:42:41.556361 5618 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 0 ms).
+I20260610 12:42:41.556409 5618 platform_impl.cpp:722] Waiting for sensor to reset
+I20260610 12:42:41.556424 5618 platform_impl.cpp:725] .
+I20260610 12:42:42.556505 5618 platform_impl.cpp:725] .
+I20260610 12:42:43.557307 5618 platform_impl.cpp:729] Waited: 2 seconds
+I20260610 12:42:43.557361 5618 platform_impl.cpp:741] Sensor reset complete
+I20260610 12:42:43.668911 5618 adsd3500_sensor.cpp:463] ADSD3500 is ready to communicate with after 1 attempt(s)
+I20260610 12:42:43.670531 5618 adsd3500_chip_config_manager.cpp:272] CCB master is supported. Reading mode details from nvm.
+I20260610 12:42:43.677810 5618 camera_initialization_manager.cpp:322] Detected imager type: adsd3100
+I20260610 12:42:43.687535 5618 camera_initialization_manager.cpp:165] Current adsd3500 firmware version is: 8.1.0.0
+I20260610 12:42:43.687560 5618 camera_initialization_manager.cpp:166] Current adsd3500 firmware git hash is: 2e50aaf0eec4c6928d5265d0cf79fe8f53da753a
+I20260610 12:42:43.687582 5618 camera_initialization_manager.cpp:415] All modes configured for ISP depth compute - CCB data not required
+W20260610 12:42:43.687596 5618 camera_initialization_manager.cpp:447] fsyncMode is not being set by SDK.
+I20260610 12:42:43.687609 5618 camera_initialization_manager.cpp:459] Using platform MIPI output speed: 1
+I20260610 12:42:43.687619 5618 camera_initialization_manager.cpp:463] Using platform deskew setting: 1
+I20260610 12:42:43.687749 5618 camera_initialization_manager.cpp:485] MIPI output speed set to 1
+I20260610 12:42:43.687886 5618 camera_initialization_manager.cpp:497] Deskew enabled at stream on
+W20260610 12:42:43.687903 5618 camera_initialization_manager.cpp:509] enableTempCompenstation is not being set by SDK.
+W20260610 12:42:43.687916 5618 camera_initialization_manager.cpp:521] enableEdgeConfidence is not being set by SDK.
+I20260610 12:42:43.693934 5618 camera_initialization_manager.cpp:267] Module serial number: 026AM313018F0N6JAL
+I20260610 12:42:43.693952 5618 camera_initialization_manager.cpp:275] Camera initialized
+I20260610 12:42:43.694605 5618 main.cpp:287] Current configuration info saved to file saved_cfg.json
+I20260610 12:42:43.694641 5618 adsd3500_sensor.cpp:1177] Target mode for runtime bit config set to 0
+I20260610 12:42:43.694842 5618 camera_itof.cpp:492] Setting lens scatter compensation flag to disabled
+W20260610 12:42:43.694865 5618 sensor_control_registry.cpp:69] Unsupported control: dualPulsatrixSystemEnabled
+I20260610 12:42:43.694878 5618 camera_itof.cpp:529] Rotation from JSON config: 0
+I20260610 12:42:43.694938 5618 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:42:43.694956 5618 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:42:43.694967 5618 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:42:43.694978 5618 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:42:43.695021 5618 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:42:43.695044 5618 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:42:43.695065 5618 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:42:43.700533 5618 v4l2_video_device_driver.cpp:199] Requested 4 buffers, driver allocated 4
+I20260610 12:42:45.901287 5618 buffer_processor.cpp:249] setVideoProperties: Allocating 8 raw frame buffers, each of size 4195328 bytes (total: 32.0078 MB)
+I20260610 12:42:45.901516 5618 buffer_processor.cpp:268] setVideoProperties: Allocating 8 ToFi buffers, each of size 4194304 bytes (total: 32 MB)
+I20260610 12:42:46.102776 5618 adsd3500_controller.cpp:255] Frame rate set to 10 fps
+I20260610 12:42:46.102828 5618 camera_itof.cpp:2097] Camera FPS set from parameter list at: 10
+W20260610 12:42:46.102847 5618 depth_parameter_mapper.cpp:134] vcselDelay was not found in parameter list, not setting.
+W20260610 12:42:46.103363 5618 depth_parameter_mapper.cpp:134] enablePhaseInvalidation was not found in parameter list, not setting.
+I20260610 12:42:46.103421 5618 camera_itof.cpp:597] Using the following configuration parameters for mode 0
+I20260610 12:42:46.103438 5618 camera_itof.cpp:600] abThreshMin : 20
+I20260610 12:42:46.103453 5618 camera_itof.cpp:600] bitsInAB : 16
+I20260610 12:42:46.103464 5618 camera_itof.cpp:600] bitsInConf : 0
+I20260610 12:42:46.103474 5618 camera_itof.cpp:600] bitsInPhaseOrDepth : 16
+I20260610 12:42:46.103484 5618 camera_itof.cpp:600] confThresh : 25
+I20260610 12:42:46.103494 5618 camera_itof.cpp:600] depthComputeIspEnable : 1
+I20260610 12:42:46.103504 5618 camera_itof.cpp:600] dualPulsatrixSystemEnabled : 1
+I20260610 12:42:46.103514 5618 camera_itof.cpp:600] enableRotation : 0
+I20260610 12:42:46.103524 5618 camera_itof.cpp:600] fps : 10
+I20260610 12:42:46.103534 5618 camera_itof.cpp:600] headerSize : 128
+I20260610 12:42:46.103543 5618 camera_itof.cpp:600] inputFormat : mipiRaw12_8
+I20260610 12:42:46.103553 5618 camera_itof.cpp:600] interleavingEnable : 0
+I20260610 12:42:46.103563 5618 camera_itof.cpp:600] jblfABThreshold : 10
+I20260610 12:42:46.103573 5618 camera_itof.cpp:600] jblfApplyFlag : 1
+I20260610 12:42:46.103583 5618 camera_itof.cpp:600] jblfExponentialTerm : 5
+I20260610 12:42:46.103593 5618 camera_itof.cpp:600] jblfGaussianSigma : 10
+I20260610 12:42:46.103602 5618 camera_itof.cpp:600] jblfMaxEdge : 12
+I20260610 12:42:46.103612 5618 camera_itof.cpp:600] jblfWindowSize : 5
+I20260610 12:42:46.103622 5618 camera_itof.cpp:600] lensScatterCompensationEnabled : 0
+I20260610 12:42:46.103632 5618 camera_itof.cpp:600] partialDepthEnable : 1
+I20260610 12:42:46.103642 5618 camera_itof.cpp:600] phaseInvalid : 0
+I20260610 12:42:46.103652 5618 camera_itof.cpp:600] radialThreshMax : 10000
+I20260610 12:42:46.103662 5618 camera_itof.cpp:600] radialThreshMin : 100
+I20260610 12:42:46.103672 5618 camera_itof.cpp:600] xyzEnable : 1
+I20260610 12:42:46.103805 5618 camera_itof.cpp:611] Metadata in AB is enabled and it is stored in the first 128 bytes.
+I20260610 12:42:46.103842 5618 camera_itof.cpp:720] Initializing depth compute with ISP (parsed dealias data)
+I20260610 12:42:46.103865 5618 buffer_processor.cpp:488] setProcessorProperties: libtofi_compute version: TOF_DepthComputeEngine_ARM64-Rel5.1.0.1
+I20260610 12:42:46.763796 5618 adsd3500_sensor.cpp:1592] Frame Rotation: disabled
+W20260610 12:42:46.763887 5618 sensor_control_registry.cpp:74] Control &#39;depthComputeOpenSource&#39; is read-only
+I20260610 12:42:46.763911 5618 camera_itof.cpp:755] Using closed source depth compute library.
+I20260610 12:42:47.186466 5618 adsd3500_controller.cpp:255] Frame rate set to 10 fps
+I20260610 12:42:47.186544 5618 camera_itof.cpp:2097] Camera FPS set from parameter list at: 10
+I20260610 12:42:47.186827 5618 adsd3500_sensor.cpp:575] Starting device 0
+I20260610 12:42:47.196013 5618 v4l2_video_device_driver.cpp:311] Started streaming on /dev/video0
+I20260610 12:42:47.263800 5618 camera_frame_acquisition_manager.cpp:187] Dropped first frame
+I20260610 12:42:47.366582 5618 main.cpp:381] Starting capture of 1 frames.
+I20260610 12:42:47.366671 5618 main.cpp:382] Expected capture time (ms): 100
+I20260610 12:42:47.366691 5618 main.cpp:383] Maximum allowed capture time (ms): 600000
+I20260610 12:42:47.366703 5618 main.cpp:384] FPS: 10
+I20260610 12:42:47.366718 5618 recording_manager.cpp:58] [RECORDING] Rotation state: DISABLED
+I20260610 12:42:47.366733 5618 recording_manager.cpp:87] [RECORDING] Enable flags: depth=1 ab=1 conf=0 xyz=1
+I20260610 12:42:47.366748 5618 recording_manager.cpp:90] [RECORDING] Original frameContent has 4 items
+I20260610 12:42:47.366760 5618 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;depth&quot;
+I20260610 12:42:47.366771 5618 recording_manager.cpp:101] [RECORDING] Adding to header: depth
+I20260610 12:42:47.366781 5618 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;ab&quot;
+I20260610 12:42:47.366791 5618 recording_manager.cpp:101] [RECORDING] Adding to header: ab
+I20260610 12:42:47.366801 5618 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;xyz&quot;
+I20260610 12:42:47.366811 5618 recording_manager.cpp:101] [RECORDING] Adding to header: xyz
+I20260610 12:42:47.366821 5618 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;metadata&quot;
+I20260610 12:42:47.366831 5618 recording_manager.cpp:101] [RECORDING] Adding to header: metadata
+I20260610 12:42:47.366842 5618 recording_manager.cpp:106] [RECORDING] Total frame types in header: 4
+I20260610 12:42:47.366852 5618 recording_manager.cpp:128] [RECORDING] Building fDataDetails from frameContent...
+I20260610 12:42:47.366863 5618 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: depth
+I20260610 12:42:47.366877 5618 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: ab
+I20260610 12:42:47.366888 5618 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: xyz
+I20260610 12:42:47.366898 5618 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: metadata
+I20260610 12:42:47.366909 5618 recording_manager.cpp:182] [RECORDING] Final fDataDetails count: 4
+I20260610 12:42:47.366919 5618 recording_manager.cpp:184] [RECORDING] Writing header to file: .
+I20260610 12:42:47.366934 5618 adsd3500_sensor.cpp:2061] startRecording: Start recording
+W20260610 12:42:47.367824 5618 utils.cpp:719] Recording folder &#39;./recordings/&#39; is not on NVMe or HDD storage. Detected type: 1 (1=mmc/SD, 2=NVMe/HDD, 0=unknown, -1=error)
+I20260610 12:42:47.367909 5618 adsd3500_recorder.cpp:56] Started recording to: .
+I20260610 12:42:47.367928 5618 camera_itof.cpp:940] [RECORDING] Started recording with rotation DISABLED
+I20260610 12:42:47.463610 5618 main.cpp:423] Capture complete. Frames captured: 1
+I20260610 12:42:47.463773 5618 buffer_processor.cpp:1418] Recording stopped. Total frames saved: 1
+I20260610 12:42:47.463794 5618 adsd3500_recorder.cpp:81] Stopped recording
+I20260610 12:42:47.463808 5618 main.cpp:432] Measured FPS: 1000
+I20260610 12:42:49.750582 5618 buffer_processor.cpp:1337] stopThreads: Threads stopped successfully. Queue sizes - v4l2_input: 8, capture_to_process: 0, tofi_io: 8, process_done: 0
+I20260610 12:42:49.750668 5618 adsd3500_sensor.cpp:620] Stopping device
+I20260610 12:42:49.752828 5618 v4l2_video_device_driver.cpp:326] Stopped streaming on /dev/video0
+I20260610 12:42:49.752881 5618 adsd3500_sensor.cpp:1513] Waiting for interrupt.
+I20260610 12:42:49.752900 5618 adsd3500_sensor.cpp:1518] .
+I20260610 12:42:49.763146 5618 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 10 ms).
+I20260610 12:42:49.773419 5618 adsd3500_sensor.cpp:1523] Waited: 20 ms.
+I20260610 12:42:49.773478 5618 adsd3500_sensor.cpp:1530] Got the Interrupt from ADSD3500
+I20260610 12:42:49.774826 5618 v4l2_buffer_manager.cpp:210] Cleaned up video buffers for device
+I20260610 12:42:49.775716 5618 buffer_processor.cpp:152] freeComputeLibrary
+I20260610 12:42:49.778073 5618 adsd3500_interrupt_notifier.cpp:190] Removed 1 sensor(s) from interrupt notifier. Remaining: 0</code></pre>
+</details>
+<h4 id="example-3-loading-configuration-data-from-json">Example 3: Loading Configuration Data from JSON</h4>
+<p>In this example we will use the JSON file to change the frame rate for mode 1 to 5fps.</p>
+<p><a href="images/data_collect_example_3_fps_change.png"><img src="images/data_collect_example_3_fps_change.png" width="25%"></a></p>
+<ul>
+<li><em>–f output</em>: Place captured data into the folder <em>output</em>.</li>
+<li><em>–m 1</em>: Use mode 1.</li>
+<li><em>–n 100</em>: Capture 100 frames.</li>
+<li><em>–lcf saved_cfg.json</em>: Used the device configuration file <em>saved_cfg.json</em>.
+<details>
+<summary>data_collect –f output –m 1 –n 100 –lcf saved_cfg.json</summary></li>
+</ul>
+<pre><code>(aditofpython_env) analog@analog-desktop:~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/data_collect$ ./data_collect --f output --m 1 --n 100 --lcf saved_cfg.json
+I20260610 12:43:38.904621 5665 main.cpp:188] ADCAM version: 1.0.0 | SDK version: 7.1.0  | branch: rel-7.1.0 | commit: abcfcf3a
+I20260610 12:43:38.904744 5665 main.cpp:241] Output folder: output
+I20260610 12:43:38.904761 5665 main.cpp:242] Mode: 1
+I20260610 12:43:38.904772 5665 main.cpp:243] Number of frames: 100
+I20260610 12:43:38.904783 5665 main.cpp:244] Json file: saved_cfg.json
+I20260610 12:43:38.904805 5665 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:43:38.904824 5665 sensor_enumerator.cpp:163] Initialized platform: NVIDIA Jetson Orin Nano (aarch64)
+I20260610 12:43:38.907586 5665 platform_impl.cpp:409] Found ADSD3500: video=/dev/video0 subdev=/dev/v4l-subdev1
+I20260610 12:43:38.907619 5665 sensor_enumerator.cpp:192] Found 1 ToF sensor(s)
+I20260610 12:43:38.918830 5665 platform_impl.cpp:124] Initializing platform: NVIDIA Jetson Orin Nano
+I20260610 12:43:38.918885 5665 buffer_processor.cpp:129] BufferProcessor initialized
+I20260610 12:43:38.918925 5665 sensor_enumerator.cpp:240] Created ADSD3500 sensor at /dev/video0
+I20260610 12:43:38.918992 5665 camera_itof.cpp:235] Sensor name = adsd3500
+I20260610 12:43:38.919016 5665 camera_initialization_manager.cpp:81] Initializing camera: Online
+W20260610 12:43:38.919054 5665 camera_configuration.cpp:464] Firmware version config file not found: /tmp/ADI-ADCAM/share/aditof/firmware_version_config.json
+I20260610 12:43:38.919067 5665 camera_configuration.cpp:465] Firmware version check will be disabled
+I20260610 12:43:38.919085 5665 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:43:38.919098 5665 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:43:38.919107 5665 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:43:38.919120 5665 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:43:38.919169 5665 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:43:38.919196 5665 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:43:38.919217 5665 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:43:38.919233 5665 adsd3500_sensor.cpp:423] ADSD3500 initialization attempt 1 of 3
+I20260610 12:43:38.919249 5665 platform_impl.cpp:629] Resetting sensor via GPIO
+I20260610 12:43:38.919369 5665 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 0 ms).
+I20260610 12:43:38.919423 5665 platform_impl.cpp:722] Waiting for sensor to reset
+I20260610 12:43:38.919437 5665 platform_impl.cpp:725] .
+I20260610 12:43:39.919526 5665 platform_impl.cpp:725] .
+I20260610 12:43:40.920360 5665 platform_impl.cpp:729] Waited: 2 seconds
+I20260610 12:43:40.920445 5665 platform_impl.cpp:741] Sensor reset complete
+I20260610 12:43:41.032016 5665 adsd3500_sensor.cpp:463] ADSD3500 is ready to communicate with after 1 attempt(s)
+I20260610 12:43:41.033636 5665 adsd3500_chip_config_manager.cpp:272] CCB master is supported. Reading mode details from nvm.
+I20260610 12:43:41.040900 5665 camera_initialization_manager.cpp:322] Detected imager type: adsd3100
+I20260610 12:43:41.050609 5665 camera_initialization_manager.cpp:165] Current adsd3500 firmware version is: 8.1.0.0
+I20260610 12:43:41.050641 5665 camera_initialization_manager.cpp:166] Current adsd3500 firmware git hash is: 2e50aaf0eec4c6928d5265d0cf79fe8f53da753a
+I20260610 12:43:41.050663 5665 camera_initialization_manager.cpp:415] All modes configured for ISP depth compute - CCB data not required
+W20260610 12:43:41.050679 5665 camera_initialization_manager.cpp:447] fsyncMode is not being set by SDK.
+I20260610 12:43:41.050692 5665 camera_initialization_manager.cpp:459] Using platform MIPI output speed: 1
+I20260610 12:43:41.050705 5665 camera_initialization_manager.cpp:463] Using platform deskew setting: 1
+I20260610 12:43:41.050843 5665 camera_initialization_manager.cpp:485] MIPI output speed set to 1
+I20260610 12:43:41.051001 5665 camera_initialization_manager.cpp:497] Deskew enabled at stream on
+W20260610 12:43:41.051017 5665 camera_initialization_manager.cpp:509] enableTempCompenstation is not being set by SDK.
+W20260610 12:43:41.051028 5665 camera_initialization_manager.cpp:521] enableEdgeConfidence is not being set by SDK.
+I20260610 12:43:41.057070 5665 camera_initialization_manager.cpp:267] Module serial number: 026AM313018F0N6JAL
+I20260610 12:43:41.057100 5665 camera_initialization_manager.cpp:275] Camera initialized
+I20260610 12:43:41.057584 5665 camera_itof.cpp:1516] User JSON config loaded, enableRotation overrides will be respected
+I20260610 12:43:41.057622 5665 adsd3500_sensor.cpp:1177] Target mode for runtime bit config set to 1
+I20260610 12:43:41.057831 5665 camera_itof.cpp:492] Setting lens scatter compensation flag to disabled
+W20260610 12:43:41.057856 5665 sensor_control_registry.cpp:69] Unsupported control: dualPulsatrixSystemEnabled
+I20260610 12:43:41.057870 5665 camera_itof.cpp:529] Rotation from JSON config: 0
+I20260610 12:43:41.057936 5665 adsd3500_sensor.cpp:282] Opening device
+I20260610 12:43:41.057956 5665 adsd3500_sensor.cpp:298] Looking for the following cards:
+I20260610 12:43:41.057969 5665 adsd3500_sensor.cpp:300] vi-output, adsd3500
+I20260610 12:43:41.057982 5665 adsd3500_sensor.cpp:357] device: /dev/video0     subdevice: /dev/v4l-subdev1
+I20260610 12:43:41.058031 5665 v4l2_video_device_driver.cpp:482] Device /dev/video0 validated successfully. Card: vi-output, adsd3500 2-0038, Buffer type: CAPTURE
+I20260610 12:43:41.058056 5665 v4l2_video_device_driver.cpp:59] Opened video device: /dev/video0 (fd=4)
+I20260610 12:43:41.058078 5665 v4l2_video_device_driver.cpp:59] Opened video device: /dev/v4l-subdev1 (fd=5)
+I20260610 12:43:41.063878 5665 v4l2_video_device_driver.cpp:199] Requested 4 buffers, driver allocated 4
+I20260610 12:43:43.264676 5665 buffer_processor.cpp:249] setVideoProperties: Allocating 8 raw frame buffers, each of size 4195328 bytes (total: 32.0078 MB)
+I20260610 12:43:43.264877 5665 buffer_processor.cpp:268] setVideoProperties: Allocating 8 ToFi buffers, each of size 4194304 bytes (total: 32 MB)
+I20260610 12:43:43.466161 5665 adsd3500_controller.cpp:255] Frame rate set to 5 fps
+I20260610 12:43:43.466239 5665 camera_itof.cpp:2097] Camera FPS set from parameter list at: 5
+W20260610 12:43:43.466255 5665 depth_parameter_mapper.cpp:134] vcselDelay was not found in parameter list, not setting.
+W20260610 12:43:43.466740 5665 depth_parameter_mapper.cpp:134] enablePhaseInvalidation was not found in parameter list, not setting.
+I20260610 12:43:43.466794 5665 camera_itof.cpp:597] Using the following configuration parameters for mode 1
+I20260610 12:43:43.466809 5665 camera_itof.cpp:600] abThreshMin : 20
+I20260610 12:43:43.466823 5665 camera_itof.cpp:600] bitsInAB : 16
+I20260610 12:43:43.466833 5665 camera_itof.cpp:600] bitsInConf : 0
+I20260610 12:43:43.466842 5665 camera_itof.cpp:600] bitsInPhaseOrDepth : 16
+I20260610 12:43:43.466852 5665 camera_itof.cpp:600] confThresh : 25
+I20260610 12:43:43.466861 5665 camera_itof.cpp:600] depthComputeIspEnable : 1
+I20260610 12:43:43.466870 5665 camera_itof.cpp:600] dualPulsatrixSystemEnabled : 1
+I20260610 12:43:43.466879 5665 camera_itof.cpp:600] enableRotation : 0
+I20260610 12:43:43.466888 5665 camera_itof.cpp:600] fps : 5
+I20260610 12:43:43.466896 5665 camera_itof.cpp:600] headerSize : 128
+I20260610 12:43:43.466905 5665 camera_itof.cpp:600] inputFormat : mipiRaw12_8
+I20260610 12:43:43.466914 5665 camera_itof.cpp:600] interleavingEnable : 0
+I20260610 12:43:43.466923 5665 camera_itof.cpp:600] jblfABThreshold : 10
+I20260610 12:43:43.466932 5665 camera_itof.cpp:600] jblfApplyFlag : 1
+I20260610 12:43:43.466942 5665 camera_itof.cpp:600] jblfExponentialTerm : 5
+I20260610 12:43:43.466951 5665 camera_itof.cpp:600] jblfGaussianSigma : 10
+I20260610 12:43:43.466960 5665 camera_itof.cpp:600] jblfMaxEdge : 12
+I20260610 12:43:43.466969 5665 camera_itof.cpp:600] jblfWindowSize : 5
+I20260610 12:43:43.466977 5665 camera_itof.cpp:600] lensScatterCompensationEnabled : 0
+I20260610 12:43:43.466986 5665 camera_itof.cpp:600] partialDepthEnable : 1
+I20260610 12:43:43.466995 5665 camera_itof.cpp:600] phaseInvalid : 0
+I20260610 12:43:43.467004 5665 camera_itof.cpp:600] radialThreshMax : 10000
+I20260610 12:43:43.467013 5665 camera_itof.cpp:600] radialThreshMin : 100
+I20260610 12:43:43.467021 5665 camera_itof.cpp:600] xyzEnable : 1
+I20260610 12:43:43.467152 5665 camera_itof.cpp:611] Metadata in AB is enabled and it is stored in the first 128 bytes.
+I20260610 12:43:43.467194 5665 camera_itof.cpp:720] Initializing depth compute with ISP (parsed dealias data)
+I20260610 12:43:43.467217 5665 buffer_processor.cpp:488] setProcessorProperties: libtofi_compute version: TOF_DepthComputeEngine_ARM64-Rel5.1.0.1
+I20260610 12:43:44.124792 5665 adsd3500_sensor.cpp:1592] Frame Rotation: disabled
+W20260610 12:43:44.124888 5665 sensor_control_registry.cpp:74] Control &#39;depthComputeOpenSource&#39; is read-only
+I20260610 12:43:44.124913 5665 camera_itof.cpp:755] Using closed source depth compute library.
+I20260610 12:43:44.544269 5665 adsd3500_sensor.cpp:575] Starting device 0
+I20260610 12:43:44.553511 5665 v4l2_video_device_driver.cpp:311] Started streaming on /dev/video0
+I20260610 12:43:44.645703 5665 camera_frame_acquisition_manager.cpp:187] Dropped first frame
+I20260610 12:43:44.845550 5665 main.cpp:381] Starting capture of 100 frames.
+I20260610 12:43:44.845638 5665 main.cpp:382] Expected capture time (ms): 20000
+I20260610 12:43:44.845656 5665 main.cpp:383] Maximum allowed capture time (ms): 600000
+I20260610 12:43:44.845668 5665 main.cpp:384] FPS: 5
+I20260610 12:43:44.845683 5665 recording_manager.cpp:58] [RECORDING] Rotation state: DISABLED
+I20260610 12:43:44.845697 5665 recording_manager.cpp:87] [RECORDING] Enable flags: depth=1 ab=1 conf=0 xyz=1
+I20260610 12:43:44.845713 5665 recording_manager.cpp:90] [RECORDING] Original frameContent has 4 items
+I20260610 12:43:44.845724 5665 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;depth&quot;
+I20260610 12:43:44.845735 5665 recording_manager.cpp:101] [RECORDING] Adding to header: depth
+I20260610 12:43:44.845746 5665 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;ab&quot;
+I20260610 12:43:44.845756 5665 recording_manager.cpp:101] [RECORDING] Adding to header: ab
+I20260610 12:43:44.845766 5665 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;xyz&quot;
+I20260610 12:43:44.845776 5665 recording_manager.cpp:101] [RECORDING] Adding to header: xyz
+I20260610 12:43:44.845786 5665 recording_manager.cpp:93] [RECORDING] frameContent item: &quot;metadata&quot;
+I20260610 12:43:44.845796 5665 recording_manager.cpp:101] [RECORDING] Adding to header: metadata
+I20260610 12:43:44.845807 5665 recording_manager.cpp:106] [RECORDING] Total frame types in header: 4
+I20260610 12:43:44.845818 5665 recording_manager.cpp:128] [RECORDING] Building fDataDetails from frameContent...
+I20260610 12:43:44.845830 5665 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: depth
+I20260610 12:43:44.845845 5665 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: ab
+I20260610 12:43:44.845856 5665 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: xyz
+I20260610 12:43:44.845866 5665 recording_manager.cpp:137] [RECORDING] Adding to fDataDetails: metadata
+I20260610 12:43:44.845876 5665 recording_manager.cpp:182] [RECORDING] Final fDataDetails count: 4
+I20260610 12:43:44.845887 5665 recording_manager.cpp:184] [RECORDING] Writing header to file: output
+I20260610 12:43:44.845901 5665 adsd3500_sensor.cpp:2061] startRecording: Start recording
+W20260610 12:43:44.846670 5665 utils.cpp:719] Recording folder &#39;output/recordings/&#39; is not on NVMe or HDD storage. Detected type: 1 (1=mmc/SD, 2=NVMe/HDD, 0=unknown, -1=error)
+I20260610 12:43:44.846806 5665 adsd3500_recorder.cpp:56] Started recording to: output
+I20260610 12:43:44.846827 5665 camera_itof.cpp:940] [RECORDING] Started recording with rotation DISABLED
+I20260610 12:44:04.836880 5665 main.cpp:423] Capture complete. Frames captured: 100
+I20260610 12:44:04.837052 5665 buffer_processor.cpp:1418] Recording stopped. Total frames saved: 100
+I20260610 12:44:04.837080 5665 adsd3500_recorder.cpp:81] Stopped recording
+I20260610 12:44:04.837095 5665 main.cpp:432] Measured FPS: 5.0528
+I20260610 12:44:07.223657 5665 buffer_processor.cpp:1337] stopThreads: Threads stopped successfully. Queue sizes - v4l2_input: 8, capture_to_process: 0, tofi_io: 8, process_done: 0
+I20260610 12:44:07.223737 5665 adsd3500_sensor.cpp:620] Stopping device
+I20260610 12:44:07.226067 5665 v4l2_video_device_driver.cpp:326] Stopped streaming on /dev/video0
+I20260610 12:44:07.226121 5665 adsd3500_sensor.cpp:1513] Waiting for interrupt.
+I20260610 12:44:07.226141 5665 adsd3500_sensor.cpp:1518] .
+I20260610 12:44:07.236210 5665 adsd3500_interrupt_manager.cpp:83] Skipping status register read for expected GPIO toggle interrupt (elapsed: 10 ms).
+I20260610 12:44:07.246686 5665 adsd3500_sensor.cpp:1523] Waited: 20 ms.
+I20260610 12:44:07.246709 5665 adsd3500_sensor.cpp:1530] Got the Interrupt from ADSD3500
+I20260610 12:44:07.247729 5665 v4l2_buffer_manager.cpp:210] Cleaned up video buffers for device
+I20260610 12:44:07.248538 5665 buffer_processor.cpp:152] freeComputeLibrary
+I20260610 12:44:07.252631 5665 adsd3500_interrupt_notifier.cpp:190] Removed 1 sensor(s) from interrupt notifier. Remaining: 0</code></pre>
+</details>
+<p>Notice, line (<em>Measured FPS: 5.04668</em>), the frame rate is 5fps.</p>
+</details>
+<details>
+<p><summary>ADIToFGUI (C++)</summary></p>
+<h3 id="aditofgui-c">ADIToFGUI (C++)</h3>
+<pre><code>$ ADIToFGUI</code></pre>
+<h4 id="selection-wizard">Selection Wizard</h4>
+<h5 id="live-camera">Live Camera</h5>
+<p><a href="images/aditofgui_wizard_live_stream.png"><img src="images/aditofgui_wizard_live_stream.png" width="100%"></a></p>
+<p>This option is used to stream frames from a live ADCAM Time of Flight camera.</p>
+<ol type="1">
+<li>Select <em>Live Camera</em>. Please note, this is only possible if the <em>Saved Stream</em> or <em>Live Camera</em> is closed.</li>
+<li>Select <em>Open</em>.</li>
+<li>Select the mode from the dropdown list, where each mode is unique option of size, range and binning. If no mode is chosen, the mode shown is used.</li>
+<li>(Optional) Configure the device, where the parameters can be loaded from a JSON configuration file via <em>Load Config</em> or modified via the <em>Configurable Parameters</em> controls.</li>
+<li><em>Start Streaming</em>, where <em>Preview</em> mode allows a reduced frame rate - this is good for streaming and saving, a recording, at a desired frame without displaying every frame.</li>
+</ol>
+<h5 id="saved-stream">Saved Stream</h5>
+<p><a href="images/aditofgui_wizard_saved_stream.png"><img src="images/aditofgui_wizard_saved_stream.png" width="100%"></a></p>
+<p>This option is used to stream save recordings.</p>
+<ol type="1">
+<li>Select <em>Saved Stream</em>. Please note, this is only possible if the <em>Saved Stream</em> or <em>Live Camera</em> is closed.</li>
+<li>Select <em>Open</em>, with the file chooser, select the appropriate <strong>.adcam</strong> file.</li>
+<li>Select <em>Start Stream</em>.</li>
+</ol>
+<h4 id="data-view">Data View</h4>
+<p>The <em>Live Camera</em> and <em>Saved Stream</em> views each contains several windows. The windows are the same between the views, where the <em>Control Window</em> controls differ slightly between the two views. In the two sub-sections below we will cover the differences.</p>
+<p>Expand the images below to see the data views of the <em>Live Camera</em> and <em>Saved Stream</em>.</p>
+<ul>
+<li><p>Live Camera: <a href="images/aditofgui_live_stream.png"><img src="images/aditofgui_live_stream.png" width="100%"></a></p></li>
+<li><p>Save Stream: <a href="images/aditofgui_saved_stream.png"><img src="images/aditofgui_saved_stream.png" width="100%"></a>|</p></li>
+<li><p>Information Window</p>
+<ul>
+<li>This window shows metrics, telemetry and parameters.</li>
+</ul></li>
+<li><p>Control Windows</p>
+<ul>
+<li>This window allows the user to configure and control the stream. This is the only window that differs between the two views.</li>
+</ul></li>
+<li><p>Absolute Brightness Window</p>
+<ul>
+<li>This window show AB frames. In real time in the Live view and non-realtime in the Saved view.</li>
+</ul></li>
+<li><p>Depth Window</p>
+<ul>
+<li>This window shows Depth frames. In real time in the Live view and non-realtime in the Saved view.</li>
+</ul></li>
+<li><p>Point Cloud Window</p>
+<ul>
+<li>This window shows point cloud frames. In real time in the Live view and non-realtime in the Saved view.</li>
+</ul></li>
+</ul>
+<h5 id="information-window">Information Window</h5>
+<p><a href="images/aditofgui_live_stream_control.png"><img src="images/aditofgui_live_stream_control.png" width="20%"></a></p>
+<ul>
+<li>Camera
+<ul>
+<li>This defines is your are using an online (aka Live Camera) or offline (aka Saved Stream) camera.</li>
+</ul></li>
+<li>Preview Mode
+<ul>
+<li>Shows if <em>Preview Mode</em> is on or off.</li>
+</ul></li>
+<li>Mode
+<ul>
+<li>The current mode as selected by the user for the <em>Live Camera</em> view or as saved in the recording for the <em>Saved Stream</em> view.</li>
+</ul></li>
+<li>Expected fps
+<ul>
+<li>The set and expected frame rate.</li>
+</ul></li>
+<li>Current fps
+<ul>
+<li>The actual frame rate as calculated in real-time.</li>
+</ul></li>
+<li>Frames Recevied
+<ul>
+<li>Frames received in a session, so far, in real-time.</li>
+</ul></li>
+<li>Frames Lost
+<ul>
+<li>Frames lost in a session, so far, in real-time.</li>
+</ul></li>
+<li>Laser Temp
+<ul>
+<li>The current laser temperature as sent via metadata from the imager module.</li>
+</ul></li>
+<li>Sensor Temp
+<ul>
+<li>The current laser temperature as sent via metadata from the imager module.</li>
+</ul></li>
+<li>Point Cloud FoV
+<ul>
+<li>The field of view in the point cloud window.</li>
+</ul></li>
+<li>Point Cloud Camera
+<ul>
+<li>The location of the camera in the point cloud window.</li>
+</ul></li>
+<li>Camera (Y, P, R)
+<ul>
+<li>The Yaw, Pitch and Rotation of the scene in the point cloud window.</li>
+</ul></li>
+</ul>
+<h5 id="control-window-live-camera-view">Control Window: Live Camera View</h5>
+<p><a href="images/aditofgui_saved_stream_control.png"><img src="images/aditofgui_saved_stream_control.png" width="20%"></a></p>
+<ul>
+<li>Configuration-&gt;Load Config
+<ul>
+<li>Allows the user to load a configuration JSON file. Device and software parameters are loaded and applied.</li>
+</ul></li>
+<li>Configuration-&gt;Save Config
+<ul>
+<li>Allows the user to save a configuration JSON file. Device and software parameters are stored.</li>
+</ul></li>
+<li>Control-&gt;Camera Icon
+<ul>
+<li>Save a snapshot of the current frame set. This is covered in more detail later.</li>
+</ul></li>
+<li>Control-&gt;Record Icon
+<ul>
+<li>Start recording the stream. When the icon is blinking the system is recording.</li>
+</ul></li>
+<li>Control-&gt;Stop Icon
+<ul>
+<li>Stop the active stream, returning to the <em>Selection Wizard</em>.</li>
+</ul></li>
+<li>Rotate-&gt;+
+<ul>
+<li>This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.</li>
+</ul></li>
+<li>Point Cloud-&gt;Reset
+<ul>
+<li>If the user rotates or translates the point cloud <em>Reset</em> goes back to the default translation and rotation values.</li>
+</ul></li>
+<li>Point Cloud-&gt;Colour Option
+<ul>
+<li>Depth Colour, AB Colour and Solid Color for the point cloud window.</li>
+</ul></li>
+<li>Active Brigthtnes-&gt;Auto-scale
+<ul>
+<li>Improves AB image to make it less dark.</li>
+</ul></li>
+<li>Active Brigthtness-&gt;Log Image
+<ul>
+<li>Improves AB image to make it less dark, but depends on Auto-scale being</li>
+</ul></li>
+<li>Configuration Parameters-&gt;Reset Parameters
+<ul>
+<li>Reset the parameters shown to the defaults. This does not write back to the Time of Flight hardawre.</li>
+</ul></li>
+<li>Configuration Parameters-&gt;Modify Parameters
+<ul>
+<li>Write the configuration parameters to the Time of Flight hardware.</li>
+</ul></li>
+</ul>
+<h5 id="control-window-saved-stream-view">Control Window: Saved Stream View</h5>
+<ul>
+<li>Control-&gt;Export All Frames
+<ul>
+<li>Export all frames in the record to png, text and ply files when the <em>Camera</em> icon is pressed.</li>
+</ul></li>
+<li>Control-&gt;Camera Icon
+<ul>
+<li>Save a snapshot of the current frame set; if <em>Export All Fames</em> is selected then all frames are saved. This is covered in more detail later.</li>
+</ul></li>
+<li>Control-&gt; ‘|&lt;’ Icon
+<ul>
+<li>Goto the first frame in the recording.</li>
+</ul></li>
+<li>Control-&gt; ‘&lt;’ Icon
+<ul>
+<li>Step back one frame in the recording.</li>
+</ul></li>
+<li>Control-&gt; ‘&gt;|’ Icon
+<ul>
+<li>Goto the last frame in the recording.</li>
+</ul></li>
+<li>Control-&gt; ‘&gt;’ Icon
+<ul>
+<li>Step forward one frame in the recording.</li>
+</ul></li>
+<li>Control-&gt;Stop Icon
+<ul>
+<li>Stop and return to the <em>Selection Wizard</em>.</li>
+</ul></li>
+<li>Rotate-&gt;+
+<ul>
+<li>This control rotates the image by 90 degress in the depth and AB windows. The current rotation is shown.</li>
+</ul></li>
+<li>Point Cloud-&gt;Reset
+<ul>
+<li>If the user rotates or translates the point cloud <em>Reset</em> goes back to the default translation and rotation values.</li>
+</ul></li>
+<li>Point Cloud-&gt;Colour Option
+<ul>
+<li>Depth Colour, AB Colour and Solid Color for the point cloud window.</li>
+</ul></li>
+<li>Active Brigthtness-&gt;Auto-scale
+<ul>
+<li>Improves AB image to make it less dark.</li>
+</ul></li>
+<li>|Active Brigthtness-&gt;Log Image
+<ul>
+<li>Improves AB image to make it less dark, but depends on Auto-scale being</li>
+</ul></li>
+</ul>
+<h4 id="aditofgui-and-configuration-parameters">ADIToFGUI and Configuration Parameters</h4>
+<p>This section covers modification of ToF parameters per mode. To accomplish this the user needs to:</p>
+<ol type="1">
+<li>Save the configuration file, via <em>Control Window-&gt;Configuration-&gt;Save Config</em>.</li>
+</ol>
+<p><a href="images/aditofgui_control_save_or_load_configuration.png"><img src="images/aditofgui_control_save_or_load_configuration.png" width="25%"></a></p>
+<ol start="2" type="1">
+<li>Modify the saved configuration file outside of ADIToFGUI using a text editor.</li>
+</ol>
+<p><a href="images/data_collect_example_3_fps_change.png"><img src="images/data_collect_example_3_fps_change.png" width="25%"></a></p>
+<ol start="3" type="1">
+<li>Load the configuration file, via <em>Control Window-&gt;Configuration-&gt;Load Config</em>.</li>
+</ol>
+<p><a href="images/aditofgui_control_save_or_load_configuration.png"><img src="images/aditofgui_control_save_or_load_configuration.png" width="25%"></a></p>
+<ol start="4" type="1">
+<li>Observing the result.</li>
+</ol>
+<p>From the screen capture below you can see the frame rate for mode 1 is now 5fps.</p>
+<p><a href="images/aditofgui_control_modify_fps.png"><img src="images/aditofgui_control_modify_fps.png" width="50%"></a></p>
+<h4 id="point-cloud-ab-and-depth-windows">Point Cloud, AB and Depth Windows</h4>
+<h5 id="point-cloud-controls">Point Cloud Controls</h5>
+<p>While hovering over the point cloud window with the mouse pointer, the point cloud translation and rotation can be control by the user.</p>
+<ul>
+<li><p>Translation is possible in the X, Y and Z planes.</p></li>
+<li><p>Yaw, pitch and roll rotations are possible.</p></li>
+<li><p>Left Mouse Button + Mouse</p>
+<ul>
+<li>Freeform control.</li>
+</ul></li>
+<li><p>Right Mouse Button + Mouse Up/Down</p>
+<ul>
+<li>Translate on the y-axis.</li>
+</ul></li>
+<li><p>Right Mouse Button + Mouse Left/Right</p>
+<ul>
+<li>Translate on the x-axis.</li>
+</ul></li>
+<li><p>Mouse Wheel</p>
+<ul>
+<li>Translate on the z-axis.</li>
+</ul></li>
+<li><p>CTRL + Mouse Wheel</p>
+<ul>
+<li>Pitch control.</li>
+</ul></li>
+<li><p>ALT + Mouse Wheel</p>
+<ul>
+<li>Yaw control.</li>
+</ul></li>
+<li><p>CTRL + ALT + Mouse Wheel</p>
+<ul>
+<li>Roll control.</li>
+</ul></li>
+</ul>
+<h5 id="ab-window">AB Window</h5>
+<p>Hovering the mouse pointer over the AB image shows the AB intensity for a given pixel.</p>
+<p><a href="images/aditofgui_ab_window.png"><img src="images/aditofgui_ab_window.png" width="25%"></a></p>
+<h5 id="depth-window">Depth Window</h5>
+<p>Hovering the mouse pointer over the depth image shows the depth/distance for a given pixel.</p>
+<p><a href="images/aditofgui_depth_window.png"><img src="images/aditofgui_depth_window.png" width="25%"></a></p>
+<p>It is also possible to mointor the depth across a given line drawn on the depth image by the user.</p>
+<p>To do so, right click in the depth window, once the red line appears move the mouse to the next point and press the right mouse button again. A graph will appear with the length of the line (in pixels) on the x-axis and depth (in mm) on the y-axis. Press the right mouse button in the depth window to remove the line.</p>
+<p><a href="images/aditofgui_depth_distance_windows.png"><img src="images/aditofgui_depth_distance_windows.png" width="40%"></a></p>
+<h4 id="configuring-aditofgui">Configuring ADIToFGUI</h4>
+<p>In the <em>ADIToFGUI</em> folder there is a file: *tof-tools.config. This tool contains some GUI configuration parameters. The default contents of the file is shown below.</p>
+<pre><code>{
+    &quot;skip_network_cameras&quot;: &quot;off&quot;,
+    &quot;camera_ip&quot;: &quot;&quot;,
+    &quot;tooltip_delay_seconds&quot;: 1.5,
+    &quot;recordings_folder&quot;: &quot;.&quot;
+}</code></pre>
+<p>Let’s take a look at each definition:</p>
+<ul>
+<li>skip_network_cameras
+<ul>
+<li>Look for networked ADI ToF Cameras if set to ‘on’.</li>
+</ul></li>
+<li>camera_ip
+<ul>
+<li>IP address of network worked camera, used if ‘skip_network_cameras’ is set to ‘on’.</li>
+</ul></li>
+<li>tooltip_delay_seconds
+<ul>
+<li>How long to wait before the GUI displays tooltips on hover. By default it is set to 1.5s.</li>
+</ul></li>
+<li>recordings_folder
+<ul>
+<li>The folder to save recordings to. By default it is the current folder - ‘recordings’ will be created.</li>
+</ul></li>
+</ul>
+</details>
+<h1 id="appendix">Appendix</h1>
+<details>
+<p><summary>Extracting Data from Saved Streams: rawparser.py</summary></p>
+<h2 id="extracting-data-from-saved-streams-rawparser.py">Extracting Data from Saved Streams: rawparser.py</h2>
+<p><em>rawparser.py</em> is used to extract frames from data streams collected by data_collect. It can also be used to do the same for data streams recorded by ADIToFGUI. As with the Pyton bindings, Python 3.10 is required.</p>
+<figure>
+<img src="https://img.shields.io/badge/Important-FFD700?style=flat-square" alt="" /><figcaption>Static Badge</figcaption>
+</figure>
+<p>The Python environment must be active, see the section <a href="#python-tools">Python Tools</a>.</p>
+<h5 id="command-line-interface-4">Command Line Interface</h5>
+<pre><code>python rawparser.py -h
+usage: rawparser.py [-h] [-o OUTDIR] [-n] [-f FRAMES] filename
+
+Script to parse a raw file and extract different frame data
+
+positional arguments:
+  filename              bin filename to parse
+
+options:
+  -h, --help            show this help message and exit
+  -o OUTDIR, --outdir OUTDIR
+                        Output directory (optional)
+  -n, --no_xyz          Input file doesn&#39;t have XYZ data
+  -f FRAMES, --frames FRAMES
+                        Frame range: N (just N), N- (from N to end), N-M (N to M inclusive)</code></pre>
+<h5 id="example-usage-1">Example Usage</h5>
+The following example extracts frames 10 thru 10 from the capture file *output_11_04_10_53_14_0.bin* and places the contents in the folder *output_10_16*.
+<details>
+<p><summary>python rawparser/rawparser.py output/recordings/aditof_20260225_172421_df2852a8.adcam -f 10-16</summary></p>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/data_collect$ python rawparser/rawparser.py output/recordings/aditof_20260225_172421_df2852a8.adcam -f 10-16
+rawparser 2.0.0
+filename: output/recordings/aditof_20260225_172421_df2852a8.adcam
+SDK version:  7.0.0 a-1  | branch:  main  | commit:  91b46285
+I20260225 13:05:05.354537 263648 system_impl.cpp:143] Creating offline sensor.
+I20260225 13:05:05.354705 263648 camera_itof.cpp:115] Sensor name = offline
+system.getCameraList() Status.Ok
+I20260225 13:05:05.354803 263648 camera_itof.cpp:161] Initializing camera: Offline
+I20260225 13:05:05.355107 263648 offline_depth_sensor.cpp:808] Building Index
+I20260225 13:05:05.355724 263648 camera_itof.cpp:513] Number of Frames: 100
+I20260225 13:05:05.355745 263648 camera_itof.cpp:515] Frame Rate: 5
+I20260225 13:05:05.355758 263648 camera_itof.cpp:536] [PLAYBACK] Reading frameContent from file header...
+I20260225 13:05:05.355771 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: depth
+I20260225 13:05:05.355784 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: ab
+I20260225 13:05:05.355795 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: xyz
+I20260225 13:05:05.355807 263648 camera_itof.cpp:542] [PLAYBACK] Found in header: metadata
+I20260225 13:05:05.355818 263648 camera_itof.cpp:546] [PLAYBACK] Total frame types loaded: 4
+I20260225 13:05:05.355830 263648 camera_itof.cpp:558] [PLAYBACK] Loading 4 fDataDetails entries...
+I20260225 13:05:05.355841 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[0]: type=depth
+I20260225 13:05:05.355854 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[1]: type=ab
+I20260225 13:05:05.355865 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[2]: type=xyz
+I20260225 13:05:05.355876 263648 camera_itof.cpp:565] [PLAYBACK] fDataDetails[3]: type=metadata
+I20260225 13:05:05.781687 263648 camera_itof.cpp:1932] [PLAYBACK] Setting enable flags based on frameContent...
+I20260225 13:05:05.781804 263648 camera_itof.cpp:1949] [PLAYBACK] Enable flags set: depth=1 ab=1 conf=0 xyz=1
+Processing Frame: 16
+Processed frames.
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/data_collect$ ls output/recordings/aditof_20260225_172421_df2852a8/
+aditof_20260225_172421_df2852a8_10  aditof_20260225_172421_df2852a8_12  aditof_20260225_172421_df2852a8_14  aditof_20260225_172421_df2852a8_16
+aditof_20260225_172421_df2852a8_11  aditof_20260225_172421_df2852a8_13  aditof_20260225_172421_df2852a8_15
+(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/data_collect$ ll output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10
+total 25112
+drwxrwxr-x 2 analog analog     4096 Feb 25 13:05 ./
+drwxrwxr-x 9 analog analog     4096 Feb 25 13:05 ../
+-rw-rw-r-- 1 analog analog   426544 Feb 25 13:05 ab_aditof_20260225_172421_df2852a8_000010.png
+-rw-rw-r-- 1 analog analog    98950 Feb 25 13:05 depth_aditof_20260225_172421_df2852a8_000010.png
+-rw-rw-r-- 1 analog analog      308 Feb 25 13:05 metadata_aditof_20260225_172421_df2852a8_000010.txt
+-rw-rw-r-- 1 analog analog 25165974 Feb 25 13:05 pointcloud_aditof_20260225_172421_df2852a8_000010.ply</code></pre>
+</details>
+<ul>
+<li><strong>ab_aditof_20260225_172421_df2852a8_000010.png</strong>: PNG of the AB frame for frame #10.</li>
+<li><strong>depth_aditof_20260225_172421_df2852a8_000010.png</strong>: PNG of the depth frame for frame #10.</li>
+<li><strong>metadata_aditof_20260225_172421_df2852a8_000010.txt</strong>: Text file of metadata for frame #10.</li>
+<li><strong>pointcloud_aditof_20260225_172421_df2852a8_000010.ply</strong>: Point cloud file, in ply format, for frame #10.</li>
+</ul>
+<h6 id="using-the-visualization-tool-for-the-ab-and-depth-pngs">Using the Visualization tool for the AB and Depth PNGs</h6>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view png output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+============================================================
+PNG and PLY File Visualizer
+============================================================
+
+Scanning directory: output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+Looking for first file of each type...
+
+✓ Found metadata: metadata_aditof_20260225_172421_df2852a8_000010.txt
+✓ Found AB image: ab_aditof_20260225_172421_df2852a8_000010.png
+✗ No conf*.png files found
+✓ Found depth image: depth_aditof_20260225_172421_df2852a8_000010.png
+✓ Found point cloud: pointcloud_aditof_20260225_172421_df2852a8_000010.ply
+
+Displaying 4 file(s)...
+
+
+============================================================
+File 1/2: AB
+============================================================
+  Loaded: 1024x1024, 3 channel(s)
+
+============================================================
+File 2/2: DEPTH
+============================================================
+  Loaded: 1024x1024, 3 channel(s)
+
+============================================================
+Creating combined display...
+============================================================
+
+Displaying combined image (2048x1064)
+Press any key in the window to continue (or Ctrl+C to exit)...</code></pre>
+<p><a href="images/visualize_png.png"><img src="images/visualize_png.png" width="40%"></a></p>
+<h6 id="using-the-visualization-tool-for-the-metadata">Using the Visualization tool for the Metadata</h6>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view metadata output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+============================================================
+PNG and PLY File Visualizer
+============================================================
+
+Scanning directory: output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/
+Looking for first file of each type...
+
+✓ Found metadata: metadata_aditof_20260225_172421_df2852a8_000010.txt
+✓ Found AB image: ab_aditof_20260225_172421_df2852a8_000010.png
+✗ No conf*.png files found
+✓ Found depth image: depth_aditof_20260225_172421_df2852a8_000010.png
+✓ Found point cloud: pointcloud_aditof_20260225_172421_df2852a8_000010.ply
+
+Displaying 4 file(s)...
+
+
+============================================================
+File 1/1: METADATA
+============================================================
+Reading metadata: output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/metadata_aditof_20260225_172421_df2852a8_000010.txt
+------------------------------------------------------------
+Metadata for frame 000010:
+frameWidth: 1024
+frameHeight: 1024
+outputconfig: 5
+depthPhaseBits: 12
+ABBits: 16
+confidenceBits: 0
+invalidPhaseValue: 20
+frequencyIndex: 32
+frameNumber: 12
+imagerMode: 1
+numberOfPhases: 3
+numberOfFrequencies: 3
+ElapsedTimeinFrac: 0
+ElapsedTimeinSec: 0
+sensorTemp: 38
+laserTemp: 39
+
+------------------------------------------------------------
+
+============================================================
+Visualization complete!
+============================================================</code></pre>
+<h6 id="using-the-visualization-tool-for-the-point-cloud">Using the Visualization tool for the Point Cloud</h6>
+<pre><code>(aditofpython_env) ~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/data_collect$ python rawparser/rawparser_visualize.py --view pointcloud output/recordings/aditof_20260225_172421_df2852a8/aditof_20260225_172421_df2852a8_10/</code></pre>
+<p><a href="images/visualize_ply.png"><img src="images/visualize_ply.png" width="40%"></a></p>
+</details>
+<details>
+<p><summary>Configuration JSON File</summary></p>
+<h2 id="configuration-json-file">Configuration JSON File</h2>
+<p>For the following discussion <a href="other/example-cfg.json">example-cfg.json</a> will be referenced.</p>
+<h3 id="general-parameters">General Parameters</h3>
+<p>These should not be changed in the context of the eval kit unless explicitly asked to do so by ADI.</p>
+<ul>
+<li><em>errata1</em>: DO NOT CHANGE</li>
+<li><em>fsyncMode</em>: DO NOT A</li>
+<li><em>mipiOutputSpeed</em>: DO NOT CHANGE</li>
+<li><em>isdeskewEnabled</em>: DO NOT CHANGE</li>
+<li><em>enableTempCompensation</em>: DO NOT CHANGE</li>
+<li><em>enableEdgeConfidence</em>: DO NOT CHANGE</li>
+</ul>
+<pre><code>  &quot;errata1&quot;:  1,
+  &quot;fsyncMode&quot;:  -1,
+  &quot;mipiOutputSpeed&quot;:  1,
+  &quot;isdeskewEnabled&quot;: 1,
+  &quot;enableTempCompensation&quot;:  -1,
+  &quot;enableEdgeConfidence&quot;:  -1,</code></pre>
+<h3 id="mode-parameters">Mode Parameters</h3>
+<p>Each supported mode has an entry in the saved file. For example Mode 0 is shown below.</p>
+<p>This is further sub-divived into two groups:</p>
+<ul>
+<li><em>depth-compute</em>: These parameters are used to configure the depth compute parameters for the ADSD3500 and depth compute library. A document is avaialble to descript these parameters, please contact ADI at tof@analog.com. Please note, this document is only available under NDA.</li>
+<li><em>configuration-parameters</em>:
+<ul>
+<li><em>fps</em>: desired frame rate in frames per second.</li>
+<li><em>headerSize</em>: DO NOT CHANGE.</li>
+<li><em>multiCoreEnable</em>: Enable use of multiple CPU cores by the depth compute library on the eval kit.</li>
+<li><em>numCores</em>: The number of CPU cores to use when <em>multiCoreEnable</em> is set to <em>1</em>.</li>
+<li><em>xyzEnable</em>: DO NOT CHANGE.</li>
+</ul>
+<pre><code>&quot;0&quot;:{
+  &quot;depth-compute&quot;:{
+    &quot;abThreshMin&quot;:20.0,
+    &quot;bitsInAB&quot;:16.0,
+    &quot;bitsInConf&quot;:0.0,
+    &quot;bitsInPhaseOrDepth&quot;:16.0,
+    &quot;confThresh&quot;:25.0,
+    &quot;depthComputeIspEnable&quot;:1.0,
+    &quot;inputFormat&quot;:&quot;mipiRaw12_8&quot;,
+    &quot;interleavingEnable&quot;:0.0,
+    &quot;jblfABThreshold&quot;:10.0,
+    &quot;jblfApplyFlag&quot;:1.0,
+    &quot;jblfExponentialTerm&quot;:5.0,
+    &quot;jblfGaussianSigma&quot;:10.0,
+    &quot;jblfMaxEdge&quot;:12.0,
+    &quot;jblfWindowSize&quot;:5.0,
+    &quot;partialDepthEnable&quot;:1.0,
+    &quot;phaseInvalid&quot;:0.0,
+    &quot;radialThreshMax&quot;:10000.0,
+    &quot;radialThreshMin&quot;:100.0
+  },
+  &quot;configuration-parameters&quot;:{
+    &quot;fps&quot;:10.0,
+    &quot;headerSize&quot;:128.0,
+    &quot;xyzEnable&quot;:1.0
+  }
+},</code></pre></li>
+</ul>
+</details>
+<details>
+<p><summary>Building the ‘dev’ Folder</summary></p>
+<p>We have include a script to clone th sources that were used to build the binaries in the evaluation kit. With this the user is able to build all code:</p>
+<ul>
+<li>Eval kit binary examples</li>
+<li>libaditof aka SDK</li>
+<li>ADSD3500 V4L2 Camera Sensor Driver</li>
+</ul>
+<p>The script is locationed under the <em>dev</em> folder: <strong>git_clone_tof.sh</strong></p>
+<p>To get the sources run this script in the <em>dev</em> folder.</p>
+<pre class="console"><code>$ cd dev
+$ ./git_clone_tof.sh
+$ cd ToF-main</code></pre>
+<p>Now refer to the main page of the associated ADCAM release for how to build the code.</p>
+<p>https://github.com/analogdevicesinc/ADCAM/tree/v1.0.0</p>
+<p>Note, the script <strong>activate_env.sh</strong> set the environment variable <strong>LIBTOFI_LIBDIR_PATH</strong> to point to the depth compute libraries.</p>
+</details>
