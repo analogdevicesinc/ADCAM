@@ -34,9 +34,14 @@ mode = 3
 
 def help():
     print(f"{sys.argv[0]} usage:")
-    print(f"Target: {sys.argv[0]} <mode number>")
-    print(f"Network connection: {sys.argv[0]} <mode number> <ip>")
     print()
+    print("**On the Jetson Orin Nano Dev Kit or Raspberry Pi 5**")
+    print(f"{sys.argv[0]} <mode number>")
+    print("For example:")
+    print(f"python {sys.argv[0]} 0")
+    print()
+    print("**For a network connected device**")
+    print(f"{sys.argv[0]} <mode number> <ip>")
     print("For example:")
     print(f"python {sys.argv[0]} 0 192.168.56.1")
     exit(1)
