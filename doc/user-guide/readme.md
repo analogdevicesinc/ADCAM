@@ -5,14 +5,14 @@
 
 ## On Windows
 
-  * For example: *"c:\Program Files\Pandoc\pandoc.exe" ADCAM-CameraKit-020.md -o ADCAM-CameraKit-020.html*
+  * For example: *"c:\Program Files\Pandoc\pandoc.exe" ADCAM-CameraKit-100.md -o ADCAM-CameraKit-100.html*
 * Commit the HTML along with other codes to the GitHub repo.
 
 ## On Linux
 
 ```console
 sudo apt install pandoc
-pandoc ADCAM-CameraKit-020.md -o ADCAM-CameraKit-020.html
+pandoc ADCAM-CameraKit-100.md -o ADCAM-CameraKit-100.html
 ```
 
 ## Additional Notes
