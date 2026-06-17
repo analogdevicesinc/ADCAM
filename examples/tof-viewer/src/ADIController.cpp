@@ -73,6 +73,8 @@ void ADIController::StartCapture(const uint32_t frameRate) {
     m_frame_counter = 0;
     m_stopFlag = false;
     m_frames_lost = 0;
+    m_prev_frame_number = static_cast<uint32_t>(-1);
+    m_current_frame_number = 0;
     m_frame_history.clear();
     m_workerThread = std::thread([this]() { captureFrames(); });
 }
