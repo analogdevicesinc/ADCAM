@@ -106,7 +106,8 @@ modeDetails = tof.DepthSensorModeDetails()
 status = sensor.getModeDetails(int(mode),modeDetails)
     
 def normalize(image_scalar, width, height):
-    image_scalar_norm = image_scalar / image_scalar.max()
+    # Normalize to fixed 16-bit range so colormap is consistent across frames
+    image_scalar_norm = np.clip(image_scalar / 65535.0, 0.0, 1.0)
 
     # Apply the colormap to the scalar image to obtain an RGB image
     image_rgb = jet_colormap(image_scalar_norm)
