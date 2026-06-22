@@ -29,7 +29,6 @@ import os
 import argparse
 import cv2 as cv
 import open3d as o3d
-import struct
 import re
 
 # ---- CONSTANTS ----
@@ -50,14 +49,19 @@ def safe_join(*args):
 def parse_frame_range(range_str):
     """
     Accepts range_str (e.g. '30', '30-', '30-40') and total_frames.
-    Returns (start, end) inclusive.
+    Returns (start, end) inclusive. 'N' means just frame N, 'N-' means N to end, 'N-M' means N to M.
     """
 
-    match = re.fullmatch(r'(\d+)(?:-(\d*)?)?', range_str)
+    match = re.fullmatch(r'(\d+)(?:-(\d*))?', range_str)
     if not match:
         raise ValueError(f"Invalid frame range: {range_str}")
     start = int(match.group(1))
-    end = int(match.group(2)) if match.group(2) else None
+    if match.group(2) is None:  # No '-' → single frame
+        end = start
+    elif match.group(2) == '':  # 'N-' → from N to end
+        end = None
+    else:  # 'N-M' → N to M inclusive
+        end = int(match.group(2))
     return start, end
 
 def generate_metadata(metadata, directory, base_filename, index):
@@ -130,20 +134,24 @@ def generate_pcloud(xyz_frame, directory, base_filename, index, height, width):
     # Reinterpret uint16 storage as signed int16 (XYZ values are signed mm)
     # then convert to float64 required by o3d.utility.Vector3dVector
     xyz_frame = xyz_frame.astype(np.int16).reshape(-1, 3).astype(np.float64)
+    # Apply Y/Z flip (equivalent to transform [[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]])
+    # using numpy directly — pc.transform() is broken in open3d 0.18.0
+    xyz_frame[:, 1] *= -1
+    xyz_frame[:, 2] *= -1
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(xyz_frame)
-    point_cloud.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
     o3d.io.write_point_cloud(safe_join(directory, f'pointcloud_{base_filename}_{index}{PLY_EXT}'), point_cloud)
 
 def generate_vid(main_dir, base_filename, processed_frames, width, height):
     vid_dir = safe_join(main_dir, f'vid_{base_filename}')
-    make_dir(vid_dir)
+    os.makedirs(vid_dir, exist_ok=True)
     video_path = safe_join(vid_dir, f'vid_{base_filename}.mp4')
     video = cv.VideoWriter(video_path, cv.VideoWriter_fourcc(*"mp4v"), 10, (width * 2, height))
     for i in processed_frames:
+        str_i = str(i).zfill(6)
         frame_dir = safe_join(main_dir, f"{base_filename}_{i}")
-        depth_img = cv.imread(safe_join(frame_dir, f'depth_{base_filename}_{i}{PNG_EXT}'))
-        ab_img = cv.imread(safe_join(frame_dir, f'ab_{base_filename}_{i}{PNG_EXT}'))
+        depth_img = cv.imread(safe_join(frame_dir, f'depth_{base_filename}_{str_i}{PNG_EXT}'))
+        ab_img = cv.imread(safe_join(frame_dir, f'ab_{base_filename}_{str_i}{PNG_EXT}'))
         if depth_img is None or ab_img is None:
             continue
         new_img = cv.hconcat([depth_img, ab_img])
@@ -206,7 +214,7 @@ def main():
     status = camera1.start()
 
     status = tof.Status.Ok
-    
+    processed_frames = []
     frame_idx = start_frame
     while (status == tof.Status.Ok):
         print(f"\rProcessing Frame: {frame_idx}", end='', flush=True)
@@ -256,21 +264,7 @@ def main():
 
         # Get the confidence frame
         if "conf" in available_types:
-            image_conf = np.asarray(frame.getData("conf"))
-            image_conf2 = image_conf.flatten()
-            count = 0
-            final_conf = np.zeros(frameDataDetails.width*frameDataDetails.height*4)
-            for i in range(frameDataDetails.width*(frameDataDetails.height // 2)):
-                packed_float = struct.pack('f', image_conf2[i])
-            # Unpack the bytes into four uint8 values
-                uint8_values = struct.unpack('2H', packed_float)
-                array_data = np.array(uint8_values)
-                for j in range(2):
-                    final_conf[count+j] = array_data[j]
-                    #print(j)
-                count = count + 2
-            image_conf = np.reshape(final_conf[frameDataDetails.width*frameDataDetails.height*0:frameDataDetails.width*frameDataDetails.height*1], \
-                                    [frameDataDetails.height,frameDataDetails.width])
+            image_conf = np.asarray(frame.getData("conf"))  # (H, W) float32 directly from binding
             generate_confidence(image_conf, frame_dir, base_filename, str_frame_idx)
 
         # Get the RGB frame
@@ -300,12 +294,16 @@ def main():
             image_xyz = np.asarray(frame.getData("xyz"))
             generate_pcloud(image_xyz, frame_dir, base_filename, str_frame_idx, height, width)
 
+        processed_frames.append(frame_idx)
         frame_idx += 1
         if frame_idx > end_frame:
             break
 
     frame_idx = frame_idx - 1  # Adjust for last increment
     print(f"\nProcessed frames.")
+
+    if processed_frames:
+        generate_vid(dir_path, base_filename, processed_frames, width, height)
 
     camera1.stop()
 
