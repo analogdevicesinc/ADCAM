@@ -107,8 +107,9 @@ def generate_confidence(conf_frame, directory, base_filename, index):
     o3d.io.write_image(safe_join(directory, f'conf_{base_filename}_{index}{PNG_EXT}'), img)
 
 def generate_pcloud(xyz_frame, directory, base_filename, index, height, width):
-    xyz_frame = xyz_frame.view(np.int16)
-    xyz_frame = xyz_frame.reshape(-1, 3)
+    # Reinterpret uint16 storage as signed int16 (XYZ values are signed mm)
+    # then convert to float64 required by o3d.utility.Vector3dVector
+    xyz_frame = xyz_frame.astype(np.int16).reshape(-1, 3).astype(np.float64)
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(xyz_frame)
     point_cloud.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
