@@ -25,6 +25,7 @@
 #include "ADIView.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
+#include <cstring>
 #include <iostream>
 //#include <GL\gl3w.h>
 #include <chrono>
