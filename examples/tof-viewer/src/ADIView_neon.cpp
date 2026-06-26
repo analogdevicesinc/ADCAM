@@ -524,6 +524,14 @@ void ADIView::_displayPointCloudImage_NEON() {
             ab_data_ready_cv.wait(lock, [this] { return ab_data_ready; });
         }
 
+#ifdef WITH_RGB_SUPPORT
+        bool haveRgb = m_capturedFrame->haveDataType("rgb");
+        if (haveRgb && m_pccolour == 3) {
+            std::unique_lock<std::mutex> lock(rgb_data_ready_mtx);
+            rgb_data_ready_cv.wait(lock, [this] { return rgb_data_ready; });
+        }
+#endif // WITH_RGB_SUPPORT
+
         // NEON-accelerated XYZ conversion
         //float32x4_t maxXV = vdupq_n_f32(Max_X);
         //float32x4_t maxYV = vdupq_n_f32(Max_Y);
@@ -552,6 +560,33 @@ void ADIView::_displayPointCloudImage_NEON() {
                     fGreen = (float)ab_video_data_8bit[cntr + 1] / 255.0f;
                     fBlue = (float)ab_video_data_8bit[cntr + 2] / 255.0f;
                     cntr += 3;
+#ifdef WITH_RGB_SUPPORT
+                } else if (m_pccolour == 3 && haveRgb &&
+                           rgb_video_data_8bit != nullptr &&
+                           rgbFrameWidth > 0 && rgbFrameHeight > 0) {
+                    // Map ToF pixel coordinate to RGB pixel coordinate.
+                    // Simple bilinear-nearest-neighbour scale — proper geometric
+                    // mapping requires RGBDCoregistration calibration data.
+                    uint32_t pixIdx = i / 3;
+                    uint32_t tof_col =
+                        pixIdx % static_cast<uint32_t>(frameWidth);
+                    uint32_t tof_row =
+                        pixIdx / static_cast<uint32_t>(frameWidth);
+                    uint32_t rgb_col = tof_col *
+                                       static_cast<uint32_t>(rgbFrameWidth) /
+                                       static_cast<uint32_t>(frameWidth);
+                    uint32_t rgb_row = tof_row *
+                                       static_cast<uint32_t>(rgbFrameHeight) /
+                                       static_cast<uint32_t>(frameHeight);
+                    uint32_t rgb_idx =
+                        (rgb_row * static_cast<uint32_t>(rgbFrameWidth) +
+                         rgb_col) *
+                        3u;
+                    // Buffer stores BGR (OpenCV convention); shader expects RGB
+                    fBlue = (float)rgb_video_data_8bit[rgb_idx] / 255.0f;
+                    fGreen = (float)rgb_video_data_8bit[rgb_idx + 1] / 255.0f;
+                    fRed = (float)rgb_video_data_8bit[rgb_idx + 2] / 255.0f;
+#endif // WITH_RGB_SUPPORT
                 } else {
                     hsvColorMap((pointCloud_video_data[i + 2]), maxRange,
                                 minRange, fRed, fGreen, fBlue);
