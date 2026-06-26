@@ -1,0 +1,44 @@
+{
+  "_comment": "ADCAM RGB-Depth coregistration calibration file",
+  "_units": "focal lengths and principal points in pixels; translation in mm",
+  "tof": {
+    "width":  512,
+    "height": 512,
+    "fx": 499.5,
+    "fy": 499.5,
+    "cx": 255.5,
+    "cy": 255.5,
+    "k1":  0.0,
+    "k2":  0.0,
+    "k3":  0.0,
+    "k4":  0.0,
+    "k5":  0.0,
+    "k6":  0.0,
+    "p1":  0.0,
+    "p2":  0.0
+  },
+  "rgb": {
+    "width":  1920,
+    "height": 1200,
+    "fx": 1600.0,
+    "fy": 1600.0,
+    "cx": 960.0,
+    "cy": 600.0,
+    "k1":  0.0,
+    "k2":  0.0,
+    "k3":  0.0,
+    "k4":  0.0,
+    "k5":  0.0,
+    "k6":  0.0,
+    "p1":  0.0,
+    "p2":  0.0
+  },
+  "extrinsics": {
+    "_comment": "rotation: row-major 3x3 matrix transforming a point from ToF frame to RGB frame",
+    "rotation":    [1.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0,
+                    0.0, 0.0, 1.0],
+    "_comment2": "translation in mm (baseline between ToF and RGB optical centres)",
+    "translation": [-30.0, 0.0, 0.0]
+  }
+}
