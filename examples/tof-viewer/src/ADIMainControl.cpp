@@ -592,6 +592,16 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             if (ImGui::IsItemClicked())
                 selected = 2;
             ImGuiExtensions::ADIShowTooltipFor("ControlPCSolidColor");
+#ifdef WITH_RGB_SUPPORT
+            if (m_view_instance->m_rgbThreadCreated) {
+                ImGui::RadioButton("RGB Colour", selected == 3);
+                if (ImGui::IsItemClicked())
+                    selected = 3;
+                ImGuiExtensions::ADIShowTooltipFor("ControlPCRGBColor");
+            } else if (selected == 3) {
+                selected = 0; // Fall back to depth colour if RGB unavailable
+            }
+#endif // WITH_RGB_SUPPORT
 
             m_view_instance->setPointCloudColour(selected);
 
