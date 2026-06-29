@@ -1,0 +1,151 @@
+From e953b49b34b36494784e89c896658b28fb8e1062 Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Mon, 29 Jun 2026 16:16:13 +0530
+Subject: [PATCH] overlay: dual_adsd3500: Add 1024x3072 RAW8 resolution as
+ mode82 in DTS files
+
+Add mode82 (1024x3072, RAW8, 8-bit DPHY) to the below camera device tree
+overlays for the ADSD3500 on Tegra234/P3767:
+- tegra234-p3767-camera-p3768-adsd3500.dts (serial_b)
+- tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts (serial_c)
+- tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dts (serial_c)
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ .../tegra234-p3767-camera-p3768-adsd3500.dts  | 32 +++++++++++++++++++
+ ...-dual-adsd3500-adsd3100-arducam-ar0234.dts | 32 +++++++++++++++++++
+ ...67-camera-p3768-dual-adsd3500-adsd3100.dts | 32 +++++++++++++++++++
+ 3 files changed, 96 insertions(+)
+
+diff --git a/overlay/tegra234-p3767-camera-p3768-adsd3500.dts b/overlay/tegra234-p3767-camera-p3768-adsd3500.dts
+index 225fcc8..eeafd93 100644
+--- a/overlay/tegra234-p3767-camera-p3768-adsd3500.dts
++++ b/overlay/tegra234-p3767-camera-p3768-adsd3500.dts
+@@ -2919,6 +2919,38 @@
+ 							max_exp_time = "660000";
+ 							embedded_metadata_height = "1";
+ 						};
++						mode82 {
++							mclk_khz = "104250";
++							num_lanes = "2";
++							tegra_sinterface = "serial_b";
++							phy_mode = "DPHY";
++							discontinuous_clk = "yes";
++							dpcm_enable = "false";
++							cil_settletime = "0";
++							dynamic_pixel_bit_depth = "8";
++							csi_pixel_bit_depth = "8";
++							mode_type = "bayer";
++							pixel_phase = "rggb";
++
++							active_w = "1024";
++							active_h = "3072";
++							readout_orientation = "0";
++							line_length = "1024";
++							inherent_gain = "1";
++							mclk_multiplier = "4";
++							pix_clk_hz = "625000000";
++
++							min_gain_val = "0";
++							max_gain_val = "48";
++							gain_step_pitch = "0.3";
++							min_hdr_ratio = "1";
++							max_hdr_ratio = "1";
++							min_framerate = "1.5";
++							max_framerate = "30";
++							min_exp_time = "30";
++							max_exp_time = "660000";
++							embedded_metadata_height = "1";
++						};
+ 						ports {
+ 							#address-cells = <1>;
+ 							#size-cells = <0>;
+diff --git a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dts b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dts
+index af5f098..b6e0b65 100644
+--- a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dts
++++ b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dts
+@@ -3151,6 +3151,38 @@
+ 								max_exp_time = "660000";
+ 								embedded_metadata_height = "1";
+ 							};
++							mode82 {
++								mclk_khz = "104250";
++								num_lanes = "2";
++								tegra_sinterface = "serial_c";
++								phy_mode = "DPHY";
++								discontinuous_clk = "yes";
++								dpcm_enable = "false";
++								cil_settletime = "0";
++								dynamic_pixel_bit_depth = "8";
++								csi_pixel_bit_depth = "8";
++								mode_type = "bayer";
++								pixel_phase = "rggb";
++
++								active_w = "1024";
++								active_h = "3072";
++								readout_orientation = "0";
++								line_length = "1024";
++								inherent_gain = "1";
++								mclk_multiplier = "4";
++								pix_clk_hz = "625000000";
++
++								min_gain_val = "0";
++								max_gain_val = "48";
++								gain_step_pitch = "0.3";
++								min_hdr_ratio = "1";
++								max_hdr_ratio = "1";
++								min_framerate = "1.5";
++								max_framerate = "30";
++								min_exp_time = "30";
++								max_exp_time = "660000";
++								embedded_metadata_height = "1";
++							};
+ 							ports {
+ 								#address-cells = <1>;
+ 								#size-cells = <0>;
+diff --git a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+index dd1c0be..8978c8c 100644
+--- a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
++++ b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+@@ -2855,6 +2855,38 @@
+ 							max_exp_time = "660000";
+ 							embedded_metadata_height = "1";
+ 						};
++						mode82 {
++							mclk_khz = "104250";
++							num_lanes = "2";
++							tegra_sinterface = "serial_c";
++							phy_mode = "DPHY";
++							discontinuous_clk = "yes";
++							dpcm_enable = "false";
++							cil_settletime = "0";
++							dynamic_pixel_bit_depth = "8";
++							csi_pixel_bit_depth = "8";
++							mode_type = "bayer";
++							pixel_phase = "rggb";
++
++							active_w = "1024";
++							active_h = "3072";
++							readout_orientation = "0";
++							line_length = "1024";
++							inherent_gain = "1";
++							mclk_multiplier = "4";
++							pix_clk_hz = "625000000";
++
++							min_gain_val = "0";
++							max_gain_val = "48";
++							gain_step_pitch = "0.3";
++							min_hdr_ratio = "1";
++							max_hdr_ratio = "1";
++							min_framerate = "1.5";
++							max_framerate = "30";
++							min_exp_time = "30";
++							max_exp_time = "660000";
++							embedded_metadata_height = "1";
++						};
+ 						ports {
+ 							#address-cells = <1>;
+ 							#size-cells = <0>;
+-- 
+2.25.1
+
