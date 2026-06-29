@@ -1,0 +1,31 @@
+From 38f85d106e6b4e3ca62fec04dc79e12e28ee1e17 Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Mon, 29 Jun 2026 18:52:07 +0530
+Subject: [PATCH] drivers: media: i2c: adsd3500: add RAW8 1024x3072
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/adsd3500.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/media/i2c/adsd3500.c b/drivers/media/i2c/adsd3500.c
+index 5cb75be0a50e..f54edada3b1d 100755
+--- a/drivers/media/i2c/adsd3500.c
++++ b/drivers/media/i2c/adsd3500.c
+@@ -887,6 +887,13 @@ static const struct adsd3500_mode_info adsd3500_mode_info_data[] = {
+ 		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
+ 		.link_freq_idx = 0
+ 	},
++	{       /* RAW8 ADSD3100 MP */
++		.width = 1024,
++		.height = 3072,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
+ 
+ };
+ 
+-- 
+2.25.1
+
