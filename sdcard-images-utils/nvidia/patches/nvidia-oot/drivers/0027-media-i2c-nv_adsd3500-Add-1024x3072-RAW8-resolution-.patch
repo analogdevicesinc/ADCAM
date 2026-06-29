@@ -1,0 +1,66 @@
+From 48cd7a4ebe35ada3921ffd7fccf8107271f0cef7 Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Mon, 29 Jun 2026 16:20:35 +0530
+Subject: [PATCH] media: i2c: nv_adsd3500: Add 1024x3072 RAW8 resolution as
+ mode82
+
+Add ADSD3500_MODE_1024x3072_30FPS (mode82) to the mode enum and
+adsd3500_frmfmt table in adsd3500_mode_tbls.h, and add the
+corresponding mode_info entry in nv_adsd3500.c.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/adsd3500_mode_tbls.h | 4 +++-
+ drivers/media/i2c/nv_adsd3500.c        | 7 +++++++
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/i2c/adsd3500_mode_tbls.h b/drivers/media/i2c/adsd3500_mode_tbls.h
+index 11f588e5..d65063de 100644
+--- a/drivers/media/i2c/adsd3500_mode_tbls.h
++++ b/drivers/media/i2c/adsd3500_mode_tbls.h
+@@ -84,6 +84,7 @@ enum {
+ 	ADSD3500_MODE_1536x768_30FPS,
+ 	ADSD3500_MODE_1024x896_30FPS,
+ 	ADSD3500_MODE_512x1792_30FPS,
++	ADSD3500_MODE_1024x3072_30FPS,
+ };
+ 
+ static const int adsd3500_30fps[] = {
+@@ -168,7 +169,7 @@ static const struct camera_common_frmfmt adsd3500_frmfmt[] = {
+ 	{{2048, 5376}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x5376_RAW12_30FPS},   // mode67
+ 	{{2048, 3584}, adsd3500_30fps, 1, 0, ADSD3500_MODE_2048x3584_RAW12_30FPS},   // mode68
+ 
+-	/* RAW8 modes (69-81) */
++	/* RAW8 modes (69-82) */
+ 	{{3072, 1707}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x1707_30FPS},   	     // mode69
+ 	{{3072, 1024}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x1024_30FPS},         // mode70
+ 	{{3072, 1366}, adsd3500_30fps, 1, 0, ADSD3500_MODE_3072x1366_30FPS},   	     // mode71
+@@ -182,6 +183,7 @@ static const struct camera_common_frmfmt adsd3500_frmfmt[] = {
+ 	{{1536, 768},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1536x768_30FPS},          // mode79
+ 	{{1024, 896},  adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x896_30FPS},          // mode80
+ 	{{512, 1792},  adsd3500_30fps, 1, 0, ADSD3500_MODE_512x1792_30FPS},          // mode81
++	{{1024, 3072}, adsd3500_30fps, 1, 0, ADSD3500_MODE_1024x3072_30FPS},         // mode82
+ 
+ 
+ 	/* Add modes with no device tree support after below */
+diff --git a/drivers/media/i2c/nv_adsd3500.c b/drivers/media/i2c/nv_adsd3500.c
+index 41fb9357..8e9d67e1 100644
+--- a/drivers/media/i2c/nv_adsd3500.c
++++ b/drivers/media/i2c/nv_adsd3500.c
+@@ -838,6 +838,13 @@ static const struct adsd3500_mode_info adsd3500_mode_info_data[] = {
+ 		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
+ 		.link_freq_idx = 0
+ 	},
++	{       /* RAW8 ADSD3100 MP */
++		.width = 1024,
++		.height = 3072,
++		.pixel_rate = 488000000,
++		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
++		.link_freq_idx = 0
++	},
+ 
+ };
+ 
+-- 
+2.25.1
+
