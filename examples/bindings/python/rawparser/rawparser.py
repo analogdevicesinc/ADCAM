@@ -127,11 +127,15 @@ def generate_rgb(rgb_data, directory, base_filename, index, width, height):
         print(f"\nWarning: Failed to generate RGB frame {index}: {e}")
 
 def generate_pcloud(xyz_frame, directory, base_filename, index, height, width):
-    xyz_frame = xyz_frame.view(np.int16)
-    xyz_frame = xyz_frame.reshape(-1, 3)
+    # Reinterpret uint16 storage as signed int16 (XYZ values are signed mm)
+    # then convert to float64 required by o3d.utility.Vector3dVector
+    xyz_frame = xyz_frame.astype(np.int16).reshape(-1, 3).astype(np.float64)
+    # Apply Y/Z flip (equivalent to transform [[1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,1]])
+    # using numpy directly — pc.transform() is broken in open3d 0.18.0
+    xyz_frame[:, 1] *= -1
+    xyz_frame[:, 2] *= -1
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(xyz_frame)
-    point_cloud.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
     o3d.io.write_point_cloud(safe_join(directory, f'pointcloud_{base_filename}_{index}{PLY_EXT}'), point_cloud)
 
 def generate_vid(main_dir, base_filename, processed_frames, width, height):
