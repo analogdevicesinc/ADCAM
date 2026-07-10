@@ -94,6 +94,21 @@ file(GLOB ADIToF_SOURCES CONFIGURE_DEPENDS "${ADIToF_SOURCE_DIR}/*.cpp")
 list(FILTER ADIToF_SOURCES EXCLUDE REGEX ".*ADIView_neon\\.cpp$")
 list(FILTER ADIToF_SOURCES EXCLUDE REGEX ".*ADIView_cuda_wrapper\\.cpp$")
 
+# Zeroing-allocator shim (Linux only).
+#
+# Workaround for a confirmed bug in the closed-source libtofi_compute.so:
+# FreeComputeDepth() (via FreeTofiCompute) frees an internal pointer that
+# InitTofiCompute() left uninitialized. On a dirty heap that pointer is garbage
+# and free() crashes as "double free or corruption"; on a clean heap it is 0
+# and free(NULL) is safe. This was confirmed with AddressSanitizer. Compiling
+# this shim into the executable interposes malloc/free process-wide and
+# zero-fills allocations so the uninitialized pointer always reads NULL.
+# ENABLE_EXPORTS (-rdynamic) guarantees the interposed symbols override the
+# closed library's malloc references.
+if(UNIX AND NOT APPLE)
+    list(APPEND ADIToF_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tools/zeroalloc.c")
+endif()
+
 # Add ARM NEON optimized source files for ARM64 platforms (not on Windows)
 if(USE_ARM_NEON)
     list(APPEND ADIToF_SOURCES "${ADIToF_SOURCE_DIR}/ADIView_neon.cpp")
@@ -160,6 +175,11 @@ if(WITH_RGB_CAMERA)
     message(STATUS "RGB camera support enabled in tof-viewer")
 else()
     message(STATUS "RGB camera support disabled in tof-viewer (original AB-only behavior)")
+# Export executable symbols (-rdynamic) so the zeroalloc.c malloc/free
+# interposers override the closed libtofi_compute.so allocation calls.
+endif()
+if(UNIX AND NOT APPLE)
+    set_target_properties(ADIToFGUI PROPERTIES ENABLE_EXPORTS ON)
 endif()
 
 # Link Libraries
