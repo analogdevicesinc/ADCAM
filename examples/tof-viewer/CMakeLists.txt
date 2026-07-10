@@ -175,6 +175,11 @@ if(WITH_RGB_CAMERA)
     message(STATUS "RGB camera support enabled in tof-viewer")
 else()
     message(STATUS "RGB camera support disabled in tof-viewer (original AB-only behavior)")
+# Export executable symbols (-rdynamic) so the zeroalloc.c malloc/free
+# interposers override the closed libtofi_compute.so allocation calls.
+endif()
+if(UNIX AND NOT APPLE)
+    set_target_properties(ADIToFGUI PROPERTIES ENABLE_EXPORTS ON)
 endif()
 
 # Link Libraries
