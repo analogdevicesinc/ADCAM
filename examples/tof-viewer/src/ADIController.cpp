@@ -69,7 +69,8 @@ void ADIController::StartCapture(const uint32_t frameRate) {
     m_fps_startTime = std::chrono::system_clock::now();
     m_last_frame_time = std::chrono::steady_clock::time_point();
     m_fps_ema_initialized = false;
-    m_fps_ema = 0.0f;
+    m_fps_ema = static_cast<float>(frameRate); // seed EMA at configured rate
+    m_framerate = m_fps_ema;                   // show correct rate immediately
     m_frame_counter = 0;
     m_stopFlag = false;
     m_frames_lost = 0;
@@ -216,8 +217,14 @@ void ADIController::captureFrames() {
             std::chrono::duration<double> elapsed =
                 currentTime - m_last_frame_time;
             if (elapsed.count() > 0.0) {
-                const float instant_fps =
-                    static_cast<float>(1.0 / elapsed.count());
+                // Clamp to the configured frame rate: timing jitter or a
+                // burst of buffered frames can produce instant_fps well above
+                // the sensor maximum, causing the reported FPS to spike.
+                const float max_fps = (m_frame_rate > 0)
+                                          ? static_cast<float>(m_frame_rate)
+                                          : 120.0f;
+                const float instant_fps = std::min(
+                    static_cast<float>(1.0 / elapsed.count()), max_fps);
                 if (!m_fps_ema_initialized) {
                     m_fps_ema = instant_fps;
                     m_fps_ema_initialized = true;
