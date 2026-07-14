@@ -266,6 +266,24 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
         return false;
     }
 
+#ifdef WITH_RGB_SUPPORT
+    // Load RGBD calibration from chip for proper geometric coregistration
+    if (m_enable_rgb_display && !m_off_line) {
+        uint8_t calibData[160] = {};
+        auto calibStatus =
+            GetActiveCamera()->readRGBDCalibrationFromChip(calibData);
+        if (calibStatus == aditof::Status::OK) {
+            m_view_instance->initRGBDCoregistration(calibData,
+                                                    sizeof(calibData));
+        } else {
+            LOG(WARNING)
+                << "RGBD calibration not available from chip (status="
+                << static_cast<int>(calibStatus)
+                << "). RGB point cloud uses naive pixel scaling.";
+        }
+    }
+#endif
+
     // For offline mode, check what frame types are actually available
     if (m_off_line) {
         UpdateOfflineFrameTypeAvailability();

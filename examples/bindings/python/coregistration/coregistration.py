@@ -267,10 +267,13 @@ def register_depth_to_rgb(depth_mm: np.ndarray, calib: RGBDCalibration,
     y_rgb_norm = pts_rgb[1] / pts_rgb[2]
     u_f, v_f = _project_points(x_rgb_norm, y_rgb_norm, calib.rgb)
 
+    # 6. Filter NaN/Inf from distortion blow-up, then bounds-check
+    finite = np.isfinite(u_f) & np.isfinite(v_f)
+    u_f = u_f[finite]; v_f = v_f[finite]; depths_in_rgb = depths_in_rgb[finite]
+
     u_i = np.round(u_f).astype(np.int32)
     v_i = np.round(v_f).astype(np.int32)
 
-    # 6. Bounds check
     in_bounds = (u_i >= 0) & (u_i < rgb_width) & (v_i >= 0) & (v_i < rgb_height)
     u_i = u_i[in_bounds]
     v_i = v_i[in_bounds]
@@ -368,13 +371,13 @@ def _grab_live_frame(mode: int):
     if status != tof.Status.Ok:
         sys.exit(f"requestFrame() failed: {status}")
 
-    depth_arr = np.asarray(frame.getData("depth"), dtype=np.uint16)
+    depth_arr = np.array(frame.getData("depth"), dtype=np.uint16)  # copy: frame GC-safe
 
     rgb_arr = None
     try:
         rgb_details = tof.FrameDataDetails()
         if frame.getDataDetails("rgb", rgb_details) == tof.Status.Ok:
-            rgb_raw = np.array(frame.getData("rgb"), copy=False, dtype=np.uint8)
+            rgb_raw = np.array(frame.getData("rgb"), dtype=np.uint8)  # copy: frame GC-safe
             rgb_arr = rgb_raw.reshape(rgb_details.height, rgb_details.width, 3)
     except Exception:
         pass

@@ -564,28 +564,37 @@ void ADIView::_displayPointCloudImage_NEON() {
                 } else if (m_pccolour == 3 && haveRgb &&
                            rgb_video_data_8bit != nullptr &&
                            rgbFrameWidth > 0 && rgbFrameHeight > 0) {
-                    // Map ToF pixel coordinate to RGB pixel coordinate.
-                    // Simple bilinear-nearest-neighbour scale — proper geometric
-                    // mapping requires RGBDCoregistration calibration data.
                     uint32_t pixIdx = i / 3;
-                    uint32_t tof_col =
-                        pixIdx % static_cast<uint32_t>(frameWidth);
-                    uint32_t tof_row =
-                        pixIdx / static_cast<uint32_t>(frameWidth);
-                    uint32_t rgb_col = tof_col *
-                                       static_cast<uint32_t>(rgbFrameWidth) /
-                                       static_cast<uint32_t>(frameWidth);
-                    uint32_t rgb_row = tof_row *
-                                       static_cast<uint32_t>(rgbFrameHeight) /
-                                       static_cast<uint32_t>(frameHeight);
-                    uint32_t rgb_idx =
-                        (rgb_row * static_cast<uint32_t>(rgbFrameWidth) +
-                         rgb_col) *
-                        3u;
-                    // Buffer stores BGR (OpenCV convention); shader expects RGB
-                    fBlue = (float)rgb_video_data_8bit[rgb_idx] / 255.0f;
-                    fGreen = (float)rgb_video_data_8bit[rgb_idx + 1] / 255.0f;
-                    fRed = (float)rgb_video_data_8bit[rgb_idx + 2] / 255.0f;
+                    int32_t rgb_col, rgb_row;
+                    if (m_rgbdCalibLoaded &&
+                        pixIdx < m_tofToRgbU.size()) {
+                        rgb_col = m_tofToRgbU[pixIdx];
+                        rgb_row = m_tofToRgbV[pixIdx];
+                    } else {
+                        // Fallback: naive scale until calibration is loaded
+                        uint32_t tof_col = pixIdx % static_cast<uint32_t>(frameWidth);
+                        uint32_t tof_row = pixIdx / static_cast<uint32_t>(frameWidth);
+                        rgb_col = static_cast<int32_t>(
+                            tof_col * static_cast<uint32_t>(rgbFrameWidth) /
+                            static_cast<uint32_t>(frameWidth));
+                        rgb_row = static_cast<int32_t>(
+                            tof_row * static_cast<uint32_t>(rgbFrameHeight) /
+                            static_cast<uint32_t>(frameHeight));
+                    }
+                    if (rgb_col >= 0 && rgb_row >= 0) {
+                        uint32_t rgb_idx =
+                            (static_cast<uint32_t>(rgb_row) *
+                                 static_cast<uint32_t>(rgbFrameWidth) +
+                             static_cast<uint32_t>(rgb_col)) *
+                            3u;
+                        // Buffer stores BGR (OpenCV convention); shader expects RGB
+                        fBlue  = (float)rgb_video_data_8bit[rgb_idx]     / 255.0f;
+                        fGreen = (float)rgb_video_data_8bit[rgb_idx + 1] / 255.0f;
+                        fRed   = (float)rgb_video_data_8bit[rgb_idx + 2] / 255.0f;
+                    } else {
+                        hsvColorMap((pointCloud_video_data[i + 2]), maxRange,
+                                    minRange, fRed, fGreen, fBlue);
+                    }
 #endif // WITH_RGB_SUPPORT
                 } else {
                     hsvColorMap((pointCloud_video_data[i + 2]), maxRange,
