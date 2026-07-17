@@ -1,0 +1,32 @@
+From 8f3d924b7d684fb33f2d284394b31193ea15ba2e Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Fri, 17 Jul 2026 14:42:50 +0530
+Subject: [PATCH 4/4] t23x: nv-public: overlay: add dtbo targets for
+ ADSD3500/ADSD3100 and AR0234 cameras
+
+- Add dtbo target for ADSD3500/ADSD3100 camera overlay
+- Add dtbo target for dual ADSD3500/ADSD3100 camera overlay
+- Add dtbo target for dual ADSD3500 with AR0234 RGB camera configuration
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ overlay/Makefile | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/overlay/Makefile b/overlay/Makefile
+index 5750473..be0a05b 100644
+--- a/overlay/Makefile
++++ b/overlay/Makefile
+@@ -74,6 +74,9 @@ dtbo-y += tegra234-p3740-0002+p3701-0008-m2ke.dtbo
+ dtbo-y += tegra234-p3740-0002+p3701-0008-m2kb.dtbo
+ dtbo-y += tegra234-p3767-camera-p3768-imx477-C.dtbo
+ dtbo-y += tegra234-p3767-camera-p3768-imx477-A.dtbo
++dtbo-y += tegra234-p3767-camera-p3768-adsd3500.dtbo
++dtbo-y += tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo
++dtbo-y += tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dtbo
+ dtbo-y += tegra234-p3740-0002-p3701-0008-csi.dtbo
+ 
+ ifneq ($(dtb-y),)
+-- 
+2.25.1
+
