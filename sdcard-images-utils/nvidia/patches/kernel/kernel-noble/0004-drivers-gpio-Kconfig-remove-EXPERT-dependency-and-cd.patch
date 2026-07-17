@@ -1,0 +1,33 @@
+From b6e8edfb084807264e6550304f602405211b0a34 Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Fri, 17 Jul 2026 14:02:14 +0530
+Subject: [PATCH 4/4] drivers: gpio: Kconfig: remove EXPERT dependency and cdev
+ selection from GPIO_SYSFS
+
+- Allow GPIO_SYSFS to be enabled without EXPERT for easier access
+- Drop implicit GPIO_CDEV selection to avoid forcing new ABI usage
+- Keep legacy sysfs GPIO interface available when SYSFS is enabled
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/gpio/Kconfig | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
+index 72035b5555a1..9dca6c67cf03 100644
+--- a/drivers/gpio/Kconfig
++++ b/drivers/gpio/Kconfig
+@@ -59,9 +59,8 @@ config DEBUG_GPIO
+ 	  that are most common when setting up new platforms or boards.
+ 
+ config GPIO_SYSFS
+-	bool "/sys/class/gpio/... (sysfs interface)" if EXPERT
++	bool "/sys/class/gpio/... (sysfs interface)"
+ 	depends on SYSFS
+-	select GPIO_CDEV # We need to encourage the new ABI
+ 	help
+ 	  Say Y here to add the legacy sysfs interface for GPIOs.
+ 
+-- 
+2.25.1
+

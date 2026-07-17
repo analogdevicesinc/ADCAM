@@ -1,7 +1,7 @@
-From 59dea2ebc99cd16b6704bc3c2e42e40dfc80e76d Mon Sep 17 00:00:00 2001
+From c7de96f05e7e8c376ddd7d3510ef7421dda856c9 Mon Sep 17 00:00:00 2001
 From: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
 Date: Fri, 10 Jan 2025 11:16:39 +0530
-Subject: [PATCH] pwm: gpio: Add a generic gpio based PWM driver
+Subject: [PATCH 2/4] pwm: gpio: Add a generic gpio based PWM driver
 
 This patch adds a bit-banging gpio PWM driver. It makes use of hrtimers,
 to allow nano-second resolution, though it obviously strongly depends on
@@ -49,10 +49,10 @@ index 000000000000..336f61faa446
 +		pwm-gpios = <&pio 7 2 GPIO_ACTIVE_LOW>;
 +	};
 diff --git a/MAINTAINERS b/MAINTAINERS
-index 7dec4a21a445..d1e30c7b9b53 100644
+index 8f3d8771c7f5..111777215a83 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
-@@ -7863,6 +7863,11 @@ F:	Documentation/i2c/muxes/i2c-mux-gpio.rst
+@@ -8924,6 +8924,11 @@ F:	Documentation/i2c/muxes/i2c-mux-gpio.rst
  F:	drivers/i2c/muxes/i2c-mux-gpio.c
  F:	include/linux/platform_data/i2c-mux-gpio.h
  
@@ -65,10 +65,10 @@ index 7dec4a21a445..d1e30c7b9b53 100644
  M:	Krzysztof Halasa <khc@pm.waw.pl>
  S:	Maintained
 diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
-index aa29841bbb79..99d2e3f38005 100644
+index 4b956d661755..11b303b44a4b 100644
 --- a/drivers/pwm/Kconfig
 +++ b/drivers/pwm/Kconfig
-@@ -228,6 +228,21 @@ config PWM_IMX1
+@@ -260,6 +260,21 @@ config PWM_IMX1
  	  To compile this driver as a module, choose M here: the module
  	  will be called pwm-imx1.
  
@@ -91,10 +91,10 @@ index aa29841bbb79..99d2e3f38005 100644
  	tristate "i.MX27 PWM support"
  	depends on ARCH_MXC || COMPILE_TEST
 diff --git a/drivers/pwm/Makefile b/drivers/pwm/Makefile
-index 708840b7fba8..5ff96e814ef1 100644
+index c5ec9e168ee7..50fbec635dfe 100644
 --- a/drivers/pwm/Makefile
 +++ b/drivers/pwm/Makefile
-@@ -16,6 +16,7 @@ obj-$(CONFIG_PWM_CROS_EC)	+= pwm-cros-ec.o
+@@ -19,6 +19,7 @@ obj-$(CONFIG_PWM_DWC_CORE)	+= pwm-dwc-core.o
  obj-$(CONFIG_PWM_DWC)		+= pwm-dwc.o
  obj-$(CONFIG_PWM_EP93XX)	+= pwm-ep93xx.o
  obj-$(CONFIG_PWM_FSL_FTM)	+= pwm-fsl-ftm.o

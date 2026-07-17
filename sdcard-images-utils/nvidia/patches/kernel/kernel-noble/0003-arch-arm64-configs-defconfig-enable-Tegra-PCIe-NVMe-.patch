@@ -1,0 +1,73 @@
+From aed6f49df688232998c01beada99f27f3957140b Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Fri, 17 Jul 2026 13:59:32 +0530
+Subject: [PATCH 3/4] arch: arm64: configs: defconfig: enable Tegra PCIe, NVMe
+ and debug options, update localversion
+
+- Build Tegra194 PCIe (host/EP) and NVMe drivers into kernel for early boot availability
+- Add "-adi" localversion and disable LOCALVERSION_AUTO for consistent versioning
+- Enable GPIO_SYSFS, PWM_GPIO (module), and dynamic debug support for development
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ arch/arm64/configs/defconfig | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index 61db401cfaa6..849b1539d358 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -1,4 +1,5 @@
+-# CONFIG_LOCALVERSION_AUTO is not set
++CONFIG_LOCALVERSION_AUTO=n
++CONFIG_LOCALVERSION="-adi"
+ CONFIG_SYSVIPC=y
+ CONFIG_POSIX_MQUEUE=y
+ CONFIG_NO_HZ_IDLE=y
+@@ -310,8 +311,8 @@ CONFIG_PCI_HISI=y
+ CONFIG_PCIE_KIRIN=y
+ CONFIG_PCIE_HISI_STB=y
+ CONFIG_PCIE_ARMADA_8K=y
+-CONFIG_PCIE_TEGRA194_HOST=m
+-CONFIG_PCIE_TEGRA194_EP=m
++CONFIG_PCIE_TEGRA194_HOST=y
++CONFIG_PCIE_TEGRA194_EP=y
+ CONFIG_PCIE_QCOM=y
+ CONFIG_PCIE_ROCKCHIP_DW_HOST=y
+ CONFIG_PCIE_VISCONTI_HOST=y
+@@ -362,7 +363,7 @@ CONFIG_ZRAM=m
+ CONFIG_BLK_DEV_LOOP=y
+ CONFIG_BLK_DEV_NBD=m
+ CONFIG_VIRTIO_BLK=y
+-CONFIG_BLK_DEV_NVME=m
++CONFIG_BLK_DEV_NVME=y
+ CONFIG_NVME_HWMON=y
+ CONFIG_NVME_TCP=m
+ CONFIG_NVME_TARGET=m
+@@ -731,6 +732,7 @@ CONFIG_PINCTRL_SM8350_LPASS_LPI=m
+ CONFIG_PINCTRL_SM8450_LPASS_LPI=m
+ CONFIG_PINCTRL_SC8280XP_LPASS_LPI=m
+ CONFIG_PINCTRL_SM8550_LPASS_LPI=m
++CONFIG_GPIO_SYSFS=y
+ CONFIG_GPIO_ALTERA=m
+ CONFIG_GPIO_DAVINCI=y
+ CONFIG_GPIO_DWAPB=y
+@@ -1553,6 +1555,7 @@ CONFIG_PWM_TEGRA=m
+ CONFIG_PWM_TIECAP=m
+ CONFIG_PWM_TIEHRPWM=m
+ CONFIG_PWM_VISCONTI=m
++CONFIG_PWM_GPIO=m
+ CONFIG_SL28CPLD_INTC=y
+ CONFIG_QCOM_PDC=y
+ CONFIG_QCOM_MPM=y
+@@ -1767,6 +1770,7 @@ CONFIG_SYSTEM_BLACKLIST_KEYRING=y
+ CONFIG_DMA_RESTRICTED_POOL=y
+ CONFIG_CMA_SIZE_MBYTES=32
+ CONFIG_PRINTK_TIME=y
++CONFIG_DYNAMIC_DEBUG_CORE=y
+ CONFIG_DEBUG_KERNEL=y
+ CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT=y
+ CONFIG_DEBUG_INFO_REDUCED=y
+-- 
+2.25.1
+
