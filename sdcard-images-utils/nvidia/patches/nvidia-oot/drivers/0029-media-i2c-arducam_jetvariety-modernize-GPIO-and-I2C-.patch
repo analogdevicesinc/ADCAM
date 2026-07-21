@@ -1,0 +1,85 @@
+From dd30a9405f212f480511d0c93490b804776b10d6 Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 21 Jul 2026 10:50:16 +0530
+Subject: [PATCH 29/29] media: i2c: arducam_jetvariety: modernize GPIO and I2C
+ callbacks
+
+- Use gpio_set_value_cansleep() for reset GPIO handling.
+- Drop unused i2c_device_id parameter from probe callback.
+- Convert remove callback to void to match current I2C API.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/arducam_jetvariety.c | 21 +++++----------------
+ 1 file changed, 5 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/media/i2c/arducam_jetvariety.c b/drivers/media/i2c/arducam_jetvariety.c
+index c8fc40ca..a7bbd5c2 100644
+--- a/drivers/media/i2c/arducam_jetvariety.c
++++ b/drivers/media/i2c/arducam_jetvariety.c
+@@ -366,10 +366,7 @@ static int arducam_power_on(struct camera_common_data *s_data)
+ 	}
+ 
+ 	if (pw->reset_gpio) {
+-		if (gpio_cansleep(pw->reset_gpio))
+-			gpio_set_value_cansleep(pw->reset_gpio, 0);
+-		else
+-			gpio_set_value(pw->reset_gpio, 0);
++		gpio_set_value_cansleep(pw->reset_gpio, 0);
+ 	}
+ 
+ 	if (unlikely(!(pw->avdd || pw->iovdd || pw->dvdd)))
+@@ -399,10 +396,7 @@ static int arducam_power_on(struct camera_common_data *s_data)
+ 
+ skip_power_seqn:
+ 	if (pw->reset_gpio) {
+-		if (gpio_cansleep(pw->reset_gpio))
+-			gpio_set_value_cansleep(pw->reset_gpio, 1);
+-		else
+-			gpio_set_value(pw->reset_gpio, 1);
++		gpio_set_value_cansleep(pw->reset_gpio, 1);
+ 	}
+ 
+ 	/* Need to wait for t4 + t5 + t9 time as per the data sheet */
+@@ -442,10 +436,7 @@ static int arducam_power_off(struct camera_common_data *s_data)
+ 		}
+ 	} else {
+ 		if (pw->reset_gpio) {
+-			if (gpio_cansleep(pw->reset_gpio))
+-				gpio_set_value_cansleep(pw->reset_gpio, 0);
+-			else
+-				gpio_set_value(pw->reset_gpio, 0);
++			gpio_set_value_cansleep(pw->reset_gpio, 0);
+ 		}
+ 
+ 		usleep_range(10, 10);
+@@ -743,8 +734,7 @@ static const struct v4l2_subdev_internal_ops arducam_subdev_internal_ops = {
+ 	};
+ #endif
+ 
+-static int arducam_probe(struct i2c_client *client,
+-	const struct i2c_device_id *id)
++static int arducam_probe(struct i2c_client *client)
+ {
+ 	struct device *dev = &client->dev;
+ 	struct tegracam_device *tc_dev;
+@@ -875,7 +865,7 @@ static int arducam_probe(struct i2c_client *client,
+ 	return 0;
+ }
+ 
+-static int arducam_remove(struct i2c_client *client)
++static void arducam_remove(struct i2c_client *client)
+ {
+ 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
+ 	struct arducam *priv = (struct arducam *)s_data->priv;
+@@ -883,7 +873,6 @@ static int arducam_remove(struct i2c_client *client)
+ 	tegracam_v4l2subdev_unregister(priv->tc_dev);
+ 	tegracam_device_unregister(priv->tc_dev);
+ 
+-	return 0;
+ }
+ 
+ static const struct i2c_device_id arducam_id[] = {
+-- 
+2.25.1
+
