@@ -1,0 +1,67 @@
+From b2b2508eb4a6c76bf794e944bd85256a2968a907 Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 21 Jul 2026 10:48:38 +0530
+Subject: [PATCH 28/29] media: i2c: nv_adsd3500: replace PDE_DATA() with
+ pde_data()
+
+- Replace deprecated PDE_DATA() macro with pde_data().
+- Update all procfs handlers to use the current procfs API.
+- Improve compatibility with newer kernel versions.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ drivers/media/i2c/nv_adsd3500.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/media/i2c/nv_adsd3500.c b/drivers/media/i2c/nv_adsd3500.c
+index 8e9d67e1..e40c0677 100644
+--- a/drivers/media/i2c/nv_adsd3500.c
++++ b/drivers/media/i2c/nv_adsd3500.c
+@@ -121,7 +121,7 @@ static int adsd3500_proc_open(struct inode *inode, struct file *file)
+ {
+ 	struct adsd3500 *adsd3500;
+ 
+-	adsd3500 = PDE_DATA(inode);
++	adsd3500 = pde_data(file_inode(file));
+ 	if (!adsd3500)
+ 		return -ENODEV;
+ 
+@@ -137,7 +137,7 @@ static int adsd3500_proc_release(struct inode *inode, struct file *file)
+ 	struct adsd3500 *adsd3500;
+ 	struct task_struct *release_task = get_current();
+ 
+-	adsd3500 = PDE_DATA(inode);
++	adsd3500 = pde_data(file_inode(file));
+ 	if (!adsd3500)
+ 		return -ENODEV;
+ 
+@@ -159,7 +159,7 @@ ssize_t adsd3500_proc_read(struct file *file, char __user *buff, size_t count, l
+ 	int ret;
+ 	char data[16];
+ 
+-	adsd3500 = PDE_DATA(file_inode(file));
++	adsd3500 = pde_data(file_inode(file));
+ 	if (!adsd3500)
+ 		return -ENODEV;
+ 
+@@ -186,7 +186,7 @@ ssize_t adsd3500_proc_write(struct file *file, const char __user *buff, size_t c
+ 
+ 	struct adsd3500 *adsd3500;
+ 
+-	adsd3500 = PDE_DATA(file_inode(file));
++	adsd3500 = pde_data(file_inode(file));
+ 	if (!adsd3500)
+ 		return -ENODEV;
+ 
+@@ -199,7 +199,7 @@ static long adsd3500_proc_ioctl(struct file *file, unsigned int cmd, unsigned lo
+ {
+ 	struct adsd3500 *adsd3500;
+ 
+-	adsd3500 = PDE_DATA(file_inode(file));
++	adsd3500 = pde_data(file_inode(file));
+ 	if (!adsd3500)
+ 		return -ENODEV;
+ 
+-- 
+2.25.1
+
