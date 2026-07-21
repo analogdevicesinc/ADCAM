@@ -83,7 +83,7 @@ static const char kUsagePublic[] =
     R"(Data Collect.
     Usage:
       data_collect 
-      data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--m <mode>] [--ccb FILE] [--ip <ip>] [--fw <firmware>] [-scf <save-configuration-file>] [-lcf <load-configuration-file>]
+      data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--m <mode>] [--ccb FILE] [--ip <ip>] [-scf <save-configuration-file>] [-lcf <load-configuration-file>]
       data_collect (-h | --help)
 
     Options:
@@ -94,7 +94,6 @@ static const char kUsagePublic[] =
       --m <mode>         Mode to capture data in. [default: 0]
       --ccb <FILE>       The path to store CCB content
       --ip <ip>          Camera IP
-      --fw <firmware>    Adsd3500 fw file
       --scf <save-configuration-file>    Save current configuration to json file
       --lcf <load-configuration-file>    Load configuration from json file
 
@@ -118,7 +117,6 @@ int main(int argc, char *argv[]) {
         {"-n", {"--n", false, "", "1", true}},
         {"-m", {"--m", false, "", "0", true}},
         {"-ip", {"--ip", false, "", "", true}},
-        {"-fw", {"--fw", false, "", "", true}},
         {"-ccb", {"--ccb", false, "", "", true}},
         {"-scf", {"--scf", false, "", "", true}},
         {"-lcf", {"--lcf", false, "", "", true}}};
@@ -180,7 +178,6 @@ int main(int argc, char *argv[]) {
     uint32_t n_frames = 0;
     uint8_t mode = 0;
     std::string ip;
-    std::string firmware;
 
     google::InitGoogleLogging(argv[0]);
     FLAGS_alsologtostderr = 1;
@@ -217,11 +214,6 @@ int main(int argc, char *argv[]) {
         ip = command_map["-ip"].value;
     }
 
-    // Parsing firmware
-    if (!command_map["-fw"].value.empty()) {
-        firmware = command_map["-fw"].value;
-    }
-
     //Parsing CCB path
     std::string ccbFilePath;
     if (!command_map["-ccb"].value.empty()) {
@@ -245,10 +237,6 @@ int main(int argc, char *argv[]) {
 
     if (!ip.empty()) {
         LOG(INFO) << "Ip address is: " << ip;
-    }
-
-    if (!firmware.empty()) {
-        LOG(INFO) << "Firmware file is: " << firmware;
     }
 
     if (!ccbFilePath.empty()) {
@@ -291,24 +279,6 @@ int main(int argc, char *argv[]) {
 
     aditof::CameraDetails cameraDetails;
     camera->getDetails(cameraDetails);
-
-    if (!firmware.empty()) {
-        std::ifstream file(firmware);
-        if (!(file.good() &&
-              file.peek() != std::ifstream::traits_type::eof())) {
-            LOG(ERROR) << firmware << " not found or is an empty file";
-            return -1;
-        }
-
-        status = camera->adsd3500UpdateFirmware(firmware);
-        if (status != Status::OK) {
-            LOG(ERROR) << "Could not update the adsd3500 firmware";
-            return -1;
-        } else {
-            LOG(INFO) << "Please reboot the board!";
-            return -1;
-        }
-    }
 
     // Get modes
     std::vector<uint8_t> availableModes;
