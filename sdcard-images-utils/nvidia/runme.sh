@@ -3,12 +3,12 @@
 # NVIDIA Jetson Orin Nano ToF ADSD3500 Build Script
 #
 # Description: Builds custom Linux kernel with ADI ToF camera support for
-#              NVIDIA Jetson Orin Nano (JetPack 6.2.2, L4T 36.5)
+#              NVIDIA Jetson Orin Nano (JetPack 7.2, L4T 39.2)
 #
 # Usage: ./runme.sh <sdk_version> <tof_branch_name>
-#        Example: ./runme.sh 0.0.2 main
+#        Example: ./runme.sh 2.0.0 main
 #
-# Requirements: Ubuntu 22.04, ~50GB disk space, internet connection
+# Requirements: Ubuntu 24.04, ~50GB disk space, internet connection
 #
 # Exit Codes:
 #   0 - Success
@@ -19,8 +19,8 @@
 #   5 - Archive error
 #
 # Author: Analog Devices Inc.
-# Version: 3.0
-# Date: 2026-05-12
+# Version: 4.0
+# Date: 2026-07-22
 #===============================================================================
 
 set -euo pipefail
@@ -29,20 +29,20 @@ set -euo pipefail
 # CONFIGURATION
 #===============================================================================
 
-readonly SCRIPT_VERSION="3.0"
+readonly SCRIPT_VERSION="4.0"
 readonly ROOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly START_TIME=$(date +%s)
 
 # Build configuration
-readonly TOOLCHAIN_URL="https://developer.download.nvidia.com/embedded/L4T/bootlin/aarch64--glibc--stable-final.tar.gz"
-readonly JETSON_LINUX_URL="https://developer.nvidia.com/downloads/embedded/l4t/r36_release_v5.0/release/Jetson_Linux_r36.5.0_aarch64.tbz2"
-readonly RELEASE_TAG="jetson_36.5"
-readonly KERNEL_VERSION="5.15.185-adi-tegra"
-readonly JETPACK_VERSION="6.2.2"
-readonly L4T_VERSION="36.5"
+readonly TOOLCHAIN_URL="https://developer.nvidia.com/downloads/embedded/L4T/r38_Release_v2.0/release/x-tools.tbz2"
+readonly JETSON_LINUX_URL="https://developer.nvidia.com/downloads/embedded/L4T/r39_Release_v2.0/release/Jetson_Linux_R39.2.0_aarch64.tbz2"
+readonly RELEASE_TAG="jetson_39.2_GA"
+readonly KERNEL_VERSION="6.8.12-adi-1021-tegra"
+readonly JETPACK_VERSION="7.2"
+readonly L4T_VERSION="39.2"
 
 # Component list for patching
-readonly COMPONENTS="nv-public kernel-jammy-src nvidia-oot"
+readonly COMPONENTS="nv-public kernel-noble nvidia-oot"
 
 # Exit codes
 readonly EXIT_SUCCESS=0
@@ -169,11 +169,11 @@ validate_arguments() {
         echo "Usage: $0 <sdk_version> <tof_branch_name>"
         echo ""
         echo "Arguments:"
-        echo "  sdk_version       : SDK version string (e.g., 0.0.2)"
+        echo "  sdk_version       : SDK version string (e.g., 2.0.0)"
         echo "  tof_branch_name   : Git branch name (e.g., main)"
         echo ""
         echo "Example:"
-        echo "  $0 0.0.2 main"
+        echo "  $0 2.0.0 main"
         echo ""
         error_exit "Invalid arguments" ${EXIT_INVALID_ARGS}
     fi
@@ -228,11 +228,12 @@ init_environment() {
 configure_toolchain() {
     log_step "Configuring cross-compilation toolchain"
 
-    local toolchain_dir="${BUILD_DIR}/aarch64--glibc--stable-final"
-    local toolchain_archive="${BUILD_DIR}/aarch64--glibc--stable-final.tar.gz"
+    local toolchain_dir="${BUILD_DIR}/l4t-gcc"
+    local toolchain_archive="${BUILD_DIR}/x-tools.tbz2"
+    local gcc_bin="${toolchain_dir}/x-tools/aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc"
 
     # Check if toolchain already exists
-    if [[ -d "${toolchain_dir}/bin" ]] && [[ -f "${toolchain_dir}/bin/aarch64-linux-gcc" ]]; then
+    if [[ -f "${gcc_bin}" ]]; then
         log_info "Toolchain already installed"
         log_success "Toolchain configuration skipped"
         return 0
@@ -250,13 +251,13 @@ configure_toolchain() {
         log_info "Toolchain archive already exists"
     fi
 
-    # Extract toolchain
+    # Extract toolchain (.tbz2 = bzip2; extracts x-tools/ into l4t-gcc/)
     log_info "Extracting toolchain..."
     mkdir -p "${toolchain_dir}"
-    tar -xzf "${toolchain_archive}" -C "${toolchain_dir}" --strip-components=1 || error_exit "Failed to extract toolchain" ${EXIT_BUILD_ERROR}
+    tar -xjf "${toolchain_archive}" -C "${toolchain_dir}" || error_exit "Failed to extract toolchain" ${EXIT_BUILD_ERROR}
 
     # Verify toolchain
-    if [[ ! -f "${toolchain_dir}/bin/aarch64-linux-gcc" ]]; then
+    if [[ ! -f "${gcc_bin}" ]]; then
         error_exit "Toolchain extraction failed: compiler not found" ${EXIT_BUILD_ERROR}
     fi
 
@@ -300,7 +301,7 @@ download_linux_kernel() {
     local source_dir="${BUILD_DIR}/Linux_for_Tegra/source"
 
     # Check if kernel sources already synced
-    if [[ -d "${source_dir}/kernel/kernel-jammy-src/.git" ]]; then
+    if [[ -d "${source_dir}/kernel/kernel-noble/.git" ]]; then
         log_info "Kernel sources already synced"
         log_success "Kernel source download skipped"
         return 0
@@ -392,46 +393,46 @@ apply_git_format_patches() {
                 log_success "nv-public patches applied"
                 ;;
 
-            "kernel-jammy-src")
-                log_info "Applying patches to kernel-jammy-src component..."
-                local kernel_dir="${l4t_dir}/source/kernel/kernel-jammy-src"
+            "kernel-noble")
+                log_info "Applying patches to kernel-noble component..."
+                local kernel_dir="${l4t_dir}/source/kernel/kernel-noble"
 
                 if [[ ! -d "${kernel_dir}" ]]; then
-                    error_exit "kernel-jammy-src directory not found: ${kernel_dir}" ${EXIT_BUILD_ERROR}
+                    error_exit "kernel-noble directory not found: ${kernel_dir}" ${EXIT_BUILD_ERROR}
                 fi
 
                 pushd "${kernel_dir}" > /dev/null || error_exit "Failed to enter kernel directory" ${EXIT_BUILD_ERROR}
 
-                log_debug "Resetting kernel-jammy-src to ${RELEASE_TAG}..."
+                log_debug "Resetting kernel-noble to ${RELEASE_TAG}..."
                 git reset --hard "${RELEASE_TAG}" || error_exit "Failed to reset kernel" ${EXIT_BUILD_ERROR}
 
-                local patch_dir="${ROOTDIR}/patches/kernel/kernel-jammy-src"
+                local patch_dir="${ROOTDIR}/patches/kernel/kernel-noble"
                 if [[ -d "${patch_dir}" ]]; then
                     local patches=("${patch_dir}"/*.patch)
                     if [[ -f "${patches[0]}" ]]; then
                         log_info "Found ${#patches[@]} patches to apply"
 
                         # Apply all patches at once
-                        log_info "Applying all kernel-jammy-src patches..."
+                        log_info "Applying all kernel-noble patches..."
                         if ! git am "${patch_dir}"/*.patch; then
                             log_error "Failed to apply patches"
                             log_error "Git status:"
                             git status
                             git am --abort 2>/dev/null || true
-                            error_exit "Failed to apply kernel-jammy-src patches" ${EXIT_BUILD_ERROR}
+                            error_exit "Failed to apply kernel-noble patches" ${EXIT_BUILD_ERROR}
                         fi
 
                         # Count applied patches
                         local applied=$(git log --oneline "${RELEASE_TAG}"..HEAD | wc -l)
                         patch_count=$((patch_count + applied))
-                        log_success "Applied ${applied} patches to kernel-jammy-src"
+                        log_success "Applied ${applied} patches to kernel-noble"
                     else
                         log_warning "No patches found in ${patch_dir}"
                     fi
                 fi
 
                 popd > /dev/null
-                log_success "kernel-jammy-src patches applied"
+                log_success "kernel-noble patches applied"
                 ;;
 
             "nvidia-oot")
@@ -493,12 +494,12 @@ build_kernel_Image() {
 
     # Set build environment variables
     export INSTALL_MOD_PATH="${source_dir}/modules"
-    export KERNEL_HEADERS="${source_dir}/kernel/kernel-jammy-src"
+    export KERNEL_HEADERS="${source_dir}/kernel/kernel-noble"
 
     # Check if cross-compilation is needed
     if [[ ! -f "/etc/nv_tegra_release" ]]; then
         log_info "Cross-compilation mode detected"
-        export CROSS_COMPILE="${BUILD_DIR}/aarch64--glibc--stable-final/bin/aarch64-linux-"
+        export CROSS_COMPILE="${BUILD_DIR}/l4t-gcc/x-tools/aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-"
         log_debug "CROSS_COMPILE=${CROSS_COMPILE}"
     else
         log_info "Native compilation mode detected"
@@ -541,8 +542,13 @@ build_kernel_Image() {
 
     # Build out-of-tree modules
     log_info "Building out-of-tree kernel modules..."
+    # NV_OOT_IVC_EXT_SKIP_BUILD and NV_OOT_TEGRA_HV_SKIP_BUILD suppress duplicate
+    # symbol exports for tegra_ivc_* and tegra_hv_* — these are already built into
+    # vmlinux on kernel 6.8+ and must not be re-exported by the OOT modules.
     local modules_start=$(date +%s)
-    if ! make modules -j "${parallel_jobs}"; then
+    if ! make modules -j "${parallel_jobs}" \
+            NV_OOT_IVC_EXT_SKIP_BUILD=y \
+            NV_OOT_TEGRA_HV_SKIP_BUILD=y; then
         error_exit "Module build failed" ${EXIT_BUILD_ERROR}
     fi
     local modules_duration=$(($(date +%s) - modules_start))
@@ -562,8 +568,8 @@ build_kernel_Image() {
 
     # Copy DTBs
     log_info "Copying device tree blobs..."
-    cp -f "${source_dir}/kernel-devicetree/generic-dts/dtbs/"*.dtb "${source_dir}/modules/dtb/" || error_exit "Failed to copy DTBs" ${EXIT_BUILD_ERROR}
-    cp -f "${source_dir}/kernel-devicetree/generic-dts/dtbs/"*.dtbo "${source_dir}/modules/dtb/" || error_exit "Failed to copy DTBOs" ${EXIT_BUILD_ERROR}
+    cp -f "${source_dir}/build/nvidia-public/devicetree/generic-dtbs/"*.dtb  "${source_dir}/modules/dtb/" || error_exit "Failed to copy DTBs" ${EXIT_BUILD_ERROR}
+    cp -f "${source_dir}/build/nvidia-public/devicetree/generic-dtbs/"*.dtbo "${source_dir}/modules/dtb/" || error_exit "Failed to copy DTBOs" ${EXIT_BUILD_ERROR}
 
     log_success "Kernel, modules, and device trees built successfully"
 
