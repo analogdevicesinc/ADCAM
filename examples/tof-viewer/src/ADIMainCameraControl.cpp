@@ -259,15 +259,12 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
         m_view_instance->setABMaxRange(value);
     }
 
-    // Program the camera with cfg passed, set the mode by writing to 0x200 and start the camera
-    status = GetActiveCamera()->start();
-    if (status != aditof::Status::OK) {
-        LOG(ERROR) << "Could not start camera!";
-        return false;
-    }
-
 #ifdef WITH_RGB_SUPPORT
-    // Load RGBD calibration from chip for proper geometric coregistration
+    // Load RGBD calibration from chip for proper geometric coregistration.
+    // MUST be BEFORE start()/STREAMON and AFTER setMode(): the 0x30 GET_RGBD
+    // burst read requires a valid mode (firmware returns per-mode ToF
+    // intrinsics), and issuing the burst command during streaming disrupts
+    // V4L2 frame delivery.
     if (m_enable_rgb_display && !m_off_line) {
         uint8_t calibData[160] = {};
         auto calibStatus =
@@ -276,13 +273,19 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
             m_view_instance->initRGBDCoregistration(calibData,
                                                     sizeof(calibData));
         } else {
-            LOG(WARNING)
-                << "RGBD calibration not available from chip (status="
-                << static_cast<int>(calibStatus)
-                << "). RGB point cloud uses naive pixel scaling.";
+            LOG(WARNING) << "RGBD calibration not available from chip (status="
+                         << static_cast<int>(calibStatus)
+                         << "). RGB point cloud uses naive pixel scaling.";
         }
     }
 #endif
+
+    // Program the camera with cfg passed, set the mode by writing to 0x200 and start the camera
+    status = GetActiveCamera()->start();
+    if (status != aditof::Status::OK) {
+        LOG(ERROR) << "Could not start camera!";
+        return false;
+    }
 
     // For offline mode, check what frame types are actually available
     if (m_off_line) {
@@ -593,8 +596,8 @@ void ADIMainWindow::RefreshDevices() {
             m_cameras_list.insert(m_cameras_list.end(), networkCameras.begin(),
                                   networkCameras.end());
         }
-#endif // HAS_NETWORK
-        // Build the connected devices list once after collecting all cameras
+#endif // HAS_NETWORK                                                          \
+    // Build the connected devices list once after collecting all cameras
         for (size_t ix = 0; ix < m_cameras_list.size(); ++ix) {
             m_connected_devices.emplace_back(ix, "ToF Camera " +
                                                      std::to_string(ix));

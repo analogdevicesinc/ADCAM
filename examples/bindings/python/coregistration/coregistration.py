@@ -385,6 +385,105 @@ def _grab_live_frame(mode: int):
     return depth_arr, rgb_arr
 
 
+def _build_overlay(rgb_bgr, registered, min_depth, max_depth):
+    """Return (side_by_side, overlay) BGR uint8 images for one frame."""
+    sbs = make_side_by_side(rgb_bgr, registered)
+    depth_colour = colorise_depth(registered, min_depth, max_depth)
+    overlay = rgb_bgr.copy().astype(np.float32)
+    mask = registered > 0
+    if mask.any():
+        alpha = 0.5
+        overlay[mask] = (
+            (1 - alpha) * overlay[mask] +
+            alpha * depth_colour[mask].astype(np.float32)
+        )
+    return sbs, overlay.astype(np.uint8)
+
+
+def _stream_live(calib, mode, min_depth, max_depth):
+    """
+    Continuously capture depth+RGB, coregister and display in real time.
+
+    Keeps the camera open across frames (unlike _grab_live_frame which
+    opens/stops per call). Press 'q' or ESC in any window to quit.
+    """
+    try:
+        import aditofpython as tof
+    except ImportError:
+        sys.exit("aditofpython not found - install the ADCAM Python bindings.")
+
+    import time
+
+    system = tof.System()
+    cameras = []
+    system.getCameraList(cameras)
+    if not cameras:
+        sys.exit("No ADCAM camera found.")
+
+    cam = cameras[0]
+    cam.initialize()
+    cam.setMode(mode)
+    cam.start()
+    print(f"Streaming (mode {mode}) - press 'q' or ESC in the window to quit.")
+
+    frames = 0
+    t0 = time.time()
+    try:
+        while True:
+            frame = tof.Frame()
+            if cam.requestFrame(frame) != tof.Status.Ok:
+                print("requestFrame() failed - stopping.")
+                break
+
+            depth_mm = np.array(frame.getData("depth"), dtype=np.uint16)
+
+            rgb_bgr = None
+            try:
+                rgb_details = tof.FrameDataDetails()
+                if frame.getDataDetails("rgb", rgb_details) == tof.Status.Ok:
+                    rgb_raw = np.array(frame.getData("rgb"), dtype=np.uint8)
+                    rgb_bgr = rgb_raw.reshape(
+                        rgb_details.height, rgb_details.width, 3)
+            except Exception:
+                pass
+
+            if rgb_bgr is not None:
+                rgb_h, rgb_w = rgb_bgr.shape[:2]
+            elif calib.rgb.width > 0 and calib.rgb.height > 0:
+                rgb_w, rgb_h = calib.rgb.width, calib.rgb.height
+            else:
+                sys.exit("No RGB frame and calibration has no rgb.width/height.")
+
+            registered = register_depth_to_rgb(depth_mm, calib, rgb_w, rgb_h)
+
+            frames += 1
+            fps = frames / (time.time() - t0)
+
+            if rgb_bgr is not None:
+                sbs, overlay = _build_overlay(
+                    rgb_bgr, registered, min_depth, max_depth)
+                cv.putText(overlay, f"{fps:4.1f} FPS", (12, 32),
+                           cv.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+                cv.imshow("RGB | Registered Depth", sbs)
+                cv.imshow("RGBD Overlay", overlay)
+            else:
+                depth_colour = colorise_depth(registered, min_depth, max_depth)
+                cv.putText(depth_colour, f"{fps:4.1f} FPS", (12, 32),
+                           cv.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+                cv.imshow("Registered Depth (colourised)", depth_colour)
+
+            key = cv.waitKey(1) & 0xFF
+            if key in (ord('q'), 27):  # 'q' or ESC
+                break
+    except KeyboardInterrupt:
+        print("\nInterrupted.")
+    finally:
+        cam.stop()
+        cv.destroyAllWindows()
+        print(f"Stopped after {frames} frames "
+              f"({frames / max(time.time() - t0, 1e-6):.1f} FPS avg).")
+
+
 # ===========================================================================
 # Entry point
 # ===========================================================================
@@ -400,6 +499,9 @@ def main():
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--live", action="store_true",
                      help="Capture one frame from the live ADCAM camera.")
+    src.add_argument("--stream", action="store_true",
+                     help="Continuously capture and display coregistration "
+                          "in real time (press 'q'/ESC to quit).")
     src.add_argument("--depth", metavar="DEPTH_PNG",
                      help="Path to a 16-bit PNG depth image (mm).")
 
@@ -418,6 +520,17 @@ def main():
     ap.add_argument("--max-depth", type=int, default=4000,
                     help="Max depth (mm) for colourisation (default: 4000).")
     args = ap.parse_args()
+
+    # ------------------------------------------------------------ stream mode
+    if args.stream:
+        if not os.path.isfile(args.calib):
+            sys.exit(f"Calibration file not found: {args.calib}")
+        calib = RGBDCalibration.from_json(args.calib)
+        print(f"  Calibration     : {args.calib}")
+        print(f"    RGB  intrinsics  fx={calib.rgb.fx:.1f}  fy={calib.rgb.fy:.1f}  "
+              f"cx={calib.rgb.cx:.1f}  cy={calib.rgb.cy:.1f}")
+        _stream_live(calib, args.mode, args.min_depth, args.max_depth)
+        return
 
     # ------------------------------------------------------------------ inputs
     if args.live:

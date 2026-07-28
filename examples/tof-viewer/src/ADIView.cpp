@@ -801,26 +801,6 @@ void ADIView::_displayDepthImage_SIMD() {
         int frameHeight = static_cast<int>(frameDepthDetails.height);
         int frameWidth = static_cast<int>(frameDepthDetails.width);
 
-#ifdef WITH_RGB_SUPPORT
-        // Update tof→rgb lookup table when coregistration is active
-        if (m_rgbdCalibLoaded && m_pccolour == 3 &&
-            rgbFrameWidth > 0 && rgbFrameHeight > 0) {
-            const std::size_t lut_n =
-                static_cast<std::size_t>(frameWidth) * frameHeight;
-            if (m_tofToRgbU.size() != lut_n) {
-                m_tofToRgbU.assign(lut_n, -1);
-                m_tofToRgbV.assign(lut_n, -1);
-            }
-            m_rgbdCoreg.buildToFToRGBMap(
-                depth_video_data,
-                static_cast<uint32_t>(frameWidth),
-                static_cast<uint32_t>(frameHeight),
-                m_tofToRgbU.data(), m_tofToRgbV.data(),
-                static_cast<uint32_t>(rgbFrameWidth),
-                static_cast<uint32_t>(rgbFrameHeight));
-        }
-#endif
-
         constexpr uint8_t PixelMax = std::numeric_limits<uint8_t>::max();
         size_t imageSize = frameHeight * frameWidth;
         size_t bgrSize = 0;
@@ -1118,6 +1098,27 @@ void ADIView::_displayPointCloudImage() {
             std::unique_lock<std::mutex> lock(rgb_data_ready_mtx);
             rgb_data_ready_cv.wait(lock, [this] { return rgb_data_ready; });
         }
+
+        // Build the tof→rgb lookup table here (single owner: this thread) so
+        // the coregistration LUT is never shared/reallocated across threads.
+        if (m_rgbdCalibLoaded && m_pccolour == 3 && haveRgb &&
+            rgbFrameWidth > 0 && rgbFrameHeight > 0) {
+            uint16_t *depth_mm = nullptr;
+            m_capturedFrame->getData("depth", &depth_mm);
+            if (depth_mm != nullptr) {
+                const std::size_t lut_n =
+                    static_cast<std::size_t>(frameWidth) * frameHeight;
+                if (m_tofToRgbU.size() != lut_n) {
+                    m_tofToRgbU.assign(lut_n, -1);
+                    m_tofToRgbV.assign(lut_n, -1);
+                }
+                m_rgbdCoreg.buildToFToRGBMap(
+                    depth_mm, static_cast<uint32_t>(frameWidth),
+                    static_cast<uint32_t>(frameHeight), m_tofToRgbU.data(),
+                    m_tofToRgbV.data(), static_cast<uint32_t>(rgbFrameWidth),
+                    static_cast<uint32_t>(rgbFrameHeight));
+            }
+        }
 #endif // WITH_RGB_SUPPORT
 
         for (uint32_t i = 0; i < pointcloudTableSize; i += 3) {
@@ -1150,14 +1151,15 @@ void ADIView::_displayPointCloudImage() {
                            rgbFrameWidth > 0 && rgbFrameHeight > 0) {
                     uint32_t pixIdx = i / 3;
                     int32_t rgb_col, rgb_row;
-                    if (m_rgbdCalibLoaded &&
-                        pixIdx < m_tofToRgbU.size()) {
+                    if (m_rgbdCalibLoaded && pixIdx < m_tofToRgbU.size()) {
                         rgb_col = m_tofToRgbU[pixIdx];
                         rgb_row = m_tofToRgbV[pixIdx];
                     } else {
                         // Fallback: naive scale until calibration is loaded
-                        uint32_t tof_col = pixIdx % static_cast<uint32_t>(frameWidth);
-                        uint32_t tof_row = pixIdx / static_cast<uint32_t>(frameWidth);
+                        uint32_t tof_col =
+                            pixIdx % static_cast<uint32_t>(frameWidth);
+                        uint32_t tof_row =
+                            pixIdx / static_cast<uint32_t>(frameWidth);
                         rgb_col = static_cast<int32_t>(
                             tof_col * static_cast<uint32_t>(rgbFrameWidth) /
                             static_cast<uint32_t>(frameWidth));
@@ -1165,16 +1167,18 @@ void ADIView::_displayPointCloudImage() {
                             tof_row * static_cast<uint32_t>(rgbFrameHeight) /
                             static_cast<uint32_t>(frameHeight));
                     }
-                    if (rgb_col >= 0 && rgb_row >= 0) {
+                    if (rgb_col >= 0 && rgb_row >= 0 &&
+                        rgb_col < rgbFrameWidth && rgb_row < rgbFrameHeight) {
                         uint32_t rgb_idx =
                             (static_cast<uint32_t>(rgb_row) *
                                  static_cast<uint32_t>(rgbFrameWidth) +
                              static_cast<uint32_t>(rgb_col)) *
                             3u;
                         // Buffer stores BGR (OpenCV convention); shader expects RGB
-                        fBlue  = (float)rgb_video_data_8bit[rgb_idx]     / 255.0f;
-                        fGreen = (float)rgb_video_data_8bit[rgb_idx + 1] / 255.0f;
-                        fRed   = (float)rgb_video_data_8bit[rgb_idx + 2] / 255.0f;
+                        fBlue = (float)rgb_video_data_8bit[rgb_idx] / 255.0f;
+                        fGreen =
+                            (float)rgb_video_data_8bit[rgb_idx + 1] / 255.0f;
+                        fRed = (float)rgb_video_data_8bit[rgb_idx + 2] / 255.0f;
                     } else {
                         hsvColorMap((pointCloud_video_data[i + 2]), maxRange,
                                     minRange, fRed, fGreen, fBlue);
@@ -1443,7 +1447,7 @@ void ADIView::_displayRgbImage() {
 
 void ADIView::initRGBDCoregistration(const uint8_t *data, std::size_t size) {
     if (m_rgbdCoreg.loadCalibrationFrom160Bytes(data, size) ==
-            aditof::Status::OK) {
+        aditof::Status::OK) {
         m_rgbdCalibLoaded = true;
         LOG(INFO) << "ADIView: RGBD coregistration calibration loaded from "
                      "chip (0x30 response). Point cloud RGB colour will use "
