@@ -1,0 +1,108 @@
+From 4e80d025ce3d132fd210c12fe1e7352106ba489c Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 28 Jul 2026 19:43:31 +0530
+Subject: [PATCH] t23x: nv-public: overlay: dual-adsd3500: clean up overlay
+ pinmux additions
+
+- Move extperiph pin configuration into a dedicated overlay fragment.
+- Add CAM_I2C_MUX GPIO hog to select the ADSD3500 channel at boot.
+- Disable the pwm-gpio node by default and improve overlay integration.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ ...67-camera-p3768-dual-adsd3500-adsd3100.dts | 69 ++++++++++++-------
+ 1 file changed, 44 insertions(+), 25 deletions(-)
+
+diff --git a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+index 8978c8c..5321b91 100644
+--- a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
++++ b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+@@ -2910,36 +2910,25 @@
+ 						gpio-line-names = "EN_1P8", "EN_0P8", "P2", "I2CM_SEL", "ISP_BS3/ISP_INT", "NET_HOST_IO_SEL", "ISP_BS0", "ISP_BS1", "HOST_IO_DIR", "ISP_BS4", "ISP_BS5", "FSYNC_DIR", "EN_VAUX", "EN_VAUX_LS", "EN_SYS";
+ 					};
+ 				};
++				/*
++				 * pwm-gpio: frame-sync PWM output to adsd3500 via GPIO P1.
++				 * New node added to bus@0 — no conflict with base DTB.
++				 * Kept in fragment@0 so &gpio is resolved in the same
++				 * overlay context, avoiding UEFI symbol lookup failure
++				 * that occurs when &gpio is referenced from a separate fragment.
++				 */
+ 				pwm: pwm-gpio {
+-					status = "okay";
++					status = "disabled";
+ 					compatible = "pwm-gpio";
+ 					#pwm-cells = <2>;
+ 					pwm-gpios = <&gpio TEGRA234_MAIN_GPIO(P, 1) GPIO_ACTIVE_HIGH>;
+ 				};
+-				pinmux@2430000 {
+-					pinctrl-names = "default";
+-					pinctrl-0 = <&pinmux_default>;
+-
+-					pinmux_default: common {
+-						extperiph1_clk_pp0 {
+-							nvidia,pins = "extperiph1_clk_pp0";
+-							nvidia,function = "rsvd2";
+-							nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+-							nvidia,tristate = <TEGRA_PIN_DISABLE>;
+-							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+-							nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+-						};
+-						extperiph2_clk_pp1 {
+-                                                        nvidia,pins = "extperiph2_clk_pp1";
+-                                                        nvidia,function = "rsvd2";
+-                                                        nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+-                                                        nvidia,tristate = <TEGRA_PIN_DISABLE>;
+-                                                        nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+-                                                        nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+-                                                };
+-
+-					};
+-				};
++				/*
++				 * CAM I2C mux GPIO hog.
++				 * Drives CAM_I2C_MUX (AON GPIO CC3) HIGH at boot so the
++				 * I2C mux selects the ADSD3500 channel. Added as a child
++				 * of the existing gpio@c2f0000 node via overlay merge.
++				 */
+ 				gpio@c2f0000 {
+ 					cam-i2c-mux-select {
+ 						gpio-hog;
+@@ -2951,4 +2940,34 @@
+ 			};
+ 		};
+ 	};
++
++	/*
++	 * extperiph clock pin configuration.
++	 * Adds extperiph1_clk_pp0 and extperiph2_clk_pp1 to the existing
++	 * pinmux_default group in the base DTB. Using target = <&pinmux_default>
++	 * merges cleanly into the live pinmux state rather than creating a
++	 * duplicate pinmux@2430000 node inside fragment@0 which would produce
++	 * conflicting pinctrl-names/pinctrl-0 properties and cause a kernel panic.
++	 */
++	fragment@1 {
++		target-path = "/bus@0/pinmux@2430000";
++		__overlay__ {
++			extperiph1_clk_pp0 {
++				nvidia,pins = "extperiph1_clk_pp0";
++				nvidia,function = "rsvd2";
++				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
++				nvidia,tristate = <TEGRA_PIN_DISABLE>;
++				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
++				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
++			};
++			extperiph2_clk_pp1 {
++				nvidia,pins = "extperiph2_clk_pp1";
++				nvidia,function = "rsvd2";
++				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
++				nvidia,tristate = <TEGRA_PIN_DISABLE>;
++				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
++				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
++			};
++		};
++	};
+ };
+-- 
+2.25.1
+
