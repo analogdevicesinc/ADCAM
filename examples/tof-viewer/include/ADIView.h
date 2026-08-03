@@ -254,8 +254,10 @@ class ADIView {
 
     // RGBD coregistration — proper geometric ToF→RGB pixel mapping
     aditof::RGBDCoregistration m_rgbdCoreg;
-    std::vector<int32_t> m_tofToRgbU; ///< Per-ToF-pixel RGB u coord (-1=invalid)
-    std::vector<int32_t> m_tofToRgbV; ///< Per-ToF-pixel RGB v coord (-1=invalid)
+    std::vector<int32_t>
+        m_tofToRgbU; ///< Per-ToF-pixel RGB u coord (-1=invalid)
+    std::vector<int32_t>
+        m_tofToRgbV; ///< Per-ToF-pixel RGB v coord (-1=invalid)
     bool m_rgbdCalibLoaded = false;
 #endif // WITH_RGB_SUPPORT
 

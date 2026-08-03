@@ -419,29 +419,6 @@ void ADIMainWindow::DisplayActiveBrightnessWindow(
 
         ImGui::SetCursorPos(ImVec2(0, 0));
 
-#ifdef WITH_RGB_SUPPORT
-        // If RGB data is available and processed, show RGB instead of AB
-        if (m_view_instance->rgb_video_data_rgb != nullptr) {
-            glBindTexture(GL_TEXTURE_2D, m_gl_ab_video_texture);
-            // RGB data: stored as BGR (3 bytes per pixel) for OpenGL display
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                         m_view_instance->rgbFrameWidth,
-                         m_view_instance->rgbFrameHeight, 0, GL_BGR,
-                         GL_UNSIGNED_BYTE, m_view_instance->rgb_video_data_rgb);
-            glad_glGenerateMipmap(GL_TEXTURE_2D);
-
-            ImVec2 _displayABDimensions = m_display_ab_dimensions;
-
-            if (rotationangledegrees == 90 || rotationangledegrees == 270) {
-                std::swap(_displayABDimensions.x, _displayABDimensions.y);
-            }
-
-            ImageRotated((ImTextureID)m_gl_ab_video_texture,
-                         ImVec2(m_ab_position->width, m_ab_position->height),
-                         ImVec2(_displayABDimensions.x, _displayABDimensions.y),
-                         rotationangleradians);
-        } else
-#endif // WITH_RGB_SUPPORT
         if (m_view_instance->ab_video_data_8bit != nullptr) {
             glBindTexture(GL_TEXTURE_2D, m_gl_ab_video_texture);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_view_instance->frameWidth,
@@ -465,20 +442,10 @@ void ADIMainWindow::DisplayActiveBrightnessWindow(
         GetHoveredImagePix(hoveredImagePixel, ImGui::GetCursorScreenPos(),
                            ImGui::GetIO().MousePos, m_display_ab_dimensions,
                            m_source_depth_image_dimensions);
-#ifdef WITH_RGB_SUPPORT
-        if (m_view_instance->rgb_video_data_rgb != nullptr) {
-            RenderFrameHoverInfo(
-                hoveredImagePixel, nullptr, m_view_instance->rgbFrameWidth,
-                ImGui::IsWindowHovered(),
-                ADI_Image_Format_t::ADI_IMAGE_FORMAT_RGB, "RGB Pixel");
-        } else
-#endif // WITH_RGB_SUPPORT
-        {
-            RenderFrameHoverInfo(
-                hoveredImagePixel, m_view_instance->ab_video_data,
-                m_view_instance->frameWidth, ImGui::IsWindowHovered(),
-                ADI_Image_Format_t::ADI_IMAGE_FORMAT_AB16, "Intensity");
-        }
+        RenderFrameHoverInfo(
+            hoveredImagePixel, m_view_instance->ab_video_data,
+            m_view_instance->frameWidth, ImGui::IsWindowHovered(),
+            ADI_Image_Format_t::ADI_IMAGE_FORMAT_AB16, "Intensity");
     }
 
     ImGui::End();
@@ -770,6 +737,8 @@ void ADIMainWindow::DisplayPointCloudWindow(ImGuiWindowFlags overlayFlags) {
 
             // Bind framebuffer and set up rendering state
             glBindFramebuffer(GL_FRAMEBUFFER, m_gl_pc_colourTex);
+            glViewport(0, 0, m_main_window_width, m_main_window_height);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
 
@@ -808,6 +777,7 @@ void ADIMainWindow::DisplayPointCloudWindow(ImGuiWindowFlags overlayFlags) {
             // Minimal state cleanup
             glUseProgram(0);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glViewport(0, 0, m_main_window_width, m_main_window_height);
 
             ImVec2 _displayPointCloudDimensions =
                 m_display_point_cloud_dimensions;
@@ -1196,8 +1166,10 @@ void ADIMainWindow::DisplayRGBWindow(ImGuiWindowFlags overlayFlags) {
             (m_rgb_position->width / m_view_instance->rgbFrameWidth),
             (m_rgb_position->height / m_view_instance->rgbFrameHeight));
 
-        size.x = m_view_instance->rgbFrameWidth * autoscale * m_dpi_scale_factor;
-        size.y = m_view_instance->rgbFrameHeight * autoscale * m_dpi_scale_factor;
+        size.x =
+            m_view_instance->rgbFrameWidth * autoscale * m_dpi_scale_factor;
+        size.y =
+            m_view_instance->rgbFrameHeight * autoscale * m_dpi_scale_factor;
 
         if (rotationangledegrees == 90 || rotationangledegrees == 270) {
             std::swap(size.x, size.y);

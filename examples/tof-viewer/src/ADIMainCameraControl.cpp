@@ -496,9 +496,6 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
             if (haveRGB) {
                 DisplayRGBWindow(overlayFlags);
             }
-            if (haveAB) {
-                DisplayActiveBrightnessWindow(overlayFlags);
-            }
 #else
             if (haveAB) {
                 DisplayActiveBrightnessWindow(overlayFlags);
