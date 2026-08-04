@@ -7,7 +7,7 @@
 #
 # Usage: sudo ./apply_patch.sh
 #
-# Requirements: Root privileges, JetPack 6.2.1, archive extracted in current directory
+# Requirements: Root privileges, JetPack 7.2, archive extracted in current directory
 #
 # Exit Codes:
 #   0 - Success
@@ -17,8 +17,8 @@
 #   4 - Configuration error
 #
 # Author: Analog Devices Inc.
-# Version: 2.0
-# Date: 2026-03-17
+# Version: 3.0
+# Date: 2026-08-04
 #===============================================================================
 
 set -euo pipefail
@@ -27,7 +27,7 @@ set -euo pipefail
 # CONFIGURATION
 #===============================================================================
 
-readonly SCRIPT_VERSION="2.0"
+readonly SCRIPT_VERSION="3.0"
 readonly ROOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly EXTLINUX_CONF="/boot/extlinux/extlinux.conf"
 readonly BACKUP_DIR="/root/adi_tof_backup_$(date +%Y%m%d_%H%M%S)"
@@ -280,6 +280,19 @@ update_kernel() {
     rm -rf /boot/adi
     mkdir -p /boot/adi || error_exit "Failed to create /boot/adi" ${EXIT_FILE_ERROR}
     mkdir -p /lib/firmware/adi || true
+
+    # Copy base DTB to /boot/dtb/ so extlinux FDT entries can reference it
+    # by the kernel_ prefix naming convention used by JetPack 6.x / 7.x.
+    log_info "Setting up /boot/dtb/ directory..."
+    mkdir -p /boot/dtb || error_exit "Failed to create /boot/dtb" ${EXIT_FILE_ERROR}
+    local src_dtb="/boot/tegra234-p3768-0000+p3767-0003-nv-super.dtb"
+    local dst_dtb="/boot/dtb/kernel_tegra234-p3768-0000+p3767-0003-nv-super.dtb"
+    if [[ -f "${src_dtb}" ]]; then
+        cp "${src_dtb}" "${dst_dtb}" || log_warning "Failed to copy DTB to /boot/dtb/"
+        log_info "Copied: $(basename ${src_dtb}) → /boot/dtb/$(basename ${dst_dtb})"
+    else
+        log_warning "Source DTB not found: ${src_dtb} — /boot/dtb/ entry will be missing"
+    fi
 
     # Copy kernel image
     log_info "Installing ADI kernel image..."
