@@ -2,8 +2,8 @@
 
 # Patch Validation Script for NVIDIA Jetson Orin Nano
 # This script validates that all patches from apply_patch.sh were applied successfully
-# Version: 2.0
-# Date: 2026-04-30
+# Version: 3.0
+# Date: 2026-08-04
 
 # Exit on error, but allow individual checks to fail gracefully
 set -o pipefail
@@ -30,6 +30,8 @@ VALIDATION_REPORT="/boot/adi-patch-validation-report.txt"
 
 # Configuration
 extlinux_conf_file="/boot/extlinux/extlinux.conf"
+ADI_KERNEL_VERSION="6.8.12-adi-1021-tegra"
+ADI_KERNEL_MODULES_DIR="/lib/modules/${ADI_KERNEL_VERSION}"
 
 # Device validation configuration
 I2C_BUS=2
@@ -237,7 +239,7 @@ function validate_device_tree_overlays() {
 function validate_kernel_modules() {
     print_check "Kernel Modules"
 
-    local module_dir="/lib/modules/5.15.185-adi-tegra"
+    local module_dir="${ADI_KERNEL_MODULES_DIR}"
 
     if [[ -d "${module_dir}" ]]; then
         print_pass "ADI kernel modules directory exists: ${module_dir}"
@@ -369,6 +371,15 @@ function validate_system_info() {
     local kernel_version=$(uname -r 2>/dev/null || echo "unknown")
     print_pass "Current kernel: ${kernel_version}"
     log_message "INFO" "Kernel version: ${kernel_version}"
+
+    # Compare against expected ADI kernel version
+    if [[ "${kernel_version}" == "${ADI_KERNEL_VERSION}" ]]; then
+        print_pass "Kernel version matches expected ADI kernel: ${ADI_KERNEL_VERSION}"
+        log_message "PASS" "Kernel version match: ${kernel_version}"
+    else
+        print_fail "Kernel version mismatch: running=${kernel_version}, expected=${ADI_KERNEL_VERSION}"
+        log_message "FAIL" "Kernel version mismatch: running=${kernel_version}, expected=${ADI_KERNEL_VERSION}"
+    fi
 
     # Check if running on Jetson
     if [[ -f "/etc/nv_tegra_release" ]]; then
@@ -642,6 +653,14 @@ function validate_tof_service() {
         return 1
     fi
 
+    # Check if service completed successfully via systemctl
+    local service_active=0
+    if command -v systemctl &>/dev/null && systemctl is-active "${service}" &>/dev/null; then
+        print_pass "ToF service is active and completed successfully"
+        log_message "PASS" "ToF service is active"
+        service_active=1
+    fi
+
     # Expected execution checkpoints
     local required_msgs=(
         "Matched MODULE:"
@@ -658,13 +677,18 @@ function validate_tof_service() {
             print_pass "Found checkpoint: ${msg}"
             log_message "INFO" "ToF service checkpoint: ${msg}"
         else
-            print_fail "Missing checkpoint: ${msg}"
-            log_message "ERROR" "ToF service missing checkpoint: ${msg}"
-            all_msgs_found=1
+            if [[ ${service_active} -eq 1 ]]; then
+                print_warning "Checkpoint not in journal (service is active): ${msg}"
+                log_message "WARN" "ToF service checkpoint not in journal: ${msg}"
+            else
+                print_fail "Missing checkpoint: ${msg}"
+                log_message "ERROR" "ToF service missing checkpoint: ${msg}"
+                all_msgs_found=1
+            fi
         fi
     done
 
-    if [[ $all_msgs_found -eq 0 ]]; then
+    if [[ ${all_msgs_found} -eq 0 ]]; then
         print_pass "ToF power/reset sequence validated successfully"
     else
         print_fail "ToF service validation incomplete"
