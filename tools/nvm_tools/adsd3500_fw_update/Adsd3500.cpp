@@ -30,6 +30,8 @@
 #define ADI_STATUS_SECOND_FIRMWARE_FLASH_UPDATE 0x0027
 #define GET_MASTER_CHIP_ID_CMD 0x0112
 #define GET_SLAVE_CHIP_ID_CMD 0x0116
+#define ADSD3500_MASTER_CHIP_ID 0x5931
+#define ADSD3500_SLAVE_CHIP_ID  0x5932
 #define GET_DUAL_ADSD3500_ENABLED_CMD 0x005A  // Read: 0x0001=Dual Enabled, 0x0000=Dual Disabled
 #define USER_TASK _IOW('A', 1, int32_t *)
 #define SIGETX 44
@@ -223,10 +225,16 @@ Adsd3500::Adsd3500(std::string FileName, bool force) {
     }
     std::cout << "[INFO] Firmware version match confirmed: " << master_ver_str << std::endl;
 
-    // Probe master device — mandatory
-    bool master_found = Read_Chip_ID(GET_MASTER_CHIP_ID_CMD);
-    if (!master_found) {
-        std::cerr << "No ADSD3500 master device detected. Aborting firmware update." << std::endl;
+    // Probe master device — mandatory; validate chip ID matches ADSD3500_MASTER_CHIP_ID
+    uint16_t master_chip_id = 0;
+    bool master_found = read_cmd(GET_MASTER_CHIP_ID_CMD, &master_chip_id);
+    if (master_found && master_chip_id == ADSD3500_MASTER_CHIP_ID) {
+        std::cout << "Master Chip ID is: 0x" << std::hex << master_chip_id << std::dec << std::endl;
+    } else {
+        std::cerr << "No ADSD3500 master device detected (chip ID 0x"
+                  << std::hex << master_chip_id
+                  << " does not match expected 0x" << ADSD3500_MASTER_CHIP_ID
+                  << "). Aborting firmware update." << std::dec << std::endl;
         close(debug_fd);
         close(sfd);
         exit(EXIT_FAILURE);
@@ -235,9 +243,10 @@ Adsd3500::Adsd3500(std::string FileName, bool force) {
     // Silent probe for slave — absence is expected in single-device configuration
     uint16_t slave_chip_id = 0;
     bool slave_found = read_cmd(GET_SLAVE_CHIP_ID_CMD, &slave_chip_id);
-    if (slave_found) {
+    if (slave_found && slave_chip_id == ADSD3500_SLAVE_CHIP_ID) {
         std::cout << std::endl << "Slave Chip ID is: 0x" << std::hex << slave_chip_id << std::dec << std::endl;
     } else {
+        slave_found = false;  // reset: read failed or chip ID does not match ADSD3500_SLAVE_CHIP_ID
         // Slave chip ID read failed — slave may not be booted yet.
         // Query master to confirm whether dual ADSD3500 is enabled.
         uint16_t dual_enabled = 0;
