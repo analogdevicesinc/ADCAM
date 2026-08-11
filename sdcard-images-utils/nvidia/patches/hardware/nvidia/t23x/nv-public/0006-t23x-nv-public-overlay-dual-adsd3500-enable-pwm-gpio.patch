@@ -1,0 +1,93 @@
+From b2ec7b68332d287638971cf1def173f92062b33a Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Tue, 11 Aug 2026 10:08:02 +0530
+Subject: [PATCH]  t23x: nv-public: overlay: dual-adsd3500: enable pwm-gpio and
+ fix extperiph pinmux merge
+
+- Enable the pwm-gpio node used for ADSD3500 frame-sync generation.
+- Merge extperiph clock pin settings into the active pinmux_default group.
+- Ensure extperiph1_clk_pp0 and extperiph2_clk_pp1 are applied at boot.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ ...67-camera-p3768-dual-adsd3500-adsd3100.dts | 54 +++++++++++--------
+ 1 file changed, 31 insertions(+), 23 deletions(-)
+
+diff --git a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+index 5321b91..2908b67 100644
+--- a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
++++ b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+@@ -2918,7 +2918,7 @@
+ 				 * that occurs when &gpio is referenced from a separate fragment.
+ 				 */
+ 				pwm: pwm-gpio {
+-					status = "disabled";
++					status = "okay";
+ 					compatible = "pwm-gpio";
+ 					#pwm-cells = <2>;
+ 					pwm-gpios = <&gpio TEGRA234_MAIN_GPIO(P, 1) GPIO_ACTIVE_HIGH>;
+@@ -2942,31 +2942,39 @@
+ 	};
+ 
+ 	/*
+-	 * extperiph clock pin configuration.
+-	 * Adds extperiph1_clk_pp0 and extperiph2_clk_pp1 to the existing
+-	 * pinmux_default group in the base DTB. Using target = <&pinmux_default>
+-	 * merges cleanly into the live pinmux state rather than creating a
+-	 * duplicate pinmux@2430000 node inside fragment@0 which would produce
+-	 * conflicting pinctrl-names/pinctrl-0 properties and cause a kernel panic.
++	 * Merges extperiph1_clk_pp0 and extperiph2_clk_pp1 INTO the existing
++	 * pinmux_default: common group inside pinmux@2430000. Using target-path="/"
++	 * and nesting the full path ensures our pin nodes are placed inside
++	 * pinmux_default and applied when the pinmux controller's "default"
++	 * pinctrl state is selected at boot.
+ 	 */
+ 	fragment@1 {
+-		target-path = "/bus@0/pinmux@2430000";
++		target-path = "/";
+ 		__overlay__ {
+-			extperiph1_clk_pp0 {
+-				nvidia,pins = "extperiph1_clk_pp0";
+-				nvidia,function = "rsvd2";
+-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+-				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+-				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+-				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+-			};
+-			extperiph2_clk_pp1 {
+-				nvidia,pins = "extperiph2_clk_pp1";
+-				nvidia,function = "rsvd2";
+-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+-				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+-				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+-				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
++			bus@0 {
++				pinmux@2430000 {
++					pinctrl-names = "default";
++					pinctrl-0 = <&pinmux_default>;
++
++					pinmux_default: common {
++						extperiph1_clk_pp0 {
++							nvidia,pins = "extperiph1_clk_pp0";
++							nvidia,function = "rsvd2";
++							nvidia,pull = <TEGRA_PIN_PULL_NONE>;
++							nvidia,tristate = <TEGRA_PIN_DISABLE>;
++							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
++							nvidia,lpdr = <TEGRA_PIN_DISABLE>;
++						};
++						extperiph2_clk_pp1 {
++							nvidia,pins = "extperiph2_clk_pp1";
++							nvidia,function = "rsvd2";
++							nvidia,pull = <TEGRA_PIN_PULL_NONE>;
++							nvidia,tristate = <TEGRA_PIN_DISABLE>;
++							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
++							nvidia,lpdr = <TEGRA_PIN_DISABLE>;
++						};
++					};
++				};
+ 			};
+ 		};
+ 	};
+-- 
+2.25.1
+
