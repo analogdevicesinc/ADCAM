@@ -1,4 +1,4 @@
-name: Build workflow for ADCAM
+name: Build ADCAM
 
 on:
   pull_request:
@@ -12,39 +12,26 @@ env:
   NUM_JOBS: 4
 
 jobs:
-  checkers:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-      - name: Check cpp format
-        if: always()
-        uses: analogdevicesinc/shared-actions/check-cpp-format@main
-        with:
-          paths: ${{ github.workspace }}/apps ${{ github.workspace }}/sdk
-  build:
+  build-adcam:
     runs-on: ubuntu-22.04-arm
     env:
       EXTRA_CMAKE_FLAGS: "-DWITH_PLATFORM=NVIDIA -DUSE_DEPTH_COMPUTE_OPENSOURCE=ON"
-    container:
-      image: septimiuvana/arm64-ubuntu
-      volumes:
-        - ${{ github.workspace }}:${{ github.workspace }}
-        - /home/runner/work/_actions:/home/runner/work/_actions
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
           submodules: recursive
-      - name: Setup kernel randomize
+      - name: Install dependencies
         shell: sh
         run: |
-          sudo sysctl kernel.randomize_va_space=0
-      - name: Builds in docker
-        uses: analogdevicesinc/wiki-scripts/build-tof@devops-actions
-        with:
-          source-path: ${{ github.workspace }}
-          extra-cmake-flags: ${{ env.EXTRA_CMAKE_FLAGS }}
-          build-type: docker
+          ./.github/scripts/install-deps.sh
+        env:
+          BUILD_TYPE: linux
+      - name: Build linux
+        shell: sh
+        run: |
+          ./.github/scripts/build-tof.sh
+        env:
+          WORK_DIR: ${{ github.workspace }}
+          BUILD_DIR: ${{ github.workspace }}/build
+          BUILD_TYPE: linux
