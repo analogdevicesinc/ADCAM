@@ -15,30 +15,33 @@ else
     exit 1
 fi
 
-# Declare GPIO mapping directly
-declare -A GPIO=(
-    [EN_1P8]=300
-    [EN_0P8]=301
-    [P2]=302
-    [I2CM_SEL]=303
-    [ISP_BS3]=304
-    [NET_HOST_IO_SEL]=305
-    [ISP_BS0]=306
-    [ISP_BS1]=307
-    [HOST_IO_DIR]=308
-    [ISP_BS4]=309
-    [ISP_BS5]=310
-    [FSYNC_DIR]=311
-    [EN_VAUX]=312
-    [EN_VAUX_LS]=313
-    [EN_SYS]=314
-)
+# Resolve GPIOs dynamically from labels in debugfs
+declare -A GPIO
+GPIO_LABELS=("NET_HOST_IO_SEL" "HOST_IO_DIR")
+HIGH_LEVEL="1"
+MODE_INTERRUPT="1"
+
+for label in "${GPIO_LABELS[@]}"; do
+    result=$(cat /sys/kernel/debug/gpio 2>/dev/null | grep -i "\\b${label}\\b" | head -n1)
+    if [[ -z "$result" ]]; then
+        echo "Label not found in /sys/kernel/debug/gpio: $label"
+        exit 1
+    fi
+
+    gpio_num=$(echo "$result" | sed -E 's/.*gpio-([0-9]+).*/\1/')
+    if [[ -z "$gpio_num" ]]; then
+        echo "Failed to extract GPIO number for label: $label"
+        exit 1
+    fi
+
+    GPIO["$label"]="$gpio_num"
+done
 
 # Set 0: EXT_FSYNC / 1: ISP_INT
-echo 1 > /sys/class/gpio/gpio${GPIO[NET_HOST_IO_SEL]}/value
+echo "$HIGH_LEVEL" > "/sys/class/gpio/gpio${GPIO[NET_HOST_IO_SEL]}/value"
 
 # Set 0: EXT_FSYNC / 1: ISP_INT
-echo 1 > /sys/class/gpio/gpio${GPIO[HOST_IO_DIR]}/value
+echo "$HIGH_LEVEL" > "/sys/class/gpio/gpio${GPIO[HOST_IO_DIR]}/value"
 
 # Enable external fsync
-v4l2-ctl --set-ctrl=fsync_trigger=1 -d $SUBDEV_PATH
+v4l2-ctl --set-ctrl="fsync_trigger=${MODE_INTERRUPT}" -d "$SUBDEV_PATH"
