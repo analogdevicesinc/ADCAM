@@ -1,0 +1,38 @@
+From d2664a7f5428e7c468adfd560d2e436f0b17622b Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Wed, 19 Aug 2026 19:25:49 +0530
+Subject: [PATCH] t23x: nv-public: overlay: dual-adsd3500: enable GPIO mode for
+ extperiph clock pins
+
+- Enable gpio-mode for extperiph1_clk_pp0 and extperiph2_clk_pp1.
+- Allow the extperiph clock pins to be used as GPIOs when required.
+- Align pinmux configuration with the ADSD3500 overlay requirements.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+index 2908b67..84d072a 100644
+--- a/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
++++ b/overlay/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dts
+@@ -2964,6 +2964,7 @@
+ 							nvidia,tristate = <TEGRA_PIN_DISABLE>;
+ 							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+ 							nvidia,lpdr = <TEGRA_PIN_DISABLE>;
++							nvidia,gpio-mode = <TEGRA_PIN_ENABLE>;
+ 						};
+ 						extperiph2_clk_pp1 {
+ 							nvidia,pins = "extperiph2_clk_pp1";
+@@ -2972,6 +2973,7 @@
+ 							nvidia,tristate = <TEGRA_PIN_DISABLE>;
+ 							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+ 							nvidia,lpdr = <TEGRA_PIN_DISABLE>;
++							nvidia,gpio-mode = <TEGRA_PIN_ENABLE>;
+ 						};
+ 					};
+ 				};
+-- 
+2.25.1
+
