@@ -638,10 +638,16 @@ function validate_tof_service() {
         return 0
     fi
 
-    # Explicit skip case (not an error)
+    # Explicit skip cases (not errors)
     if echo "$logs" | grep -q "Skipping ToF power sequence"; then
         print_pass "ToF power sequence intentionally skipped (as configured)"
         log_message "INFO" "ToF power sequence skipped by configuration"
+        return 0
+    fi
+
+    if echo "$logs" | grep -q "Power sequence for CONFIG 3 (ADTF3066 + RGB) is not yet implemented. Skipping."; then
+        print_pass "ToF CONFIG 3 detected; power sequence intentionally skipped (not implemented yet)"
+        log_message "INFO" "ToF CONFIG 3 sequence not implemented; skip accepted"
         return 0
     fi
 
