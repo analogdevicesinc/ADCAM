@@ -1,0 +1,37 @@
+name: Build ADCAM
+
+on:
+  pull_request:
+    branches:
+        - main
+
+permissions:
+  contents: read
+
+env:
+  NUM_JOBS: 4
+
+jobs:
+  build-adcam:
+    runs-on: ubuntu-22.04-arm
+    env:
+      EXTRA_CMAKE_FLAGS: "-DWITH_PLATFORM=NVIDIA -DUSE_DEPTH_COMPUTE_OPENSOURCE=ON"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        shell: sh
+        run: |
+          ./.github/scripts/install-deps.sh
+        env:
+          BUILD_TYPE: linux
+      - name: Build linux
+        shell: sh
+        run: |
+          ./.github/scripts/build-tof.sh
+        env:
+          WORK_DIR: ${{ github.workspace }}
+          BUILD_DIR: ${{ github.workspace }}/build
+          BUILD_TYPE: linux
