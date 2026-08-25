@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../lib/libdoxycfg.a CMakeFiles/doxycfg.dir/__/generated_src/configimpl.cpp.o CMakeFiles/doxycfg.dir/__/generated_src/configoptions.cpp.o CMakeFiles/doxycfg.dir/__/generated_src/configvalues.cpp.o CMakeFiles/doxycfg.dir/portable.cpp.o CMakeFiles/doxycfg.dir/portable_c.c.o
+/usr/bin/ranlib ../lib/libdoxycfg.a
