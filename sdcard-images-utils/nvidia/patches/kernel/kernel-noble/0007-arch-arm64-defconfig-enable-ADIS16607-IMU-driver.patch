@@ -1,0 +1,29 @@
+From ba0d0ed13ae8b35ef73a9873c2f24fbe4c8d9562 Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Thu, 27 Aug 2026 12:45:50 +0530
+Subject: [PATCH 07/10] arch: arm64: defconfig: enable ADIS16607 IMU driver
+
+- Enable CONFIG_ADIS16607 as a module in the arm64 defconfig.
+- Include support for ADIS16607-2 and ADIS16607-3 inertial sensors.
+- Make the driver available in default kernel builds without manual configuration.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ arch/arm64/configs/defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index 849b1539d358..29d0bca1dcf0 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -1536,6 +1536,7 @@ CONFIG_VCNL4000=m
+ CONFIG_IIO_ST_MAGN_3AXIS=m
+ CONFIG_IIO_CROS_EC_BARO=m
+ CONFIG_MPL3115=m
++CONFIG_ADIS16607=m
+ CONFIG_PWM=y
+ CONFIG_PWM_BCM2835=m
+ CONFIG_PWM_BRCMSTB=m
+-- 
+2.25.1
+
