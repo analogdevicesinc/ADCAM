@@ -1235,6 +1235,11 @@ void ADIMainWindow::ShowStartWizard() {
                     m_selected_device_index = 0;
                     fileName = fs;
                     m_off_line_frame_index = 0;
+                    // Join any still-joinable worker from a previous file load,
+                    // otherwise this assignment calls std::terminate().
+                    if (initCameraWorker.joinable()) {
+                        initCameraWorker.join();
+                    }
                     initCameraWorker =
                         std::thread([this, fs]() { InitCamera(fs); });
                 } else {
@@ -1257,6 +1262,9 @@ void ADIMainWindow::ShowStartWizard() {
             if (ImGuiExtensions::ADIButton("Close", m_is_open_device)) {
                 setWorkingLabel("Closing file...");
                 setIsWorking(true);
+                if (initCameraWorker.joinable()) {
+                    initCameraWorker.join();
+                }
                 m_view_instance->cleanUp();
                 m_view_instance.reset();
 
