@@ -36,7 +36,7 @@ using namespace adicontroller;
 
 ADIController::ADIController(
     std::vector<std::shared_ptr<aditof::Camera>> camerasList)
-    : m_cameraInUse(-1), m_frameRequested(false) {
+    : m_cameraInUse(-1), m_frameRequested(false), m_stopFlag(true) {
 
     m_prev_frame_number = -1;
     m_current_frame_number = 0;
@@ -55,8 +55,12 @@ ADIController::~ADIController() {
     if (m_cameraInUse == -1) {
         return;
     }
-    StopCapture();
-    m_cameras[static_cast<unsigned int>(m_cameraInUse)]->stop();
+    // Avoid redundant camera->stop() calls (e.g. ADIView already called
+    // StopCapture()); repeating them is harmless but noisy for offline
+    // playback, which logs an error when the file stream is already closed.
+    if (!m_stopFlag) {
+        StopCapture();
+    }
 }
 
 void ADIController::StartCapture(const uint32_t frameRate) {
