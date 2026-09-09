@@ -195,6 +195,8 @@ int Adsd3500::CloseAdsd3500() {
     }
 
     free(videoDevice.videoBuffers);
+    videoDevice.videoBuffers = nullptr;
+    videoDevice.nVideoBuffers = 0;
 
     if (videoDevice.videoCaptureDeviceId != -1) {
         if (close(videoDevice.videoCaptureDeviceId) == -1) {
@@ -837,6 +839,8 @@ int Adsd3500::SetFrameType() {
         }
     }
     free(videoDevice.videoBuffers);
+    videoDevice.videoBuffers = nullptr;
+    videoDevice.nVideoBuffers = 0;
 
     if (videoDevice.videoCaptureDeviceId != -1) {
         if (close(videoDevice.videoCaptureDeviceId) == -1) {

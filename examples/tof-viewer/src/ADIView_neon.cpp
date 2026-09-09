@@ -34,7 +34,7 @@ using namespace adiviewer;
 void ADIView::normalizeABBuffer_NEON(uint16_t *abBuffer, uint16_t abWidth,
                                      uint16_t abHeight, bool advanceScaling,
                                      bool useLogScaling) {
-    size_t imageSize = abHeight * abWidth;
+    size_t imageSize = static_cast<size_t>(abHeight) * abWidth;
     uint32_t min_value_of_AB_pixel = 0xFFFF;
     uint32_t max_value_of_AB_pixel = 1;
     const size_t neon_width = 8; // NEON: 8 x uint16_t per vector
@@ -95,7 +95,7 @@ void ADIView::normalizeABBuffer_NEON(uint16_t *abBuffer, uint16_t abWidth,
     uint16x8_t global_vmax = vdupq_n_u16(0);
 
     for (uint16_t y = 0; y < abHeight; ++y) {
-        size_t row_start = y * abWidth;
+        size_t row_start = static_cast<size_t>(y) * abWidth;
         size_t x = 0;
 
         for (; x + neon_width <= abWidth; x += neon_width) {
@@ -174,7 +174,7 @@ void ADIView::normalizeABBuffer_NEON(uint16_t *abBuffer, uint16_t abWidth,
             log10(1.0 + double(max_value_of_AB_pixel - min_value_of_AB_pixel));
 
         for (uint16_t y = 0; y < abHeight; ++y) {
-            size_t row_start = y * abWidth;
+            size_t row_start = static_cast<size_t>(y) * abWidth;
 
             // Log scaling is harder to vectorize efficiently, use scalar
             for (size_t x = 0; x < abWidth; ++x) {
