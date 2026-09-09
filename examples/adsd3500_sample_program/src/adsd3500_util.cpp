@@ -1023,22 +1023,25 @@ int Adsd3500::SetFrameType() {
         return -1;
     }
 
-    videoDevice.videoBuffers =
-        (buffer *)calloc(req.count, sizeof(*videoDevice.videoBuffers));
-    if (!videoDevice.videoBuffers) {
+    // Populate a local buffer array first; only publish it to videoDevice
+    // once every entry has mmap'd successfully, so videoDevice.videoBuffers
+    // never points at a partially-initialized or already-freed allocation.
+    struct buffer *newBuffers =
+        (struct buffer *)calloc(req.count, sizeof(*newBuffers));
+    if (!newBuffers) {
         std::cout << "Unable to allocate video buffers in the driver"
                   << std::endl;
         return -1;
     }
 
     int length, offset;
-    for (videoDevice.nVideoBuffers = 0; videoDevice.nVideoBuffers < req.count;
-         videoDevice.nVideoBuffers++) {
+    unsigned int newCount;
+    for (newCount = 0; newCount < req.count; newCount++) {
 
         CLEAR(buf);
         buf.type = videoDevice.videoBuffersType;
         buf.memory = V4L2_MEMORY_MMAP;
-        buf.index = videoDevice.nVideoBuffers;
+        buf.index = newCount;
         buf.m.planes = videoDevice.planes;
         buf.length = 1;
 
@@ -1047,6 +1050,7 @@ int Adsd3500::SetFrameType() {
             std::cout << "VIDIOC_QUERYBUF error "
                       << "errno: " << errno << " error: " << strerror(errno)
                       << std::endl;
+            free(newBuffers);
             return -1;
         }
 
@@ -1058,20 +1062,23 @@ int Adsd3500::SetFrameType() {
             offset = buf.m.planes[0].m.mem_offset;
         }
 
-        videoDevice.videoBuffers[videoDevice.nVideoBuffers].start =
+        newBuffers[newCount].start =
             mmap(NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED,
                  videoDevice.videoCaptureDeviceId, offset);
 
-        if (videoDevice.videoBuffers[videoDevice.nVideoBuffers].start ==
-            MAP_FAILED) {
+        if (newBuffers[newCount].start == MAP_FAILED) {
             std::cout << "mmap error "
                       << "errno: " << errno << " error: " << strerror(errno)
                       << std::endl;
+            free(newBuffers);
             return -1;
         }
 
-        videoDevice.videoBuffers[videoDevice.nVideoBuffers].length = length;
+        newBuffers[newCount].length = length;
     }
+
+    videoDevice.videoBuffers = newBuffers;
+    videoDevice.nVideoBuffers = newCount;
 
     return 0;
 }
