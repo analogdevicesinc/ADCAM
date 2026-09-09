@@ -570,7 +570,7 @@ void ADIView::normalizeABBuffer(uint16_t *abBuffer, uint16_t abWidth,
                                 uint16_t abHeight, bool advanceScaling,
                                 bool useLogScaling) {
 
-    size_t imageSize = abHeight * abWidth;
+    size_t imageSize = static_cast<size_t>(abHeight) * abWidth;
 
     uint32_t min_value_of_AB_pixel = 0xFFFF;
     uint32_t max_value_of_AB_pixel = 1;
@@ -713,11 +713,11 @@ void ADIView::_displayAbImage() {
         normalizeABBuffer(_ab_video_data, frameWidth, frameHeight,
                           getAutoScale(), getLogImage());
 
-        size_t imageSize = frameHeight * frameWidth;
+        size_t imageSize = static_cast<size_t>(frameHeight) * frameWidth;
         size_t bgrSize = 0;
 
         if (ab_video_data_8bit == nullptr) {
-            ab_video_data_8bit = new uint8_t[frameHeight * frameWidth * 3];
+            ab_video_data_8bit = new uint8_t[imageSize * 3];
         }
 
         for (int32_t dummyCtr = 0; dummyCtr < imageSize; dummyCtr++) {
@@ -956,12 +956,12 @@ void ADIView::_displayDepthImage() {
         frameWidth = static_cast<int>(frameDepthDetails.width);
 
         constexpr uint8_t PixelMax = std::numeric_limits<uint8_t>::max();
-        size_t imageSize = frameHeight * frameWidth;
+        size_t imageSize = static_cast<size_t>(frameHeight) * frameWidth;
         size_t bgrSize = 0;
 
         if (depth_video_data_8bit == nullptr) {
             depth_video_data_8bit =
-                new uint8_t[frameHeight * frameWidth * 3]; //Multiplied by BGR
+                new uint8_t[imageSize * 3]; //Multiplied by BGR
         }
 
         float fRed = 0.f;
@@ -1059,7 +1059,7 @@ void ADIView::_displayPointCloudImage() {
         frameWidth = static_cast<int>(frameXyzDetails.width);
 
         //Size is [XX, YY, ZZ] x Width x Height
-        size_t frameSize = frameHeight * frameWidth * 3;
+        size_t frameSize = static_cast<size_t>(frameHeight) * frameWidth * 3;
         if (normalized_vertices == nullptr ||
             pointcloudTableSize != frameSize) {
             if (normalized_vertices) {
