@@ -8,7 +8,7 @@
 ```
 Usage:
       data_collect CONFIG
-      data_collect [--f <folder>] [--n <ncapture>] [--m <mode>] [--wt <warmup>] [--ccb FILE] [--ip <ip>] [--fw <firmware>] [-s | --split] [-t | --netlinktest] CONFIG
+      data_collect [--f <folder>] [--n <ncapture>] [--m <mode>] [--wt <warmup>] [--ccb FILE] [--ip <ip>] [-s | --split] [-t | --netlinktest] CONFIG
       data_collect (-h | --help)
 
     Arguments:
@@ -22,7 +22,6 @@ Usage:
       --wt <warmup>      Warmup Time (sec) [default: 0]
       --ccb <FILE>       The path to store CCB content
       --ip <ip>          Camera IP
-      --fw <firmware>    Adsd3500 fw file
       --split            Save each frame into a separate file (Debug)
       --netlinktest      Puts server on target in test mode (Debug)
       --singlethread     Store the frame to file using same tread
@@ -55,5 +54,5 @@ None
 
 ## Troubleshooting
 * If you see the error "Could not initialize camera!" it could because the USB device could not be opened. Check the USB device connection. If the USB connection is proper then, it is because of the config file path passed is incorrect. Check the config file passed in camera->initialize() function.
-* If you see the error "Could not start camera!" it is because of depth compute initialization failed or downloading the firmware to camera is failed or may be due to setting calibration parameters, check the camera calibration file and sensor firmware file passed are correct.
+* If you see the error "Could not start camera!" it is because of depth compute initialization failed or may be due to setting calibration parameters, check the camera calibration file passed is correct.
 * If you see the error "config Json file is not provided.." pass the --c option with valid json file.
