@@ -592,6 +592,7 @@ build_kernel_Image() {
         "tegra234-p3767-camera-p3768-adsd3500.dtbo"
         "tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo"
         "tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dtbo"
+        "tegra234-p3767-camera-p3768-adsd3500-adtf3066-arducam-ar0234.dtbo"
     )
 
     local dtbo_count=0
@@ -605,7 +606,7 @@ build_kernel_Image() {
             log_warning "DTBO not found: ${dtbo}"
         fi
     done
-    log_success "Copied ${dtbo_count}/3 device tree overlays"
+    log_success "Copied ${dtbo_count}/4 device tree overlays"
 
     # Create kernel modules archive
     log_info "Creating kernel modules archive..."

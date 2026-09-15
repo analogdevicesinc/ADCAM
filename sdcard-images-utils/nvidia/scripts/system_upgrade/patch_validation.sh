@@ -168,7 +168,7 @@ function validate_extlinux_config() {
     fi
 
     # Check for required boot labels
-    local required_labels=("backup" "ADSD3500+ADSD3100" "ADSD3500-DUAL+ADSD3100" "ADSD3500-DUAL+ADSD3100+AR0234")
+    local required_labels=("backup" "ADSD3500+ADSD3100" "ADSD3500-DUAL+ADSD3100" "ADSD3500-DUAL+ADSD3100+AR0234" "ADSD3500+ADTF3066+AR0234")
     for label in "${required_labels[@]}"; do
         if grep -q "LABEL ${label}" "${extlinux_conf_file}"; then
             print_pass "Boot label '${label}' exists"
@@ -225,6 +225,7 @@ function validate_device_tree_overlays() {
         "/boot/adi/tegra234-p3767-camera-p3768-adsd3500.dtbo"
         "/boot/adi/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo"
         "/boot/adi/tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dtbo"
+        "/boot/adi/tegra234-p3767-camera-p3768-adsd3500-adtf3066-arducam-ar0234.dtbo"
     )
 
     for dtbo in "${dtbo_files[@]}"; do
