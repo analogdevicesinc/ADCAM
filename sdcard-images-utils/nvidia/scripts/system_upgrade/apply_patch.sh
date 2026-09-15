@@ -407,6 +407,14 @@ LABEL ADSD3500-DUAL+ADSD3100+AR0234
       INITRD /boot/initrd
       APPEND \${cbootargs} ${root_device} rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0
 
+LABEL ADSD3500+ADTF3066+AR0234
+    MENU LABEL ADSD3500+ADTF3066+AR0234: <GMSL3 ToF+RGB Camera>
+    LINUX /boot/adi/Image
+    FDT /boot/dtb/${dtb_file}
+    OVERLAYS /boot/adi/tegra234-p3767-camera-p3768-adsd3500-adtf3066-arducam-ar0234.dtbo
+    INITRD /boot/initrd
+    APPEND \${cbootargs} ${root_device} rw rootwait rootfstype=ext4 mminit_loglevel=4 console=ttyTCU0,115200 firmware_class.path=/etc/firmware fbcon=map:0 nospectre_bhb video=efifb:off console=tty0
+
 EOF
 
     # Set default boot label
@@ -466,7 +474,7 @@ display_summary() {
     echo "Boot configuration:"
     echo "  - Config file: ${EXTLINUX_CONF}"
     echo "  - Default boot: ${DEFAULT_LABEL}"
-    echo "  - Available labels: backup, ADSD3500+ADSD3100, ADSD3500-DUAL+ADSD3100, ADSD3500-DUAL+ADSD3100+AR0234"
+    echo "  - Available labels: backup, ADSD3500+ADSD3100, ADSD3500-DUAL+ADSD3100, ADSD3500-DUAL+ADSD3100+AR0234, ADSD3500+ADTF3066+AR0234"
 
     echo ""
     echo "Services configured:"
