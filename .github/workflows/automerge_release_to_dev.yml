@@ -24,16 +24,16 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
        
 
-      - name: Fetch dev-1.0.0 branch
+      - name: Fetch dev-1.1.0 branch
         run: |
-          git fetch origin dev-1.0.0 || echo "dev-1.0.0 does not exist yet"
+          git fetch origin dev-1.1.0 || echo "dev-1.1.0 does not exist yet"
 
-      - name: Checkout or create dev-1.0.0
+      - name: Checkout or create dev-1.1.0
         run: |
-          if git show-ref --verify --quiet refs/remotes/origin/dev-1.0.0; then
-            git checkout -b dev-1.0.0 origin/dev-1.0.0
+          if git show-ref --verify --quiet refs/remotes/origin/dev-1.1.0; then
+            git checkout -b dev-1.1.0 origin/dev-1.1.0
           else
-            git checkout -b dev-1.0.0
+            git checkout -b dev-1.1.0
           fi
           
       - name: Force replace dev branch with rel-1.1.0 branch contents (including submodules)
@@ -48,4 +48,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git dev-1.0.0 --force
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git dev-1.1.0 --force
