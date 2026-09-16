@@ -1,19 +1,19 @@
-name: Auto Merge rel-1.0.0 to dev branch (with submodules)
+name: Auto Merge rel-1.1.0 to dev branch (with submodules)
 
 on:
   push:
     branches:
-      - rel-1.0.0
+      - rel-1.1.0
 
 jobs:
   merge:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout rel-1.0.0 branch
+      - name: Checkout rel-1.1.0 branch
         uses: actions/checkout@v3
         with:
-          ref: rel-1.0.0
+          ref: rel-1.1.0
           fetch-depth: 0
           submodules: true
           persist-credentials: false
@@ -36,13 +36,13 @@ jobs:
             git checkout -b dev-1.0.0
           fi
           
-      - name: Force replace dev branch with rel-1.0.0 branch contents (including submodules)
+      - name: Force replace dev branch with rel-1.1.0 branch contents (including submodules)
         run: |
           set -e
-          git reset --hard origin/rel-1.0.0
+          git reset --hard origin/rel-1.1.0
           git submodule update --init --recursive
           git add .
-          git commit -m "Force sync dev branch with rel-1.0.0 branch (including submodules)" || echo "No changes to commit"
+          git commit -m "Force sync dev branch with rel-1.1.0 branch (including submodules)" || echo "No changes to commit"
 
       - name: Push changes to dev
         env:
