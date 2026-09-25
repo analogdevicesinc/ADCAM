@@ -92,7 +92,6 @@ var searchData=
   ['adsd3500setvcseldelay',['adsd3500SetVCSELDelay',['../classaditof_1_1_camera.html#aa8e25fa3a15666c00a89bc844cefcd36',1,'aditof::Camera']]],
   ['adsd3500status',['Adsd3500Status',['../namespaceaditof.html#a320673d4700814b3be0f55bc2efcf9d6',1,'aditof']]],
   ['adsd3500togglefsync',['adsd3500ToggleFsync',['../classaditof_1_1_camera.html#a31c2fa3ab4ddbffe78722a4faafe3ccb',1,'aditof::Camera']]],
-  ['adsd3500updatefirmware',['adsd3500UpdateFirmware',['../classaditof_1_1_camera.html#a9e03e6987bb51a707e4d3389583652c9',1,'aditof::Camera']]],
   ['adsderrors',['ADSDErrors',['../classaditof_1_1_a_d_s_d_errors.html',1,'aditof']]],
   ['adsds3500setdynamicmodeswitchingsequence',['adsds3500setDynamicModeSwitchingSequence',['../classaditof_1_1_camera.html#a0d19f12fbb4a606d722f7218596db607',1,'aditof::Camera']]],
   ['adtf3066',['ADTF3066',['../namespaceaditof.html#a6678e35b423629a2de13db733ddfcd50aa0106f704cc50f89310aa1682d894a1b',1,'aditof']]],

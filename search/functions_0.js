@@ -44,6 +44,5 @@ var searchData=
   ['adsd3500settogglemode',['adsd3500SetToggleMode',['../classaditof_1_1_camera.html#a9e9d77b97b404912bc62f4b70b2682ce',1,'aditof::Camera']]],
   ['adsd3500setvcseldelay',['adsd3500SetVCSELDelay',['../classaditof_1_1_camera.html#aa8e25fa3a15666c00a89bc844cefcd36',1,'aditof::Camera']]],
   ['adsd3500togglefsync',['adsd3500ToggleFsync',['../classaditof_1_1_camera.html#a31c2fa3ab4ddbffe78722a4faafe3ccb',1,'aditof::Camera']]],
-  ['adsd3500updatefirmware',['adsd3500UpdateFirmware',['../classaditof_1_1_camera.html#a9e03e6987bb51a707e4d3389583652c9',1,'aditof::Camera']]],
   ['adsds3500setdynamicmodeswitchingsequence',['adsds3500setDynamicModeSwitchingSequence',['../classaditof_1_1_camera.html#a0d19f12fbb4a606d722f7218596db607',1,'aditof::Camera']]]
 ];

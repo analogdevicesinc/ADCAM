@@ -135,9 +135,6 @@ virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="c
 <tr class="memitem:a175fc6effb278e552044526f6b789ac1"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classaditof_1_1_camera.html#a175fc6effb278e552044526f6b789ac1">enableDepthCompute</a> (bool enable)=0</td></tr>
 <tr class="memdesc:a175fc6effb278e552044526f6b789ac1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable or disable the depth processing on the frames received from the sensor Must be called after getFrame() where the depth processing happens.  <a href="#a175fc6effb278e552044526f6b789ac1">More...</a><br /></td></tr>
 <tr class="separator:a175fc6effb278e552044526f6b789ac1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9e03e6987bb51a707e4d3389583652c9"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classaditof_1_1_camera.html#a9e03e6987bb51a707e4d3389583652c9">adsd3500UpdateFirmware</a> (const std::string &amp;fwFilePath)=0</td></tr>
-<tr class="memdesc:a9e03e6987bb51a707e4d3389583652c9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Update the firmware of ADSD3500 with the content found in the specified file.  <a href="#a9e03e6987bb51a707e4d3389583652c9">More...</a><br /></td></tr>
-<tr class="separator:a9e03e6987bb51a707e4d3389583652c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9e9d77b97b404912bc62f4b70b2682ce"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classaditof_1_1_camera.html#a9e9d77b97b404912bc62f4b70b2682ce">adsd3500SetToggleMode</a> (int mode)=0</td></tr>
 <tr class="memdesc:a9e9d77b97b404912bc62f4b70b2682ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enables or disables FSYNC toggle for ADSD3500.  <a href="#a9e9d77b97b404912bc62f4b70b2682ce">More...</a><br /></td></tr>
 <tr class="separator:a9e9d77b97b404912bc62f4b70b2682ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1881,41 +1878,6 @@ virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="c
 </div><div class="memdoc">
 
 <p>Toggles ADSD3500 FSYNC once if automated FSYNC is disabled. </p>
-<dl class="section return"><dt>Returns</dt><dd>Status </dd></dl>
-
-</div>
-</div>
-<a id="a9e03e6987bb51a707e4d3389583652c9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9e03e6987bb51a707e4d3389583652c9">&#9670;&nbsp;</a></span>adsd3500UpdateFirmware()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">Status</a> aditof::Camera::adsd3500UpdateFirmware </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>fwFilePath</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Update the firmware of ADSD3500 with the content found in the specified file. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">fwFilePath</td><td>- A path to a file (including file name and extension) where the firmware for adsd3500 is stored. </td></tr>
-  </table>
-  </dd>
-</dl>
 <dl class="section return"><dt>Returns</dt><dd>Status </dd></dl>
 
 </div>
