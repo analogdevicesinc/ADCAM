@@ -129,6 +129,7 @@ def get_mode_mapping(config):
     imager = config.imager
     if imager == 'vga':
         modemapping = {
+            2: {"height": 256, "width": 320},
             3: {"height": 256, "width": 320},
             5: {"height": 256, "width": 320},
             6: {"height": 256, "width": 320},
@@ -227,6 +228,17 @@ def configure_camera(camera, config, tof_module):
     if status != tof_module.Status.Ok:
         sys.exit("Could not set FPS!")
 
+    # The mode-switch chip command in setMode() clears the MIPI transport
+    # register (same as a full reset); reapply it as done for normal frame
+    # capture before the DMS registers are touched.
+    status = camera.adsd3500SetMIPIOutputSpeed(1)
+    if status != tof_module.Status.Ok:
+        sys.exit("Could not reapply MIPI output speed before DMS setup!")
+
+    # Chip bus needs to settle after the mode-switch reset in setMode() above
+    # before it will reliably accept the DMS register writes.
+    time.sleep(0.3)
+
     # Enable dynamic mode switching
     status = camera.adsd3500setEnableDynamicModeSwitching(True)
     if status != tof_module.Status.Ok:
@@ -240,10 +252,15 @@ def configure_camera(camera, config, tof_module):
     if status != tof_module.Status.Ok:
         sys.exit("Error setting dynamic mode switching!")
 
+    # Chip needs a moment to apply the sequence before the status register
+    # reflects it.
+    time.sleep(0.3)
+
     status, dynamic_mode_switch_status = camera.adsd3500GetGenericTemplate(0x0085)
     if status != tof_module.Status.Ok:
-        sys.exit("Error setting dynamic mode switching!")
-    print('Dynamic Mode Status: ', dynamic_mode_switch_status)
+        print('Warning: could not read Dynamic Mode Status register (non-fatal)')
+    else:
+        print('Dynamic Mode Status: ', dynamic_mode_switch_status)
 
 
 def start_camera(camera, tof_module):

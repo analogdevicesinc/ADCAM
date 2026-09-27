@@ -390,18 +390,12 @@ int main(int argc, char *argv[]) {
             std::chrono::milliseconds(5)); // Sleep for 5ms
     }
 
+    // Camera does not expose a recorded-frame counter; give the recorder
+    // a brief grace period to flush any frames still being written.
     LOG(INFO) << "Waiting for frames to be written...";
-    uint32_t framesWritten = 0;
-    framesWritten = camera->getRecordedFrameCount();
-    int waitCount = 0;
-    while (framesWritten < n_frames && waitCount < 100) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        framesWritten = camera->getRecordedFrameCount();
-        waitCount++;
-    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    LOG(INFO) << "Capture complete. Frames requested: " << frames_captured
-              << ", Frames written: " << framesWritten;
+    LOG(INFO) << "Capture complete. Frames requested: " << frames_captured;
     status = camera->stopRecording();
     if (status != Status::OK) {
         LOG(WARNING) << "Unable to stop recording!";

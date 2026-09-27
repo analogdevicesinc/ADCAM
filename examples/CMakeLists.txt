@@ -4,6 +4,7 @@ project(examples)
 add_subdirectory(first-frame)
 add_subdirectory(data_collect)
 add_subdirectory(tof-viewer)
+add_subdirectory(dynamic_mode_switching)
 # adsd3500_sample_program requires proprietary ToFi libraries
 if(ON_TARGET AND NOT USE_DEPTH_COMPUTE_OPENSOURCE)
     add_subdirectory(adsd3500_sample_program)
@@ -15,6 +16,7 @@ install(PROGRAMS
     $<TARGET_FILE:first-frame>
     $<TARGET_FILE:data_collect>
     $<TARGET_FILE:ADIToFGUI>
+    $<TARGET_FILE:dynamic_mode_switching>
     DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
 if(ON_TARGET AND NOT USE_DEPTH_COMPUTE_OPENSOURCE)
