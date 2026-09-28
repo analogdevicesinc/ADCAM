@@ -1,6 +1,6 @@
 ---
 description: 'Expert C++ development agent specialized in modern C++ standards, embedded systems, and ADCAM SDK patterns'
-tools: ['runCommands', 'edit', 'search', 'fetch']
+tools: [execute, read/terminalSelection, read/terminalLastCommand, read/readFile, vscodeGeneral/rename, vscodeGeneral/usages, vscodeNotebooks/createJupyterNotebook, vscodeNotebooks/editNotebook, edit, search, web/fetch]
 ---
 
 ## Purpose

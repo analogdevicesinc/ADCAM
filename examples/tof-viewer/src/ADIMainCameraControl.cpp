@@ -29,7 +29,9 @@
 #include "aditof/system.h"
 #include "aditof/version.h"
 #include <aditof/log.h>
+#include <chrono>
 #include <iostream>
+#include <thread>
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include "psapi.h"
@@ -182,6 +184,53 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     if (status != aditof::Status::OK) {
         LOG(ERROR) << "Could not set camera mode!";
         return false;
+    }
+
+    if (!m_off_line) {
+        if (m_dms_enabled) {
+            uint8_t modeB = static_cast<uint8_t>(m_dms_second_mode_selection);
+
+            // The mode-switch chip command above clears the MIPI transport
+            // register; reapply it before the DMS registers are touched.
+            status = GetActiveCamera()->adsd3500SetMIPIOutputSpeed(1);
+            if (status != aditof::Status::OK) {
+                LOG(ERROR) << "Could not reapply MIPI output speed before "
+                              "Dynamic Mode Switching setup!";
+                return false;
+            }
+
+            // Chip bus needs to settle after the mode-switch reset before
+            // it will reliably accept the DMS register writes.
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+            status =
+                GetActiveCamera()->adsd3500setEnableDynamicModeSwitching(true);
+            if (status != aditof::Status::OK) {
+                LOG(ERROR) << "Could not enable Dynamic Mode Switching!";
+                return false;
+            }
+
+            std::vector<std::pair<uint8_t, uint8_t>> sequence = {
+                {mode, 1},  // Mode A, repeat 1 time
+                {modeB, 1}, // Mode B, repeat 1 time
+            };
+            status = GetActiveCamera()->adsds3500setDynamicModeSwitchingSequence(
+                sequence);
+            if (status != aditof::Status::OK) {
+                LOG(ERROR) << "Could not set Dynamic Mode Switching sequence!";
+                return false;
+            }
+
+            LOG(INFO) << "Dynamic Mode Switching enabled: mode "
+                      << (int)mode << " <-> mode " << (int)modeB;
+            m_dms_was_enabled = true;
+        } else if (m_dms_was_enabled) {
+            // Only touch the DMS register if it was previously turned on;
+            // the default (never-used) path stays byte-identical to the
+            // pre-DMS behavior with no extra chip communication.
+            GetActiveCamera()->adsd3500setEnableDynamicModeSwitching(false);
+            m_dms_was_enabled = false;
+        }
     }
 #if 0 //Andre
     if (!m_off_line) {
