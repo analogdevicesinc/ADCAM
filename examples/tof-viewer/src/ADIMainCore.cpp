@@ -250,6 +250,14 @@ void ADIMainWindow::InitializeTooltips() {
     ADIRegisterTooltip(
         "WizardOnlineSelectMode",
         "Select camera operating mode (resolution and frame format)");
+    ADIRegisterTooltip(
+        "WizardOnlineDynamicModeSwitching",
+        "When enabled, the camera automatically alternates between two "
+        "modes every frame");
+    ADIRegisterTooltip(
+        "WizardOnlineDynamicModeSwitchingSecondMode",
+        "Second mode to alternate into; the mode selected above is used "
+        "as the first mode");
     ADIRegisterTooltip("WizardOnlineLoadConfig",
                        "Load depth processing configuration from JSON file");
     ADIRegisterTooltip(
@@ -870,13 +878,6 @@ void ADIMainWindow::Render() {
                     m_view_instance->cleanUp();
                 }
 
-                auto camera = GetActiveCamera();
-                if (camera && false) {
-                    LOG(INFO) << "*** adsd3500setEnableDynamicModeSwitching "
-                                 "disabled ***";
-                    camera->adsd3500setEnableDynamicModeSwitching(false);
-                }
-
                 m_frame_window_position_state = 0;
                 m_view_selection_changed = m_view_selection;
                 m_last_mode = m_mode_selection;
@@ -1363,6 +1364,23 @@ void ADIMainWindow::ShowStartWizard() {
                     m_ini_params.clear();
                 }
                 ImGuiExtensions::ADIShowTooltipFor("WizardOnlineSelectMode");
+
+                NewLine(5.0f);
+
+                ImGuiExtensions::ADICheckbox("Enable Dynamic Mode Switching",
+                                             &m_dms_enabled);
+                ImGuiExtensions::ADIShowTooltipFor(
+                    "WizardOnlineDynamicModeSwitching");
+
+                if (m_dms_enabled) {
+                    NewLine(5.0f);
+                    ImGuiExtensions::ADIComboBox(
+                        "Second Mode", "Selected Second Mode",
+                        ImGuiSelectableFlags_None, m_cameraModesDropDown,
+                        &m_dms_second_mode_selection, true);
+                    ImGuiExtensions::ADIShowTooltipFor(
+                        "WizardOnlineDynamicModeSwitchingSecondMode");
+                }
 
                 NewLine(5.0f);
 

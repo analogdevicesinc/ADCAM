@@ -663,6 +663,9 @@ class ADIMainWindow {
     int32_t m_main_window_width;
     int32_t m_mode_selection = 0;
     int32_t m_mode_select_changed = 0; //flag when changed
+    bool m_dms_enabled = false;
+    bool m_dms_was_enabled = false;
+    int32_t m_dms_second_mode_selection = 0;
     bool m_is_playing = false;
     int32_t m_view_selection = 0;
     int32_t m_view_selection_changed = 0; //flag when changed
