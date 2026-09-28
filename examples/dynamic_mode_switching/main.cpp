@@ -60,28 +60,43 @@ static const char Help_Menu[] =
 
 /**
  * @brief Save a frame's data to a binary file, tagged by the mode it belongs to.
+ *
+ * In Dynamic Mode Switching the Frame object is sized for the primary mode, so
+ * the built-in per-type pointers/bytesCount don't match an alternate mode's
+ * smaller layout. Chunk the raw "frameData" buffer using this mode's own
+ * width/height instead, matching the tofi output packing: depth | ab | conf.
  */
 static Status save_frame(aditof::Frame &frame, const std::string &frameType,
-                         int mode_num) {
-    uint16_t *data1;
-    FrameDataDetails fDetails;
-
-    if (!frame.haveDataType(frameType)) {
-        LOG(WARNING) << "Frame doesn't have data of type " << frameType;
-        return Status::INVALID_ARGUMENT;
-    }
-
-    Status status = frame.getData(frameType, &data1);
-    if (status != Status::OK || !data1) {
-        LOG(ERROR) << "Could not get frame data " << frameType;
+                         int mode_num, uint32_t width, uint32_t height) {
+    uint16_t *frameData = nullptr;
+    Status status = frame.getData("frameData", &frameData);
+    if (status != Status::OK || !frameData) {
+        LOG(ERROR) << "Could not get raw frameData buffer";
         return Status::GENERIC_ERROR;
     }
 
-    frame.getDataDetails(frameType, fDetails);
+    const uint32_t numPixels = width * height;
+    size_t offsetU16 = 0; // offset within frameData in uint16_t units
+    size_t byteCount = 0;
+
+    if (frameType == "depth") {
+        offsetU16 = 0;
+        byteCount = static_cast<size_t>(numPixels) * sizeof(uint16_t);
+    } else if (frameType == "ab") {
+        offsetU16 = numPixels;
+        byteCount = static_cast<size_t>(numPixels) * sizeof(uint16_t);
+    } else if (frameType == "conf") {
+        offsetU16 = static_cast<size_t>(numPixels) * 2;
+        byteCount = static_cast<size_t>(numPixels) * sizeof(float);
+    } else {
+        LOG(WARNING) << "Unsupported frame type for chunking: " << frameType;
+        return Status::INVALID_ARGUMENT;
+    }
+
     std::ofstream out("out_" + frameType + "_mode_" + std::to_string(mode_num) +
                           ".bin",
                       std::ios::binary);
-    out.write(reinterpret_cast<char *>(data1), fDetails.bytesCount);
+    out.write(reinterpret_cast<char *>(frameData + offsetU16), byteCount);
     out.close();
 
     return Status::OK;
@@ -168,6 +183,22 @@ int main(int argc, char *argv[]) {
                        << " is not available on this camera!";
             return 0;
         }
+    }
+
+    // Capture each mode's true base resolution up front (Frame details reflect
+    // whichever mode was last set, so record them before DMS interleaving).
+    std::map<uint8_t, std::pair<uint32_t, uint32_t>> modeDims;
+    for (uint8_t m : {modeB, modeA}) { // end with modeA set (the DMS primary)
+        if (camera->setMode(m) != Status::OK) {
+            LOG(ERROR) << "Could not set camera mode " << static_cast<int>(m);
+            return 0;
+        }
+        CameraDetails details;
+        camera->getDetails(details);
+        modeDims[m] = {details.frameType.width, details.frameType.height};
+        LOG(INFO) << "Mode " << static_cast<int>(m) << " resolution: "
+                  << details.frameType.width << "x"
+                  << details.frameType.height;
     }
 
     status = camera->setMode(modeA);
@@ -268,10 +299,20 @@ int main(int argc, char *argv[]) {
                       << " C";
 
             if (metadata.imagerMode == modeA && !haveModeA) {
-                save_frame(frame, "depth", modeA);
+                save_frame(frame, "depth", modeA, modeDims[modeA].first,
+                           modeDims[modeA].second);
+                save_frame(frame, "ab", modeA, modeDims[modeA].first,
+                           modeDims[modeA].second);
+                save_frame(frame, "conf", modeA, modeDims[modeA].first,
+                           modeDims[modeA].second);
                 haveModeA = true;
             } else if (metadata.imagerMode == modeB && !haveModeB) {
-                save_frame(frame, "depth", modeB);
+                save_frame(frame, "depth", modeB, modeDims[modeB].first,
+                           modeDims[modeB].second);
+                save_frame(frame, "ab", modeB, modeDims[modeB].first,
+                           modeDims[modeB].second);
+                save_frame(frame, "conf", modeB, modeDims[modeB].first,
+                           modeDims[modeB].second);
                 haveModeB = true;
             }
 
