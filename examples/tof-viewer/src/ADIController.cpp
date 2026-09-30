@@ -152,8 +152,12 @@ void ADIController::calculateFrameLoss(const uint32_t frameNumber,
         return;
     }
 
-    if (currentFrameNumber - prevFrameNumber > 1) {
-        m_frames_lost += (currentFrameNumber - prevFrameNumber - 1);
+    // In mode fusion the frameNumber advances by m_frame_number_step (2) per
+    // delivered frame, so only count gaps beyond that step as real loss.
+    const uint32_t delta = currentFrameNumber - prevFrameNumber;
+    const uint32_t step = m_frame_number_step ? m_frame_number_step : 1;
+    if (delta > step) {
+        m_frames_lost += (delta / step) - 1;
     }
 }
 
@@ -288,8 +292,11 @@ bool ADIController::OutputDeltaTime(uint32_t frameNumber) {
     // Calculate expected vs. actual frame counts
     uint32_t first_frame = m_frame_history.front().frame_number;
     uint32_t last_frame = m_frame_history.back().frame_number;
+    // Account for the fusion frameNumber step (2) so the expected count matches
+    // the delivered-frame cadence.
+    const uint32_t step = m_frame_number_step ? m_frame_number_step : 1;
     uint32_t expected_frames =
-        (last_frame - first_frame) + 1; // +1 includes both endpoints
+        (last_frame - first_frame) / step + 1; // +1 includes both endpoints
     uint32_t actual_frames = static_cast<uint32_t>(m_frame_history.size());
 
     // Avoid division by zero

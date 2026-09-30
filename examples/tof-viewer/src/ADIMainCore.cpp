@@ -1367,7 +1367,7 @@ void ADIMainWindow::ShowStartWizard() {
 
                 NewLine(5.0f);
 
-                ImGuiExtensions::ADICheckbox("Enable Dynamic Mode Switching",
+                ImGuiExtensions::ADICheckbox("Mode Fusion",
                                              &m_dms_enabled);
                 ImGuiExtensions::ADIShowTooltipFor(
                     "WizardOnlineDynamicModeSwitching");

@@ -45,7 +45,7 @@ static const char Help_Menu[] =
     dynamic_mode_switching (-h | --help)
     dynamic_mode_switching [-ip | --ip <ip>] [-m0 | --m0 <modeA>] [-m1 | --m1 <modeB>]
                            [-config | --config <config_file.json>] [-fps | --fps <fps>]
-                           [-n | --n <pairs>]
+                           [-n | --n <pairs>] [-fuse | --fuse <0|1>]
 
     Options:
       -h --help              Show this screen.
@@ -53,6 +53,7 @@ static const char Help_Menu[] =
       -m1 --m1 <modeB>       Second mode in the switching sequence. [default: 1]
       -fps --fps <fps>       Frame rate to configure. [default: 20]
       -n --n <pairs>         Number of (modeA, modeB) frame pairs to capture. [default: 1]
+      -fuse --fuse <0|1>     Fuse the two modes into a single depth frame (SR+LR). [default: 0]
       -config <config.json>  Optional JSON config file with depth parameters.
       -ip <ip>               Camera IP address (network cameras only).
 
@@ -110,6 +111,7 @@ int main(int argc, char *argv[]) {
         {"-m1", {"--m1", false, "", "1", true}},
         {"-fps", {"--fps", false, "", "20", true}},
         {"-n", {"--n", false, "", "1", true}},
+        {"-fuse", {"--fuse", false, "", "0", true}},
         {"-config", {"--config", false, "last", "", false}}};
 
     CommandParser command;
@@ -151,6 +153,7 @@ int main(int argc, char *argv[]) {
     uint8_t modeB = static_cast<uint8_t>(std::stoi(command_map["-m1"].value));
     uint16_t fps = static_cast<uint16_t>(std::stoi(command_map["-fps"].value));
     int pairsToCapture = std::stoi(command_map["-n"].value);
+    bool fuse = (std::stoi(command_map["-fuse"].value) != 0);
     std::string configFile = command_map["-config"].value;
     std::string ip;
     if (!command_map["-ip"].value.empty()) {
@@ -241,6 +244,14 @@ int main(int argc, char *argv[]) {
         {modeA, 1}, // Mode A, repeat 1 time
         {modeB, 1}, // Mode B, repeat 1 time
     };
+    // Fusion is off at the SDK level by default (plain alternation delivers
+    // each mode's frames separately). Opt in with -fuse 1 to have the two
+    // modes concatenated into a single fused SR+LR depth frame.
+    status = camera->setModeFusionEnabled(fuse);
+    if (status != Status::OK) {
+        LOG(ERROR) << "Could not set mode fusion state!";
+        return 0;
+    }
     status = camera->adsds3500setDynamicModeSwitchingSequence(sequence);
     if (status != Status::OK) {
         LOG(ERROR) << "Could not set Dynamic Mode Switching sequence!";
@@ -271,6 +282,46 @@ int main(int argc, char *argv[]) {
     aditof::Frame frame;
     Metadata metadata;
     const int maxTriesPerPair = 10;
+
+    if (fuse) {
+        // With fusion enabled the SDK delivers a single combined SR+LR frame
+        // (tagged with the long-range mode) instead of the two modes
+        // separately, so just capture the requested number of fused frames.
+        const uint8_t lrMode =
+            (modeA == 7 || modeA == 8) ? modeA : modeB;
+        for (int i = 0; i < pairsToCapture; ++i) {
+            status = camera->requestFrame(&frame);
+            if (status != Status::OK) {
+                LOG(ERROR) << "Could not request frame!";
+                camera->stop();
+                return 0;
+            }
+            status = frame.getMetadataStruct(metadata);
+            if (status != Status::OK) {
+                LOG(ERROR) << "Could not read frame metadata!";
+                camera->stop();
+                return 0;
+            }
+            LOG(INFO) << "Captured fused frame (reported mode "
+                      << static_cast<int>(metadata.imagerMode)
+                      << ") | Sensor Temp: " << metadata.sensorTemperature
+                      << " C | Laser Temp: " << metadata.laserTemperature
+                      << " C";
+            save_frame(frame, "depth", lrMode, modeDims[lrMode].first,
+                       modeDims[lrMode].second);
+            save_frame(frame, "ab", lrMode, modeDims[lrMode].first,
+                       modeDims[lrMode].second);
+            save_frame(frame, "conf", lrMode, modeDims[lrMode].first,
+                       modeDims[lrMode].second);
+        }
+
+        status = camera->stop();
+        if (status != Status::OK) {
+            LOG(ERROR) << "Could not stop the camera!";
+            return 0;
+        }
+        return 0;
+    }
 
     for (int pair = 0; pair < pairsToCapture; ++pair) {
         bool haveModeA = false;
