@@ -598,6 +598,31 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             NewLine(5.0f);
         }
 
+        if (haveDepth) {
+            DrawBarLabel("Depth");
+            NewLine(5.0f);
+            // Numeric entry for the depth range (mm) the depth-window colormap
+            // spans; typeable boxes with +/- step buttons, applied live.
+            int dMin = m_view_instance->minRange;
+            int dMax = m_view_instance->maxRange;
+            bool changed = false;
+            ImGui::PushItemWidth(120.0f);
+            if (ImGui::InputInt("Min (mm)", &dMin, 50, 500))
+                changed = true;
+            if (ImGui::InputInt("Max (mm)", &dMax, 50, 500))
+                changed = true;
+            ImGui::PopItemWidth();
+            if (changed) {
+                if (dMin < 0)
+                    dMin = 0;
+                if (dMax <= dMin)
+                    dMax = dMin + 1;
+                m_view_instance->minRange = dMin;
+                m_view_instance->maxRange = dMax;
+            }
+            NewLine(5.0f);
+        }
+
         if (haveAB) {
             DrawBarLabel("Active Brightness");
             NewLine(5.0f);

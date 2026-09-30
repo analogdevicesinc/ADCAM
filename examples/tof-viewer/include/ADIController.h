@@ -265,6 +265,17 @@ class ADIController {
      */
     aditof::Status getFramesLost(uint32_t &framesLost);
 
+    /**
+     * @brief Reflect SR/LR mode fusion in the frame-loss/drop calculations.
+     *        When enabled, each delivered frame consumes two sensor frames, so
+     *        the embedded frameNumber advances by 2; without this the loss
+     *        counter reports ~50% false loss.
+     * @param[in] enabled True when mode fusion (DMS) is active.
+     */
+    void setModeFusionEnabled(bool enabled) {
+        m_frame_number_step = enabled ? 2u : 1u;
+    }
+
     /** @brief List of available cameras */
     std::vector<std::shared_ptr<aditof::Camera>> m_cameras;
 
@@ -332,6 +343,9 @@ class ADIController {
     uint32_t m_frames_lost = 0;
     uint32_t m_prev_frame_number = -1;
     uint32_t m_current_frame_number = 0;
+    // Sensor frameNumber increment between delivered frames: 1 normally, 2 when
+    // mode fusion is enabled (each output consumes two sensor frames).
+    uint32_t m_frame_number_step = 1;
 
     // Frame-drop detection state: rolling window tracking
     // Stores (frame_number, timestamp) pairs for recent frames
