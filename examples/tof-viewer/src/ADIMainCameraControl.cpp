@@ -110,6 +110,10 @@ void ADIMainWindow::InitCamera(std::string filePath) {
         camera->getAvailableModes(_cameraModes);
         sort(_cameraModes.begin(), _cameraModes.end());
 
+        aditof::ImagerType imagerType = aditof::ImagerType::UNSET;
+        camera->getImagerType(imagerType);
+        const bool isAdtf3066 = (imagerType == aditof::ImagerType::ADTF3066);
+
         for (uint32_t i = 0; i < (uint32_t)_cameraModes.size(); ++i) {
             aditof::DepthSensorModeDetails modeDetails;
 
@@ -120,9 +124,18 @@ void ADIMainWindow::InitCamera(std::string filePath) {
             s = s + ":" + std::to_string(modeDetails.baseResolutionWidth) +
                 "x" + std::to_string(modeDetails.baseResolutionHeight) + ",";
             if (!modeDetails.isPCM) {
-                std::string append = (modeDetails.numberOfFrequencies == 2)
-                                         ? "Short Range"
-                                         : "Long Range";
+                std::string append;
+                if (isAdtf3066) {
+                    // ADTF3066 (hardcoded): LR = modes 7, 8; SR = 0, 1, 3, 6.
+                    // Frequency count can't classify these (SR mode 1 and LR
+                    // mode 7 are both 3-frequency).
+                    uint8_t m = modeDetails.modeNumber;
+                    append = (m == 7 || m == 8) ? "Long Range" : "Short Range";
+                } else {
+                    append = (modeDetails.numberOfFrequencies == 2)
+                                 ? "Short Range"
+                                 : "Long Range";
+                }
                 s = s + append;
             } else {
                 s = s + "PCM";
@@ -186,52 +199,6 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
         return false;
     }
 
-    if (!m_off_line) {
-        if (m_dms_enabled) {
-            uint8_t modeB = static_cast<uint8_t>(m_dms_second_mode_selection);
-
-            // The mode-switch chip command above clears the MIPI transport
-            // register; reapply it before the DMS registers are touched.
-            status = GetActiveCamera()->adsd3500SetMIPIOutputSpeed(1);
-            if (status != aditof::Status::OK) {
-                LOG(ERROR) << "Could not reapply MIPI output speed before "
-                              "Dynamic Mode Switching setup!";
-                return false;
-            }
-
-            // Chip bus needs to settle after the mode-switch reset before
-            // it will reliably accept the DMS register writes.
-            std::this_thread::sleep_for(std::chrono::milliseconds(300));
-
-            status =
-                GetActiveCamera()->adsd3500setEnableDynamicModeSwitching(true);
-            if (status != aditof::Status::OK) {
-                LOG(ERROR) << "Could not enable Dynamic Mode Switching!";
-                return false;
-            }
-
-            std::vector<std::pair<uint8_t, uint8_t>> sequence = {
-                {mode, 1},  // Mode A, repeat 1 time
-                {modeB, 1}, // Mode B, repeat 1 time
-            };
-            status = GetActiveCamera()->adsds3500setDynamicModeSwitchingSequence(
-                sequence);
-            if (status != aditof::Status::OK) {
-                LOG(ERROR) << "Could not set Dynamic Mode Switching sequence!";
-                return false;
-            }
-
-            LOG(INFO) << "Dynamic Mode Switching enabled: mode "
-                      << (int)mode << " <-> mode " << (int)modeB;
-            m_dms_was_enabled = true;
-        } else if (m_dms_was_enabled) {
-            // Only touch the DMS register if it was previously turned on;
-            // the default (never-used) path stays byte-identical to the
-            // pre-DMS behavior with no extra chip communication.
-            GetActiveCamera()->adsd3500setEnableDynamicModeSwitching(false);
-            m_dms_was_enabled = false;
-        }
-    }
 #if 0 //Andre
     if (!m_off_line) {
         status = GetActiveCamera()->adsd3500SetFrameRate(m_user_frame_rate);
@@ -308,6 +275,64 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
         m_view_instance->setABMaxRange(value);
     }
 
+    // Enable Dynamic Mode Switching last, after every depth-parameter and
+    // fps chip write above. The ADSD3500 rejects control writes once DMS is
+    // active (errno=5), so enabling it earlier silently dropped those
+    // settings for the fused/alternate mode.
+    if (!m_off_line) {
+        if (m_dms_enabled) {
+            uint8_t modeB = static_cast<uint8_t>(m_dms_second_mode_selection);
+
+            // The viewer's DMS toggle means "fuse the two modes"; opt into
+            // fusion at the SDK level before configuring the sequence so the
+            // compute contexts are rebuilt with modeFusionEnabled=1.
+            GetActiveCamera()->setModeFusionEnabled(true);
+
+            // The mode-switch chip command in setMode clears the MIPI
+            // transport register; reapply it before the DMS registers are
+            // touched.
+            status = GetActiveCamera()->adsd3500SetMIPIOutputSpeed(1);
+            if (status != aditof::Status::OK) {
+                LOG(ERROR) << "Could not reapply MIPI output speed before "
+                              "Dynamic Mode Switching setup!";
+                return false;
+            }
+
+            // Chip bus needs to settle after the mode-switch reset before
+            // it will reliably accept the DMS register writes.
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+            status =
+                GetActiveCamera()->adsd3500setEnableDynamicModeSwitching(true);
+            if (status != aditof::Status::OK) {
+                LOG(ERROR) << "Could not enable Dynamic Mode Switching!";
+                return false;
+            }
+
+            std::vector<std::pair<uint8_t, uint8_t>> sequence = {
+                {mode, 1},  // Mode A, repeat 1 time
+                {modeB, 1}, // Mode B, repeat 1 time
+            };
+            status = GetActiveCamera()->adsds3500setDynamicModeSwitchingSequence(
+                sequence);
+            if (status != aditof::Status::OK) {
+                LOG(ERROR) << "Could not set Dynamic Mode Switching sequence!";
+                return false;
+            }
+
+            LOG(INFO) << "Dynamic Mode Switching enabled: mode "
+                      << (int)mode << " <-> mode " << (int)modeB;
+            m_dms_was_enabled = true;
+        } else if (m_dms_was_enabled) {
+            // Only touch the DMS register if it was previously turned on;
+            // the default (never-used) path stays byte-identical to the
+            // pre-DMS behavior with no extra chip communication.
+            GetActiveCamera()->setModeFusionEnabled(false);
+            GetActiveCamera()->adsd3500setEnableDynamicModeSwitching(false);
+            m_dms_was_enabled = false;
+        }
+    }
+
     // Program the camera with cfg passed, set the mode by writing to 0x200 and start the camera
     status = GetActiveCamera()->start();
     if (status != aditof::Status::OK) {
@@ -362,6 +387,7 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
 #endif
 
             if (!m_off_line) {
+                m_view_instance->m_ctrl->setModeFusionEnabled(m_dms_enabled);
                 m_view_instance->m_ctrl->StartCapture(m_fps_expected);
                 m_view_instance->m_ctrl->requestFrame();
             } else { // Offline: Always get the first frame
