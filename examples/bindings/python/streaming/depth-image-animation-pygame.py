@@ -212,8 +212,13 @@ def config_window():
     width = 560
     height = 520
 
+    mode_res = {}  # mode -> (width, height), filled after the config loads
+
     def mode_label(m):
-        return f"Mode {m}  ({range_label(m)})"
+        base = f"Mode {m}  ({range_label(m)})"
+        if m in mode_res:
+            base += f"  {mode_res[m][0]}x{mode_res[m][1]}"
+        return base
 
     # Config File drop-down: "Default (no config)" plus any discovered *.json.
     config_options = [("Default (no config)", "")]
@@ -275,6 +280,12 @@ def config_window():
                         if not available_modes:
                             load_msg = "No modes available - check the config."
                             continue
+                        sensor = camera1.getSensor()
+                        for m in available_modes:
+                            md = tof.DepthSensorModeDetails()
+                            sensor.getModeDetails(m, md)
+                            mode_res[m] = (md.baseResolutionWidth,
+                                           md.baseResolutionHeight)
                         start_mode = available_modes[0]
                         primary_dd = Dropdown((30, 158, width - 60, 34),
                                               available_modes, mode_label)
@@ -371,17 +382,30 @@ def animate(dmin, dmax):
 
 
 def run_window(title, modeDetails, dmin, dmax):
-    """Running window: live depth stream with an adjustable depth range."""
-    img_w = modeDetails.baseResolutionWidth
-    img_h = modeDetails.baseResolutionHeight
-    panel_h = 70
-    win_w = max(img_w, 500)
-    screen = pygame.display.set_mode((win_w, img_h + panel_h))
-    pygame.display.set_caption(f"ADCAM Depth - Mode {title}")
+    """Running window: live depth stream scaled to fit a resizable window, with
+    an adjustable depth range."""
+    res_label = (f"{modeDetails.baseResolutionWidth}"
+                 f"x{modeDetails.baseResolutionHeight}")
+    panel_h = 92
+    min_w = 520
+
+    first = animate(dmin, dmax)
+    win_w = max(first.get_width(), min_w)
+    win_h = first.get_height() + panel_h
+    screen = pygame.display.set_mode((win_w, win_h), pygame.RESIZABLE)
+    pygame.display.set_caption(f"ADCAM Depth - Mode {title} ({res_label})")
     font = pygame.font.SysFont("Arial", 16)
 
-    min_input = TextInput((60, img_h + 20, 90, 30), dmin)
-    max_input = TextInput((280, img_h + 20, 90, 30), dmax)
+    min_input = TextInput((60, 0, 90, 30), dmin)
+    max_input = TextInput((280, 0, 90, 30), dmax)
+
+    def place_inputs():
+        # Inputs live in the bottom panel; repositioned on every resize.
+        py = win_h - panel_h
+        min_input.rect.topleft = (60, py + 50)
+        max_input.rect.topleft = (280, py + 50)
+
+    place_inputs()
 
     rng = [dmin, dmax]
     clock = pygame.time.Clock()
@@ -390,6 +414,12 @@ def run_window(title, modeDetails, dmin, dmax):
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 done = True
+            elif e.type == pygame.VIDEORESIZE:
+                win_w = max(e.w, min_w)
+                win_h = max(e.h, panel_h + 120)
+                screen = pygame.display.set_mode((win_w, win_h),
+                                                 pygame.RESIZABLE)
+                place_inputs()
             # Typed range is applied on Enter.
             if min_input.handle_event(e):
                 rng[0] = max(0, min_input.value(rng[0]))
@@ -399,18 +429,31 @@ def run_window(title, modeDetails, dmin, dmax):
             if max_input.handle_event(e):
                 rng[1] = max(rng[0] + 1, max_input.value(rng[1]))
 
+        # Scale the frame to fill the image area, preserving aspect ratio.
+        surf = animate(rng[0], rng[1])
+        area_w, area_h = win_w, win_h - panel_h
+        scale = min(area_w / surf.get_width(), area_h / surf.get_height())
+        sw = max(1, int(surf.get_width() * scale))
+        sh = max(1, int(surf.get_height() * scale))
+        scaled = pygame.transform.smoothscale(surf, (sw, sh))
+        ox = (area_w - sw) // 2
+        oy = (area_h - sh) // 2
+
+        panel_y = win_h - panel_h
         screen.fill((0, 0, 0))
-        screen.blit(animate(rng[0], rng[1]), (0, 0))
+        screen.blit(scaled, (ox, oy))
         pygame.draw.rect(screen, (30, 30, 30),
-                         pygame.Rect(0, img_h, win_w, panel_h))
+                         pygame.Rect(0, panel_y, win_w, panel_h))
+        screen.blit(font.render(f"Mode {title}    Resolution: {res_label}",
+                                True, (200, 200, 200)), (20, panel_y + 14))
         screen.blit(font.render("Min", True, (255, 255, 255)),
-                    (20, img_h + 26))
+                    (20, panel_y + 56))
         min_input.draw(screen, font)
         screen.blit(font.render("Max", True, (255, 255, 255)),
-                    (240, img_h + 26))
+                    (240, panel_y + 56))
         max_input.draw(screen, font)
         screen.blit(font.render("mm  Enter=apply", True, (150, 150, 150)),
-                    (384, img_h + 26))
+                    (384, panel_y + 56))
         pygame.display.flip()
         clock.tick(60)
 
