@@ -3,7 +3,9 @@ project(examples)
 
 add_subdirectory(first-frame)
 add_subdirectory(data_collect)
-add_subdirectory(tof-viewer)
+if (NOT NXP)
+    add_subdirectory(tof-viewer)
+endif()
 # adsd3500_sample_program requires proprietary ToFi libraries
 if(ON_TARGET AND NOT USE_DEPTH_COMPUTE_OPENSOURCE)
     add_subdirectory(adsd3500_sample_program)
@@ -11,11 +13,18 @@ endif()
 
 include(GNUInstallDirs)
 
-install(PROGRAMS
-    $<TARGET_FILE:first-frame>
-    $<TARGET_FILE:data_collect>
-    $<TARGET_FILE:ADIToFGUI>
-    DESTINATION ${CMAKE_INSTALL_BINDIR} )
+if (NXP)
+    install(PROGRAMS
+        $<TARGET_FILE:first-frame>
+        $<TARGET_FILE:data_collect>
+        DESTINATION ${CMAKE_INSTALL_BINDIR} )
+else()
+    install(PROGRAMS
+        $<TARGET_FILE:first-frame>
+        $<TARGET_FILE:data_collect>
+        $<TARGET_FILE:ADIToFGUI>
+        DESTINATION ${CMAKE_INSTALL_BINDIR} )
+endif()
 
 if(ON_TARGET AND NOT USE_DEPTH_COMPUTE_OPENSOURCE)
     install(PROGRAMS

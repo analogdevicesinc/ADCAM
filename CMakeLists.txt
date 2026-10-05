@@ -21,11 +21,11 @@ option(WITH_EXAMPLES "Build examples?" ON)
 option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
 option(WITH_NETWORK "Build network interface?" OFF)
-set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO", "NVIDIA", "RPI", "WSL2", or "HOST"
+set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO", "NVIDIA", "RPI", "WSL2", "NXP", or "HOST"
 
 ################################# PLATFORM DETECTION ###############################
 
-set_property(CACHE WITH_PLATFORM PROPERTY STRINGS "AUTO" "NVIDIA" "RPI" "WSL2" "HOST")
+set_property(CACHE WITH_PLATFORM PROPERTY STRINGS "AUTO" "NVIDIA" "RPI" "WSL2" "NXP" "HOST")
 # Map WITH_PLATFORM to PLATFORM_CHOICE for platform detection
 set(PLATFORM_CHOICE "${WITH_PLATFORM}")
 
@@ -33,6 +33,7 @@ set(PLATFORM_CHOICE "${WITH_PLATFORM}")
 set(NVIDIA OFF CACHE BOOL "Set to ON when building on NVIDIA" FORCE)
 set(RPI OFF CACHE BOOL "Set to ON when building on Raspberry Pi" FORCE)
 set(WSL2 OFF CACHE BOOL "Set to ON when building on Windows Subsystem for Linux 2" FORCE)
+set(NXP OFF CACHE BOOL "Set to ON when building on NXP" FORCE)
 
 # Include platform detection
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/platform_detection.cmake)
@@ -105,7 +106,7 @@ set(LIBADITOF_SUBMODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libaditof)
 
 # Check whether we configure thgs for remote or we're on target
 set(SELECTED_PLATFORMS 0)
-set(ALL_PLATFORMS NVIDIA RPI WSL2)
+set(ALL_PLATFORMS NVIDIA RPI WSL2 NXP)
 foreach(platform IN LISTS ALL_PLATFORMS)
     if(${platform})
         math(EXPR SELECTED_PLATFORMS "${SELECTED_PLATFORMS}+1")
@@ -143,6 +144,8 @@ elseif(RPI)
      add_definitions(-DRPI)
 elseif(WSL2)
      add_definitions(-DWSL2)
+elseif(NXP)
+     add_definitions(-DNXP)
 endif()
 
 set(RESOURCES_DIR "${CMAKE_BINARY_DIR}/resources")
