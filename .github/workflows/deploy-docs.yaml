@@ -1,0 +1,32 @@
+name: Deploy docs for ADCAM
+
+on:
+  pull_request:   # only building, not publishing
+    branches:
+      - main
+  push:
+    branches:
+      - main  
+
+permissions:
+  contents: write
+
+env:
+  NUM_JOBS: 4
+
+jobs:
+  deploy-doxygen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Deploy doxygen
+        uses: analogdevicesinc/shared-actions/deploy-doxygen@main
+        with:
+          work_dir: ${{ github.workspace }}
+          docs_dir: ${{ github.workspace }}/doc
+          args: evalkit-doc
+          version: 1.8.15
+          publish: ${{ github.event_name == 'pull_request' && 'false' || github.event_name == 'push' && 'true' }}

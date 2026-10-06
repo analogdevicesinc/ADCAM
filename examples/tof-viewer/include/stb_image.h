@@ -1918,7 +1918,7 @@ static stbi__uint16 *stbi__convert_format16(stbi__uint16 *data, int img_n,
         return data;
     STBI_ASSERT(req_comp >= 1 && req_comp <= 4);
 
-    good = (stbi__uint16 *)stbi__malloc(req_comp * x * y * 2);
+    good = (stbi__uint16 *)stbi__malloc((size_t)req_comp * x * y * 2);
     if (good == NULL) {
         STBI_FREE(data);
         return (stbi__uint16 *)stbi__errpuc("outofmem", "Out of memory");
@@ -6883,11 +6883,11 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp,
         out = (stbi_uc *)stbi__malloc_mad3(8, w, h, 0);
         ri->bits_per_channel = 16;
     } else
-        out = (stbi_uc *)stbi__malloc(4 * w * h);
+        out = (stbi_uc *)stbi__malloc((size_t)4 * w * h);
 
     if (!out)
         return stbi__errpuc("outofmem", "Out of memory");
-    pixelCount = w * h;
+    pixelCount = (size_t)w * h;
 
     // Initialize the data to zero.
     //memset( out, 0, pixelCount * 4 );
@@ -7220,7 +7220,7 @@ static void *stbi__pic_load(stbi__context *s, int *px, int *py, int *comp,
     result = (stbi_uc *)stbi__malloc_mad3(x, y, 4, 0);
     if (!result)
         return stbi__errpuc("outofmem", "Out of memory");
-    memset(result, 0xff, x * y * 4);
+    memset(result, 0xff, (size_t)x * y * 4);
 
     if (!stbi__pic_load_core(s, x, y, comp, result)) {
         STBI_FREE(result);
@@ -7551,7 +7551,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp,
 
     // clear my history;
     memset(g->history, 0x00,
-           g->w * g->h); // pixels that were affected previous frame
+           (size_t)g->w * g->h); // pixels that were affected previous frame
 
     for (;;) {
         int tag = stbi__get8(s);
@@ -7715,8 +7715,8 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
                 stride = g.w * g.h * 4;
 
                 if (out) {
-                    void *tmp = (stbi_uc *)STBI_REALLOC_SIZED(out, out_size,
-                                                              layers * stride);
+                    void *tmp = (stbi_uc *)STBI_REALLOC_SIZED(
+                        out, out_size, (size_t)layers * stride);
                     if (!tmp)
                         return stbi__load_gif_main_outofmem(&g, out, delays);
                     else {
@@ -7734,7 +7734,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
                         delays_size = layers * sizeof(int);
                     }
                 } else {
-                    out = (stbi_uc *)stbi__malloc(layers * stride);
+                    out = (stbi_uc *)stbi__malloc((size_t)layers * stride);
                     if (!out)
                         return stbi__load_gif_main_outofmem(&g, out, delays);
                     out_size = layers * stride;
