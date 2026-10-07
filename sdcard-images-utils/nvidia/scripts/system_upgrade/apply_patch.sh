@@ -33,8 +33,8 @@ readonly EXTLINUX_CONF="/boot/extlinux/extlinux.conf"
 readonly BACKUP_DIR="/root/adi_tof_backup_$(date +%Y%m%d_%H%M%S)"
 
 # Boot configuration labels
-readonly DEFAULT_LABEL="ADSD3500-DUAL+ADSD3100"
-readonly KERNEL_VERSION="5.15.185-adi-tegra"
+readonly DEFAULT_LABEL="ADSD3500+ADTF3066+AR0234"
+readonly KERNEL_VERSION="6.8.12-adi-1021-tegra"
 
 # Exit codes
 readonly EXIT_SUCCESS=0
@@ -328,8 +328,8 @@ update_kernel() {
         depmod -a "${KERNEL_VERSION}" || log_warning "depmod failed for ${KERNEL_VERSION}"
     else
         log_warning "Kernel modules directory not found for ${KERNEL_VERSION}"
-        # Try to find any 5.15.148* directory
-        local module_dir=$(find "${temp_dir}/lib/modules" -type d -name "5.15.148*" | head -1)
+        # Try to find a module directory matching the target kernel version
+        local module_dir=$(find "${temp_dir}/lib/modules" -type d -name "${KERNEL_VERSION}*" | head -1)
         if [[ -n "${module_dir}" ]]; then
             local kernel_ver=$(basename "${module_dir}")
             log_info "Found modules for ${kernel_ver}, installing..."
