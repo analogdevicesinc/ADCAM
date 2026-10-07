@@ -603,7 +603,7 @@ build_kernel_Image() {
             log_info "Copied: ${dtbo}"
             dtbo_count=$((dtbo_count + 1))
         else
-            log_warning "DTBO not found: ${dtbo}"
+            error_exit "Required DTBO not found: ${dtbo}" ${EXIT_BUILD_ERROR}
         fi
     done
     log_success "Copied ${dtbo_count}/4 device tree overlays"

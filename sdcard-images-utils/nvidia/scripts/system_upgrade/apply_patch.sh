@@ -115,12 +115,20 @@ validate_environment() {
         log_info "Found: ${file}"
     done
 
-    # Check for DTBOs
-    local dtbo_count=$(find "${ROOTDIR}" -name "tegra234-p3767-camera-p3768-*.dtbo" | wc -l)
-    if [[ ${dtbo_count} -eq 0 ]]; then
-        error_exit "No device tree overlays found" ${EXIT_FILE_ERROR}
-    fi
-    log_info "Found ${dtbo_count} device tree overlay(s)"
+    # Check for all overlays referenced by the boot menu
+    local required_dtbo_files=(
+        "tegra234-p3767-camera-p3768-adsd3500.dtbo"
+        "tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo"
+        "tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100-arducam-ar0234.dtbo"
+        "tegra234-p3767-camera-p3768-adsd3500-adtf3066-arducam-ar0234.dtbo"
+    )
+    for dtbo in "${required_dtbo_files[@]}"; do
+        if [[ ! -f "${ROOTDIR}/${dtbo}" ]]; then
+            error_exit "Required device tree overlay not found: ${dtbo}" ${EXIT_FILE_ERROR}
+        fi
+        log_info "Found: ${dtbo}"
+    done
+    log_info "Found ${#required_dtbo_files[@]} required device tree overlay(s)"
 
     # Check for ubuntu_overlay if it exists
     if [[ -d "${ROOTDIR}/ubuntu_overlay" ]]; then
