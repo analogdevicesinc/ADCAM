@@ -1,0 +1,88 @@
+From 9f1c6bca3bdf9aa6929dc13dea71827cbe5ae4a8 Mon Sep 17 00:00:00 2001
+From: Kishan Kava <kishan.kava@analog.com>
+Date: Thu, 27 Nov 2025 15:33:00 +0530
+Subject: [PATCH] driver: media: i2c: arducam ar0234: Added external trigger
+ functionality
+
+	* By adding this functionality AR0234 camera now can run on
+	  external trigger mode.
+	* Wihtout external trigger, camera will not be able to capture
+	  frames.
+
+Signed-off-by: Kishan Kava <kishan.kava@analog.com>
+---
+ drivers/media/i2c/arducam_jetvariety.c | 38 ++++++++++++++++++++++++--
+ drivers/media/i2c/arducam_jetvariety.h |  2 ++
+ 2 files changed, 38 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/i2c/arducam_jetvariety.c b/drivers/media/i2c/arducam_jetvariety.c
+index c8fc40ca..59af605d 100644
+--- a/drivers/media/i2c/arducam_jetvariety.c
++++ b/drivers/media/i2c/arducam_jetvariety.c
+@@ -627,14 +627,48 @@ static int arducam_set_mode(struct tegracam_device *tc_dev)
+ static int arducam_start_streaming(struct tegracam_device *tc_dev)
+ {
+ 	struct arducam *priv = (struct arducam *)tegracam_get_privdata(tc_dev);
++	int err = 0;
++
++	dev_info(tc_dev->dev, "Starting stream...\n");
++
++	/* STEP 1: Start streaming first (free-running mode) */
++	err = arducam_write(priv->i2c_client, STREAM_ON, 1);
++	if (err) {
++		dev_err(tc_dev->dev, "Failed to start streaming (err=%d)\n", err);
++		return err;
++	}
+ 
+-	return arducam_write(priv->i2c_client, STREAM_ON, 1);
++	msleep(10);
++	/* STEP 2: Enable external trigger mode AFTER stream starts */
++	dev_info(tc_dev->dev, "Writing CTRL_ID_REG (0x0401) = 0x%08x (ARDUCAM_TRIGGER_MODE)\n", ARDUCAM_TRIGGER_MODE);
++	err = arducam_write(priv->i2c_client, CTRL_ID_REG, ARDUCAM_TRIGGER_MODE);
++
++	err += arducam_write(priv->i2c_client, CTRL_VALUE_REG, 1);
++
++	if (err) {
++		dev_err(tc_dev->dev, "Failed to enable trigger mode (err=%d)\n", err);
++	}
++
++	return 0;
+ }
+ 
+ static int arducam_stop_streaming(struct tegracam_device *tc_dev)
+ {
+-	int err;
++	int err = 0;
+ 	struct arducam *priv = (struct arducam *)tegracam_get_privdata(tc_dev);
++
++	dev_info(tc_dev->dev, "Stopping stream...\n");
++
++	/* STEP 1: Disable external trigger mode BEFORE stopping stream */
++	dev_info(tc_dev->dev, "Writing CTRL_ID_REG (0x0401) = 0x%08x (ARDUCAM_TRIGGER_MODE)\n", ARDUCAM_TRIGGER_MODE);
++	err = arducam_write(priv->i2c_client, CTRL_ID_REG, ARDUCAM_TRIGGER_MODE);
++
++	err += arducam_write(priv->i2c_client, CTRL_VALUE_REG, 0);
++	if (err) {
++		dev_err(tc_dev->dev, "Failed to disable trigger mode (err=%d)\n", err);
++	}
++
++	/* STEP 2: Stop streaming */
+ 	err = arducam_write(priv->i2c_client, STREAM_ON, 0);
+ 	usleep_range(50000, 51000);
+ 
+diff --git a/drivers/media/i2c/arducam_jetvariety.h b/drivers/media/i2c/arducam_jetvariety.h
+index 48870327..65e31c02 100644
+--- a/drivers/media/i2c/arducam_jetvariety.h
++++ b/drivers/media/i2c/arducam_jetvariety.h
+@@ -50,6 +50,8 @@
+ #define MEDIA_BUS_FMT_ARDUCAM_Y102Y16_1x16	0x5002
+ #define MEDIA_BUS_FMT_ARDUCAM_Y122Y16_1x16	0x5003
+ 
++#define ARDUCAM_TRIGGER_MODE  0x00981901
++
+ #define V4L2_CID_ARDUCAM_BASE					(V4L2_CID_USER_BASE + 0x1000)
+ #define V4L2_CID_ARDUCAM_EXT_TRI				(V4L2_CID_ARDUCAM_BASE + 1)
+ #define V4L2_CID_ARDUCAM_TEGRA_DISABLE_TIMEOUT	(V4L2_CID_ARDUCAM_BASE + 2)
+-- 
+2.25.1
+
