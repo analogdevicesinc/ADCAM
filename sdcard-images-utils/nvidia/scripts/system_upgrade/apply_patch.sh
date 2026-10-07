@@ -30,6 +30,7 @@ set -euo pipefail
 readonly SCRIPT_VERSION="3.0"
 readonly ROOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly EXTLINUX_CONF="/boot/extlinux/extlinux.conf"
+readonly BASE_DTB="/boot/tegra234-p3768-0000+p3767-0003-nv-super.dtb"
 readonly BACKUP_DIR="/root/adi_tof_backup_$(date +%Y%m%d_%H%M%S)"
 
 # Boot configuration labels
@@ -98,6 +99,30 @@ check_root() {
     fi
 }
 
+validate_dtbo_overlay() (
+    local base_dtb="$1"
+    local overlay_dtbo="$2"
+    local output_dtb
+
+    output_dtb=$(mktemp --suffix=.dtb) || {
+        log_error "Failed to create temporary DTB for $(basename "${overlay_dtbo}")"
+        exit 1
+    }
+    trap 'rm -f -- "${output_dtb}"' EXIT
+
+    if ! fdtoverlay -i "${base_dtb}" -o "${output_dtb}" "${overlay_dtbo}"; then
+        log_error "Failed to apply DTBO: $(basename "${overlay_dtbo}")"
+        exit 1
+    fi
+
+    if [[ ! -s "${output_dtb}" ]] || ! fdtget -l "${output_dtb}" / >/dev/null 2>&1; then
+        log_error "Invalid merged DTB after applying: $(basename "${overlay_dtbo}")"
+        exit 1
+    fi
+
+    log_success "DTBO applies successfully: $(basename "${overlay_dtbo}")"
+)
+
 validate_environment() {
     log_step "Validating environment"
 
@@ -116,6 +141,15 @@ validate_environment() {
     done
 
     # Check for all overlays referenced by the boot menu
+    for command in fdtoverlay fdtget; do
+        if ! command -v "${command}" >/dev/null 2>&1; then
+            error_exit "Required command not found: ${command} (install device-tree-compiler)" ${EXIT_CONFIG_ERROR}
+        fi
+    done
+    if [[ ! -r "${BASE_DTB}" ]]; then
+        error_exit "Base DTB not found or not readable: ${BASE_DTB}" ${EXIT_CONFIG_ERROR}
+    fi
+
     local required_dtbo_files=(
         "tegra234-p3767-camera-p3768-adsd3500.dtbo"
         "tegra234-p3767-camera-p3768-dual-adsd3500-adsd3100.dtbo"
@@ -123,8 +157,12 @@ validate_environment() {
         "tegra234-p3767-camera-p3768-adsd3500-adtf3066-arducam-ar0234.dtbo"
     )
     for dtbo in "${required_dtbo_files[@]}"; do
-        if [[ ! -f "${ROOTDIR}/${dtbo}" ]]; then
-            error_exit "Required device tree overlay not found: ${dtbo}" ${EXIT_FILE_ERROR}
+        local overlay_dtbo="${ROOTDIR}/${dtbo}"
+        if [[ ! -r "${overlay_dtbo}" ]]; then
+            error_exit "Required device tree overlay not found or not readable: ${dtbo}" ${EXIT_FILE_ERROR}
+        fi
+        if ! validate_dtbo_overlay "${BASE_DTB}" "${overlay_dtbo}"; then
+            error_exit "Failed to validate device tree overlay: ${dtbo}" ${EXIT_CONFIG_ERROR}
         fi
         log_info "Found: ${dtbo}"
     done
@@ -293,7 +331,7 @@ update_kernel() {
     # by the kernel_ prefix naming convention used by JetPack 6.x / 7.x.
     log_info "Setting up /boot/dtb/ directory..."
     mkdir -p /boot/dtb || error_exit "Failed to create /boot/dtb" ${EXIT_FILE_ERROR}
-    local src_dtb="/boot/tegra234-p3768-0000+p3767-0003-nv-super.dtb"
+    local src_dtb="${BASE_DTB}"
     local dst_dtb="/boot/dtb/kernel_tegra234-p3768-0000+p3767-0003-nv-super.dtb"
     if [[ -f "${src_dtb}" ]]; then
         cp "${src_dtb}" "${dst_dtb}" || log_warning "Failed to copy DTB to /boot/dtb/"
