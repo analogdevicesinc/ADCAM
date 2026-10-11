@@ -1606,8 +1606,7 @@ For the following discussion [example-cfg.json](other/example-cfg.json) will be 
 
 These should not be changed in the context of the eval kit unless explicitly asked to do so by ADI.
 
-* *errata1*: Drops the first frame after streaming starts to avoid invalid sensor data (`1` = drop, `0` = keep). **DO NOT CHANGE unless instructed by ADI.**
-  * **Manual trigger** (`fsyncMode = 0`): Set `errata1 = 0` to avoid needing an extra fsync pulse for the dropped frame.
+* *errata1*: No longer used. The SDK does not drop the first frame and ignores this key; it is only accepted so that older configuration files still load.
 * *fsyncMode*: DO NOT CHANGE
 * *mipiOutputSpeed*: DO NOT CHANGE
 * *isdeskewEnabled*: DO NOT CHANGE
