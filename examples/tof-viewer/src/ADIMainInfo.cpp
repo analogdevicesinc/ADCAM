@@ -132,8 +132,7 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
             bool fused = !m_off_line &&
                          (m_dms_enabled || delivered_mode != camera_mode);
             if (fused) {
-                uint8_t modeB =
-                    static_cast<uint8_t>(m_dms_second_mode_selection);
+                uint8_t modeB = m_dms_active_second_mode;
                 s = std::to_string(static_cast<int>(camera_mode)) + " + " +
                     std::to_string(static_cast<int>(modeB)) + " (fused)";
             } else {
