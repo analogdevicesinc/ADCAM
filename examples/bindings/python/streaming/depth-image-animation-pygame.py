@@ -30,6 +30,33 @@ import time
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 import os
+import json
+
+
+def apply_param_overrides(camera):
+    """Apply optional per-mode depth-param overrides from
+    pygame_param_overrides.json (next to this script), e.g.
+    {"7": {"radialThreshMax": 5000}, "0": {"confThresh": 30}}.
+    Written to each mode's config before setMode() so fusion/DMS picks them up.
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "pygame_param_overrides.json")
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path) as f:
+            overrides = json.load(f)
+    except Exception as e:  # noqa: BLE001 - optional file, just warn
+        print("param overrides: could not read", path, ":", e)
+        return
+    for mode_str, params in overrides.items():
+        try:
+            mode = int(mode_str)
+        except (TypeError, ValueError):
+            continue
+        strparams = {k: str(v) for k, v in params.items()}
+        status = camera.setFrameProcessParams(strparams, mode)
+        print(f"param override mode {mode}: {strparams} -> {status}")
 
 
 def help():
@@ -72,6 +99,13 @@ else:
     status = system.getCameraList(cameras)
 print("system.getCameraList()", status)
 
+if not cameras:
+    where = f"network @ {sys.argv[1]}" if len(sys.argv) >= 2 else "the target"
+    print(f"No camera found on {where}.")
+    print("Run with no arguments for the on-board camera, or pass a valid "
+          "network camera IP (e.g. 10.42.0.1).")
+    sys.exit(1)
+
 camera1 = cameras[0]
 
 # NOTE: the camera is initialized inside the configuration window (once) after
@@ -108,6 +142,10 @@ def find_configs():
 def range_label(m):
     # ADTF3066 (hardcoded): Long Range = modes 7, 8; others are Short Range.
     return "Long Range" if m in (7, 8) else "Short Range"
+
+
+# Key depth params exposed for live tuning in the config window.
+PARAM_KEYS = ["confThresh", "abThreshMin", "radialThreshMin", "radialThreshMax"]
 
 
 def draw_button(surface, font, rect, text, active=False):
@@ -210,7 +248,7 @@ def config_window():
     font = pygame.font.SysFont("Arial", 20)
     small = pygame.font.SysFont("Arial", 16)
     width = 560
-    height = 520
+    height = 720
 
     mode_res = {}  # mode -> (width, height), filled after the config loads
 
@@ -239,7 +277,32 @@ def config_window():
     min_input = TextInput((160, y_range + 24, 140, 32), 0)
     max_input = TextInput((160, y_range + 64, 140, 32), 5000)
     fusion_btn = pygame.Rect(30, 210, width - 60, 34)
-    start_btn = pygame.Rect(width // 2 - 80, y_range + 118, 160, 44)
+
+    # Depth-param editor: one text field per key, reused as the edited mode
+    # changes. Values per mode live in param_by_mode; edit_mode is the mode the
+    # fields currently show (switchable during fusion).
+    y_params = 452
+    param_inputs = {
+        k: TextInput((230, y_params + 56 + i * 34, 110, 30), 0)
+        for i, k in enumerate(PARAM_KEYS)
+    }
+    param_by_mode = {}
+    edit_mode = None
+    edit_toggle_btn = pygame.Rect(30, y_params + 22, width - 60, 28)
+
+    def load_params_into_inputs(mode):
+        vals = param_by_mode.get(mode, {})
+        for k in PARAM_KEYS:
+            param_inputs[k].text = str(vals.get(k, "0"))
+
+    def save_inputs_into(mode):
+        if mode is None:
+            return
+        d = param_by_mode.setdefault(mode, {})
+        for k in PARAM_KEYS:
+            d[k] = str(param_inputs[k].value(0))
+
+    start_btn = pygame.Rect(width // 2 - 80, 662, 160, 44)
 
     screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("ADCAM Depth - Configuration")
@@ -253,6 +316,9 @@ def config_window():
             # Text fields consume focus (mouse) and typing (keys).
             min_input.handle_event(e)
             max_input.handle_event(e)
+            if loaded:
+                for k in PARAM_KEYS:
+                    param_inputs[k].handle_event(e)
             if e.type == pygame.MOUSEBUTTONDOWN:
                 p = e.pos
                 # Open drop-downs take click priority so the list is clickable.
@@ -296,6 +362,13 @@ def config_window():
                                              available_modes, mode_label)
                         second_dd.selected = (others[0] if others
                                               else start_mode)
+                        # Seed each mode's editable params from its config.
+                        for m in available_modes:
+                            _, pm = camera1.getDepthParamtersMap(m)
+                            param_by_mode[m] = {
+                                k: pm.get(k, "0") for k in PARAM_KEYS}
+                        edit_mode = start_mode
+                        load_params_into_inputs(edit_mode)
                         load_msg = "Loaded: " + config_dd.selected[0]
                         loaded = True
                     continue
@@ -308,6 +381,13 @@ def config_window():
                     continue
                 if fusion_btn.collidepoint(p):
                     fusion = not fusion
+                if fusion and edit_toggle_btn.collidepoint(p):
+                    save_inputs_into(edit_mode)
+                    edit_mode = (second_dd.selected
+                                 if edit_mode == primary_dd.selected
+                                 else primary_dd.selected)
+                    load_params_into_inputs(edit_mode)
+                    continue
                 if start_btn.collidepoint(p):
                     dmin = max(0, min_input.value(0))
                     dmax = max_input.value(dmin + 1)
@@ -318,6 +398,16 @@ def config_window():
                     if second_mode == sel_mode:
                         alt = [m for m in available_modes if m != sel_mode]
                         second_mode = alt[0] if alt else sel_mode
+                    # Commit edited params into each involved mode's config so
+                    # main()'s setMode()/fusion flow applies them.
+                    save_inputs_into(edit_mode)
+                    involved = {sel_mode}
+                    if fusion:
+                        involved.add(second_mode)
+                    for m in involved:
+                        vals = param_by_mode.get(m)
+                        if vals:
+                            camera1.setFrameProcessParams(vals, m)
                     return sel_mode, dmin, dmax, fusion, second_mode
 
         screen.fill((30, 30, 30))
@@ -341,14 +431,36 @@ def config_window():
                 screen.blit(small.render("Second Mode", True, (200, 200, 200)),
                             (30, second_dd.rect.y - 18))
                 second_dd.draw_header(screen, small)
-            screen.blit(small.render("Depth Range (mm)", True,
-                                     (255, 255, 255)), (30, y_range))
+            screen.blit(small.render("Depth Range (mm) - visualization only",
+                                     True, (255, 255, 255)), (30, y_range))
             screen.blit(small.render("Min", True, (255, 255, 255)),
                         (110, min_input.rect.y + 7))
             min_input.draw(screen, small)
             screen.blit(small.render("Max", True, (255, 255, 255)),
                         (110, max_input.rect.y + 7))
             max_input.draw(screen, small)
+
+            # Depth-param editor: keep edit_mode valid, then draw the fields for
+            # the currently edited mode.
+            valid_modes = [primary_dd.selected]
+            if fusion and second_dd.selected != primary_dd.selected:
+                valid_modes.append(second_dd.selected)
+            if edit_mode not in valid_modes:
+                edit_mode = valid_modes[0]
+                load_params_into_inputs(edit_mode)
+            screen.blit(small.render("Depth Params", True, (255, 255, 255)),
+                        (30, y_params))
+            if fusion:
+                draw_button(
+                    screen, small, edit_toggle_btn,
+                    f"Editing Mode {edit_mode} ({range_label(edit_mode)})"
+                    "  - click to switch",
+                    active=True)
+            for k in PARAM_KEYS:
+                screen.blit(small.render(k, True, (200, 200, 200)),
+                            (30, param_inputs[k].rect.y + 6))
+                param_inputs[k].draw(screen, small)
+
             draw_button(screen, font, start_btn, "Start", active=True)
         # Draw open drop-down lists last so they overlay the widgets below.
         if loaded:
@@ -376,9 +488,44 @@ def animate(dmin, dmax):
     camera1.requestFrame(frame)
     frameDataDetails = tof.FrameDataDetails()
     frame.getDataDetails("depth", frameDataDetails)
-    image = np.asarray(frame.getData("depth"))
-    image = np.rot90(image)
-    return pygame.surfarray.make_surface(normalize(image, dmin, dmax))
+    depth = np.rot90(np.asarray(frame.getData("depth")))
+    surf = pygame.surfarray.make_surface(normalize(depth, dmin, dmax))
+    return surf, depth
+
+
+def dump_frame(depth, surface, title, dmin, dmax, font):
+    """Save the current frame: raw depth as .bin and the colorized depth (with
+    the colorbar) as .png, into the working directory. Returns the base name."""
+    ts = time.strftime("%Y%m%d_%H%M%S")
+    tag = "".join(c for c in str(title) if c.isalnum() or c in "+_")
+    base = f"pygame_frame_{tag}_{ts}"
+    depth.astype(np.uint16).tofile(base + "_depth.bin")
+    sw, sh = surface.get_width(), surface.get_height()
+    cbar_w = 76
+    comp = pygame.Surface((sw + cbar_w, sh))
+    comp.fill((0, 0, 0))
+    comp.blit(surface, (0, 0))
+    draw_colorbar(comp, font, (sw + 12, 24, 16, max(20, sh - 40)), dmin, dmax)
+    pygame.image.save(comp, base + "_depth.png")
+    print(f"Saved {base}_depth.bin/.png  ({depth.shape[1]}x{depth.shape[0]})")
+    return base
+
+
+def draw_colorbar(surface, font, rect, dmin, dmax):
+    """Vertical depth colorbar: top = dmax, bottom = dmin, using the same jet
+    map as the image, with min/mid/max labels in mm."""
+    x, y, w, h = rect
+    fr = np.linspace(1.0, 0.0, h, dtype=np.float32)  # top=max, bottom=min
+    rgb = (jet_colormap(fr)[:, :3] * 255).astype(np.uint8)  # (h, 3)
+    strip = np.repeat(rgb[:, None, :], w, axis=1)  # (h, w, 3)
+    bar = pygame.surfarray.make_surface(np.transpose(strip, (1, 0, 2)))
+    surface.blit(bar, (x, y))
+    pygame.draw.rect(surface, (200, 200, 200), pygame.Rect(x, y, w, h), 1)
+    surface.blit(font.render("mm", True, (220, 220, 220)), (x - 2, y - 20))
+    for frac, val in ((0.0, dmax), (0.5, (dmin + dmax) // 2), (1.0, dmin)):
+        ty = int(y + frac * h)
+        lbl = font.render(str(int(val)), True, (220, 220, 220))
+        surface.blit(lbl, (x + w + 4, ty - lbl.get_height() // 2))
 
 
 def run_window(title, modeDetails, dmin, dmax):
@@ -386,10 +533,10 @@ def run_window(title, modeDetails, dmin, dmax):
     an adjustable depth range."""
     res_label = (f"{modeDetails.baseResolutionWidth}"
                  f"x{modeDetails.baseResolutionHeight}")
-    panel_h = 92
+    panel_h = 104
     min_w = 520
 
-    first = animate(dmin, dmax)
+    first = animate(dmin, dmax)[0]
     win_w = max(first.get_width(), min_w)
     win_h = first.get_height() + panel_h
     screen = pygame.display.set_mode((win_w, win_h), pygame.RESIZABLE)
@@ -398,19 +545,25 @@ def run_window(title, modeDetails, dmin, dmax):
 
     min_input = TextInput((60, 0, 90, 30), dmin)
     max_input = TextInput((280, 0, 90, 30), dmax)
+    save_btn = pygame.Rect(0, 0, 100, 34)
 
     def place_inputs():
-        # Inputs live in the bottom panel; repositioned on every resize.
+        # Inputs + Save button live in the bottom panel; repositioned on resize.
         py = win_h - panel_h
-        min_input.rect.topleft = (60, py + 50)
-        max_input.rect.topleft = (280, py + 50)
+        min_input.rect.topleft = (60, py + 44)
+        max_input.rect.topleft = (280, py + 44)
+        save_btn.topleft = (win_w - 120, py + 42)
 
     place_inputs()
 
     rng = [dmin, dmax]
+    save_msg = ""
+    save_until = 0.0
     clock = pygame.time.Clock()
     done = False
     while not done:
+        # Grab this iteration's frame first so a save uses the current frame.
+        surf, depth = animate(rng[0], rng[1])
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 done = True
@@ -420,6 +573,11 @@ def run_window(title, modeDetails, dmin, dmax):
                 screen = pygame.display.set_mode((win_w, win_h),
                                                  pygame.RESIZABLE)
                 place_inputs()
+            elif (e.type == pygame.MOUSEBUTTONDOWN
+                  and save_btn.collidepoint(e.pos)):
+                base = dump_frame(depth, surf, title, rng[0], rng[1], font)
+                save_msg = "Saved " + base
+                save_until = time.time() + 2.5
             # Typed range is applied on Enter.
             if min_input.handle_event(e):
                 rng[0] = max(0, min_input.value(rng[0]))
@@ -430,8 +588,9 @@ def run_window(title, modeDetails, dmin, dmax):
                 rng[1] = max(rng[0] + 1, max_input.value(rng[1]))
 
         # Scale the frame to fill the image area, preserving aspect ratio.
-        surf = animate(rng[0], rng[1])
-        area_w, area_h = win_w, win_h - panel_h
+        # A strip on the right is reserved for the depth colorbar.
+        cbar_w = 76
+        area_w, area_h = win_w - cbar_w, win_h - panel_h
         scale = min(area_w / surf.get_width(), area_h / surf.get_height())
         sw = max(1, int(surf.get_width() * scale))
         sh = max(1, int(surf.get_height() * scale))
@@ -442,18 +601,25 @@ def run_window(title, modeDetails, dmin, dmax):
         panel_y = win_h - panel_h
         screen.fill((0, 0, 0))
         screen.blit(scaled, (ox, oy))
+        cb_h = max(20, area_h - 40)
+        draw_colorbar(screen, font, (area_w + 12, 24, 16, cb_h),
+                      rng[0], rng[1])
         pygame.draw.rect(screen, (30, 30, 30),
                          pygame.Rect(0, panel_y, win_w, panel_h))
-        screen.blit(font.render(f"Mode {title}    Resolution: {res_label}",
-                                True, (200, 200, 200)), (20, panel_y + 14))
+        screen.blit(font.render(
+            f"Mode {title}   Res: {res_label}   "
+            f"Min/Max (mm) = visualization only",
+            True, (200, 200, 200)), (20, panel_y + 12))
         screen.blit(font.render("Min", True, (255, 255, 255)),
-                    (20, panel_y + 56))
+                    (20, min_input.rect.y + 7))
         min_input.draw(screen, font)
         screen.blit(font.render("Max", True, (255, 255, 255)),
-                    (240, panel_y + 56))
+                    (240, max_input.rect.y + 7))
         max_input.draw(screen, font)
-        screen.blit(font.render("mm  Enter=apply", True, (150, 150, 150)),
-                    (384, panel_y + 56))
+        draw_button(screen, font, save_btn, "Save", active=True)
+        if save_msg and time.time() < save_until:
+            screen.blit(font.render(save_msg, True, (150, 220, 150)),
+                        (20, panel_y + 80))
         pygame.display.flip()
         clock.tick(60)
 
@@ -465,6 +631,36 @@ def main():
     # 1) Configuration window: load a config file, choose mode, optional
     #    fusion, depth range. The camera is initialized inside this window.
     sel_mode, dmin, dmax, fusion, second_mode = config_window()
+
+    # Optional per-mode param overrides, applied before any setMode() so each
+    # mode's config (and thus its fusion context) reflects them.
+    apply_param_overrides(camera1)
+
+    if fusion:
+        # The primary (active/first) mode must be fixed by IsSRFrameFirst, not
+        # by which mode the user picked: IsSRFrameFirst=0 -> LR primary (SR
+        # second), =1 -> SR primary (LR second). Resolve it here so the capture
+        # is identical regardless of the selection order. ADTF3066 (hardcoded):
+        # modes 7, 8 are Long Range; all others are Short Range.
+        def is_lr(m):
+            return m == 7 or m == 8
+
+        lr_mode = sel_mode if is_lr(sel_mode) else second_mode
+        sr_mode = second_mode if is_lr(sel_mode) else sel_mode
+
+        _, sr_params = camera1.getDepthParamtersMap(sr_mode)
+        sr_first = sr_params.get("IsSRFrameFirst", "0") == "1"
+
+        sel_mode = sr_mode if sr_first else lr_mode
+        second_mode = lr_mode if sr_first else sr_mode
+
+        # Warm up both fused modes by running the full setMode() path on each
+        # (secondary first, primary last so it stays active). This mirrors the
+        # console example's two-mode discovery and leaves each mode's compute
+        # context in the same "built twice" state, so fusion output no longer
+        # depends on which mode was visited first.
+        status = camera1.setMode(second_mode)
+        print("camera1.setMode(second warm-up)", status)
 
     status = camera1.setMode(sel_mode)
     print("camera1.setMode()", status)

@@ -356,6 +356,27 @@ class ADIMainWindow {
 
     void ShowIniWindow(bool showModify = true);
 
+    // Per-mode editable depth-param state, so each half of a fusion pair can
+    // be shown and tuned independently in the control window.
+    struct IniParamState {
+        bool loaded = false;
+        int32_t abThreshMin = 0;
+        int32_t confThresh = 0;
+        int32_t radialThreshMin = 0;
+        int32_t radialThreshMax = 0;
+        bool jblfApplyFlag = false;
+        int32_t jblfWindowSize = 0;
+        int32_t jblfGaussianSigma = 0;
+        int32_t jblfExponentialTerm = 0;
+        int32_t jblfMaxEdge = 0;
+        int32_t jblfABThreshold = 0;
+        int32_t fps = 0;
+        std::map<std::string, std::string> modified;
+    };
+
+    // Renders one mode's editable depth params into st and st.modified.
+    void ShowIniParamsForMode(uint16_t mode, IniParamState &st);
+
     /**
 		* @brief Will poll the USB interface to look
 		*        for supported devices
@@ -666,6 +687,10 @@ class ADIMainWindow {
     bool m_dms_enabled = false;
     bool m_dms_was_enabled = false;
     int32_t m_dms_second_mode_selection = 0;
+    // Resolved fusion pair actually programmed (primary = active camera mode);
+    // the secondary may differ from m_dms_second_mode_selection once the pair
+    // is reordered by IsSRFrameFirst.
+    uint8_t m_dms_active_second_mode = 0;
     bool m_is_playing = false;
     int32_t m_view_selection = 0;
     int32_t m_view_selection_changed = 0; //flag when changed
@@ -721,6 +746,16 @@ class ADIMainWindow {
 
     std::map<std::string, std::string> m_ini_params;
     std::map<std::string, std::string> m_modified_ini_params;
+    std::map<uint16_t, IniParamState> m_ini_by_mode;
+    // Params staged by the control window's Modify button, keyed by mode, to
+    // be written to each mode's config during the next PrepareCamera() (when
+    // the device is stopped, so the ADSD3500 accepts the writes even in
+    // fusion/DMS mode).
+    std::map<uint16_t, std::map<std::string, std::string>>
+        m_pending_modified_by_mode;
+    // Radio-button selection of which fusion mode's params the control window
+    // is currently showing (index into the pair).
+    int m_ini_radio_sel = 0;
     bool m_use_modified_ini_params;
 
     bool m_offline_save_all_frames;

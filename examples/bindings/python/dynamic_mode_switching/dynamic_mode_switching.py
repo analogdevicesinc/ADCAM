@@ -193,7 +193,14 @@ def configure_camera(camera, config, tof_module):
     available_modes = []
     if config.config_path:
         print("Loading configuration from JSON file: ", config.config_path)
+        # Load both DMS modes from the same file. Each call only (re)loads its
+        # own mode's entry and leaves the other mode already loaded intact, so
+        # both sides of the pair can be tuned from one JSON instead of mode_b
+        # silently falling back to the CCB defaults.
         status = camera.loadDepthParamsFromJsonFile(config.config_path, int(config.mode_a))
+        if status != tof_module.Status.Ok:
+            sys.exit("Could not load depth parameters from JSON file!")
+        status = camera.loadDepthParamsFromJsonFile(config.config_path, int(config.mode_b))
         if status != tof_module.Status.Ok:
             sys.exit("Could not load depth parameters from JSON file!")
     else:

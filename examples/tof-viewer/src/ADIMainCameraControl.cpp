@@ -193,12 +193,59 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     aditof::Status status = aditof::Status::OK;
     std::vector<aditof::FrameDetails> frameTypes;
 
+    uint8_t dmsSecondMode = static_cast<uint8_t>(m_dms_second_mode_selection);
+
+    // For fusion, the primary (active/first) mode must be fixed by
+    // IsSRFrameFirst, not by which mode the user picked: IsSRFrameFirst=0 ->
+    // LR primary (SR second), =1 -> SR primary (LR second). Resolve it here so
+    // the capture is identical regardless of the dropdown selection order.
+    if (!m_off_line && m_dms_enabled) {
+        auto isLR = [](uint8_t m) { return m == 7 || m == 8; };
+        uint8_t lrMode = isLR(mode) ? mode : dmsSecondMode;
+        uint8_t srMode = isLR(mode) ? dmsSecondMode : mode;
+
+        std::map<std::string, std::string> srParams;
+        bool srFirst = false;
+        if (GetActiveCamera()->getDepthParamtersMap(srMode, srParams) ==
+            aditof::Status::OK) {
+            auto it = srParams.find("IsSRFrameFirst");
+            srFirst = (it != srParams.end() && it->second == "1");
+        }
+
+        mode = srFirst ? srMode : lrMode;
+        dmsSecondMode = srFirst ? lrMode : srMode;
+    }
+    m_dms_active_second_mode = dmsSecondMode;
+
+    // Write any params staged by the control window's Modify button into each
+    // mode's config BEFORE the setMode calls below, so each setMode() applies
+    // that mode's edited INI (chip + context). Device is stopped here, so the
+    // ADSD3500 accepts the writes even in fusion/DMS.
+    if (!m_pending_modified_by_mode.empty()) {
+        for (auto &entry : m_pending_modified_by_mode) {
+            GetActiveCamera()->setFrameProcessParams(
+                entry.second, static_cast<int32_t>(entry.first));
+        }
+        m_pending_modified_by_mode.clear();
+    }
+
+    // Apply each fused mode's INI via its own setMode(): secondary first, then
+    // primary. The last active mode is irrelevant for DMS - streaming always
+    // starts from the programmed pattern - so this just ensures both modes'
+    // contexts are built from their (edited) configs.
+    if (!m_off_line && m_dms_enabled) {
+        status = GetActiveCamera()->setMode(dmsSecondMode);
+        if (status != aditof::Status::OK) {
+            LOG(ERROR) << "Could not warm up second fusion mode!";
+            return false;
+        }
+    }
+
     status = GetActiveCamera()->setMode(mode);
     if (status != aditof::Status::OK) {
         LOG(ERROR) << "Could not set camera mode!";
         return false;
     }
-
 #if 0 //Andre
     if (!m_off_line) {
         status = GetActiveCamera()->adsd3500SetFrameRate(m_user_frame_rate);
@@ -225,6 +272,7 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     } else {
         m_use_modified_ini_params = false;
         m_ini_params.clear();
+        m_ini_by_mode.clear();
         m_modified_ini_params.clear();
         m_last_mode = mode;
     }
@@ -281,7 +329,7 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     // settings for the fused/alternate mode.
     if (!m_off_line) {
         if (m_dms_enabled) {
-            uint8_t modeB = static_cast<uint8_t>(m_dms_second_mode_selection);
+            uint8_t modeB = dmsSecondMode;
 
             // The viewer's DMS toggle means "fuse the two modes"; opt into
             // fusion at the SDK level before configuring the sequence so the

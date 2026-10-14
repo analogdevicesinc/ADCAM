@@ -603,6 +603,8 @@ void ADIMainWindow::DisplayControlWindow(ImGuiWindowFlags overlayFlags,
             NewLine(5.0f);
             // Numeric entry for the depth range (mm) the depth-window colormap
             // spans; typeable boxes with +/- step buttons, applied live.
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f),
+                               "Min/Max: visualization only");
             int dMin = m_view_instance->minRange;
             int dMax = m_view_instance->maxRange;
             bool changed = false;
@@ -693,91 +695,136 @@ bool ADIMainWindow::EntryInt32_t(const char *label, int32_t &input,
     return previous != input;
 }
 
-void ADIMainWindow::ShowIniWindow(bool showModify) {
-    aditof::Status status;
-
-    static int32_t abThreshMin = 0;
-    static int32_t confThresh = 0;
-    static int32_t radialThreshMin = 0;
-    static int32_t radialThreshMax = 0;
-    static bool jblfApplyFlag = false;
-    static int32_t jblfWindowSize = 0;
-    static int32_t jblfGaussianSigma = 0;
-    static int32_t jblfExponentialTerm = 0;
-    static int32_t jblfMaxEdge = 0;
-    static int32_t jblfABThreshold = 0;
-    static int32_t fps = 0;
-
-    if (m_ini_params.empty()) {
-        status = GetActiveCamera()->getDepthParamtersMap(m_mode_selection,
-                                                         m_ini_params);
-        if (status != aditof::Status::OK) {
-            LOG(ERROR) << "Could not get ini params";
+void ADIMainWindow::ShowIniParamsForMode(uint16_t mode, IniParamState &st) {
+    if (!st.loaded) {
+        std::map<std::string, std::string> params;
+        if (GetActiveCamera()->getDepthParamtersMap(mode, params) ==
+            aditof::Status::OK) {
+            auto getf = [&](const char *k) -> int32_t {
+                auto it = params.find(k);
+                if (it == params.end() || it->second.empty())
+                    return 0;
+                try {
+                    return static_cast<int32_t>(std::round(std::stof(it->second)));
+                } catch (const std::exception &) {
+                    return 0;
+                }
+            };
+            st.abThreshMin = getf("abThreshMin");
+            st.confThresh = getf("confThresh");
+            st.radialThreshMin = getf("radialThreshMin");
+            st.radialThreshMax = getf("radialThreshMax");
+            st.jblfApplyFlag = (getf("jblfApplyFlag") == 1);
+            st.jblfWindowSize = getf("jblfWindowSize");
+            st.jblfGaussianSigma = getf("jblfGaussianSigma");
+            st.jblfExponentialTerm = getf("jblfExponentialTerm");
+            st.jblfMaxEdge = getf("jblfMaxEdge");
+            st.jblfABThreshold = getf("jblfABThreshold");
+            st.fps = getf("fps");
+            st.loaded = true;
         } else {
-            abThreshMin = std::stof(m_ini_params["abThreshMin"]);
-            confThresh = std::stof(m_ini_params["confThresh"]);
-            radialThreshMin = std::stof(m_ini_params["radialThreshMin"]);
-            radialThreshMax = std::stof(m_ini_params["radialThreshMax"]);
-            jblfApplyFlag = (static_cast<int>(std::round(std::stof(
-                                 m_ini_params["jblfApplyFlag"]))) == 1);
-            jblfWindowSize = static_cast<int>(
-                std::round(std::stof(m_ini_params["jblfWindowSize"])));
-            jblfGaussianSigma = std::stof(m_ini_params["jblfGaussianSigma"]);
-            jblfExponentialTerm =
-                std::stof(m_ini_params["jblfExponentialTerm"]);
-            jblfMaxEdge = std::stof(m_ini_params["jblfMaxEdge"]);
-            jblfABThreshold = std::stof(m_ini_params["jblfABThreshold"]);
-            fps = static_cast<int>(std::round(std::stof(m_ini_params["fps"])));
+            LOG(ERROR) << "Could not get ini params for mode " << (int)mode;
         }
     }
 
     ImGui::PushItemWidth(140 * m_dpi_scale_factor);
 
-    EntryInt32_t("abThreshMin", abThreshMin, 0, 65535);
+    EntryInt32_t("abThreshMin", st.abThreshMin, 0, 65535);
     ImGuiExtensions::ADIShowTooltipFor("ControlIniAbThreshMin");
-    EntryInt32_t("confThresh", confThresh, 0, 255);
+    EntryInt32_t("confThresh", st.confThresh, 0, 255);
     ImGuiExtensions::ADIShowTooltipFor("ControlIniConfThresh");
-    EntryInt32_t("radialThreshMin", radialThreshMin, 0,
+    EntryInt32_t("radialThreshMin", st.radialThreshMin, 0,
                  65535); // TODO: compare min and max relative sizes
     ImGuiExtensions::ADIShowTooltipFor("ControlIniRadialThreshMin");
-    EntryInt32_t("radialThreshMax", radialThreshMax, 0, 65535);
+    EntryInt32_t("radialThreshMax", st.radialThreshMax, 0, 65535);
     ImGuiExtensions::ADIShowTooltipFor("ControlIniRadialThreshMax");
-    ImGui::Checkbox("jblfApplyFlag", &jblfApplyFlag);
+    ImGui::Checkbox("jblfApplyFlag", &st.jblfApplyFlag);
     ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfApplyFlag");
-    EntryInt32_t("jblfWindowSize", jblfWindowSize, 3,
+    EntryInt32_t("jblfWindowSize", st.jblfWindowSize, 3,
                  7); // TODO: Make this a drop down
     ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfWindowSize");
-    EntryInt32_t("jblfGaussianSigma", jblfGaussianSigma, 0, 65535);
+    EntryInt32_t("jblfGaussianSigma", st.jblfGaussianSigma, 0, 65535);
     ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfGaussianSigma");
-    EntryInt32_t("jblfExponentialTerm", jblfExponentialTerm, 0, 255);
+    EntryInt32_t("jblfExponentialTerm", st.jblfExponentialTerm, 0, 255);
     ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfExponentialTerm");
-    EntryInt32_t("jblfMaxEdge", jblfMaxEdge, 0, 64);
+    EntryInt32_t("jblfMaxEdge", st.jblfMaxEdge, 0, 64);
     ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfMaxEdge");
-    EntryInt32_t("jblfABThreshold", jblfABThreshold, 0, 131071);
+    EntryInt32_t("jblfABThreshold", st.jblfABThreshold, 0, 131071);
     ImGuiExtensions::ADIShowTooltipFor("ControlIniJblfABThreshold");
-    EntryInt32_t("fps", fps, 0, 60);
+    EntryInt32_t("fps", st.fps, 0, 60);
     ImGuiExtensions::ADIShowTooltipFor("ControlIniFps");
 
-    // modify ini params
-    m_modified_ini_params["abSumThresh"] =
+    ImGui::PopItemWidth();
+
+    st.modified["abSumThresh"] =
         std::to_string(1.0f); // Unused, but needed for now.
-    m_modified_ini_params["abThreshMin"] = std::to_string(abThreshMin);
-    m_modified_ini_params["confThresh"] = std::to_string(confThresh);
-    m_modified_ini_params["radialThreshMin"] = std::to_string(radialThreshMin);
-    m_modified_ini_params["radialThreshMax"] = std::to_string(radialThreshMax);
-    if (jblfApplyFlag) {
-        m_modified_ini_params["jblfApplyFlag"] = std::to_string(1);
+    st.modified["abThreshMin"] = std::to_string(st.abThreshMin);
+    st.modified["confThresh"] = std::to_string(st.confThresh);
+    st.modified["radialThreshMin"] = std::to_string(st.radialThreshMin);
+    st.modified["radialThreshMax"] = std::to_string(st.radialThreshMax);
+    st.modified["jblfApplyFlag"] = std::to_string(st.jblfApplyFlag ? 1 : 0);
+    st.modified["jblfWindowSize"] = std::to_string(st.jblfWindowSize);
+    st.modified["jblfGaussianSigma"] = std::to_string(st.jblfGaussianSigma);
+    st.modified["jblfExponentialTerm"] = std::to_string(st.jblfExponentialTerm);
+    st.modified["jblfMaxEdge"] = std::to_string(st.jblfMaxEdge);
+    st.modified["jblfABThreshold"] = std::to_string(st.jblfABThreshold);
+    st.modified["fps"] = std::to_string(st.fps);
+}
+
+void ADIMainWindow::ShowIniWindow(bool showModify) {
+    auto isLR = [](uint16_t m) { return m == 7 || m == 8; };
+
+    // Build the selectable mode list: both halves during fusion, else the
+    // single active/selected mode. Each mode keeps its own edited values.
+    std::vector<uint16_t> modes;
+    if (!m_off_line && m_dms_enabled) {
+        uint16_t primaryMode = static_cast<uint16_t>(m_mode_selection);
+        uint16_t secondMode = static_cast<uint16_t>(m_dms_second_mode_selection);
+        if (m_is_playing) {
+            aditof::CameraDetails d;
+            if (GetActiveCamera()->getDetails(d) == aditof::Status::OK &&
+                d.mode >= 0) {
+                primaryMode = static_cast<uint16_t>(d.mode);
+            }
+            secondMode = m_dms_active_second_mode;
+        }
+        modes.push_back(primaryMode);
+        if (secondMode != primaryMode) {
+            modes.push_back(secondMode);
+        }
     } else {
-        m_modified_ini_params["jblfApplyFlag"] = std::to_string(0);
+        uint16_t m = static_cast<uint16_t>(m_mode_selection);
+        if (m_is_playing) {
+            aditof::CameraDetails d;
+            if (GetActiveCamera()->getDetails(d) == aditof::Status::OK &&
+                d.mode >= 0) {
+                m = static_cast<uint16_t>(d.mode);
+            }
+        }
+        modes.push_back(m);
     }
-    m_modified_ini_params["jblfWindowSize"] = std::to_string(jblfWindowSize);
-    m_modified_ini_params["jblfGaussianSigma"] =
-        std::to_string(jblfGaussianSigma);
-    m_modified_ini_params["jblfExponentialTerm"] =
-        std::to_string(jblfExponentialTerm);
-    m_modified_ini_params["jblfMaxEdge"] = std::to_string(jblfMaxEdge);
-    m_modified_ini_params["jblfABThreshold"] = std::to_string(jblfABThreshold);
-    m_modified_ini_params["fps"] = std::to_string(fps);
+
+    // Radio buttons choose which mode's params are shown; both modes' edits
+    // are retained in m_ini_by_mode across switches.
+    if (modes.size() > 1) {
+        if (m_ini_radio_sel < 0 || m_ini_radio_sel >= (int)modes.size()) {
+            m_ini_radio_sel = 0;
+        }
+        for (int i = 0; i < (int)modes.size(); ++i) {
+            std::string label = "Mode " + std::to_string((int)modes[i]) + " (" +
+                                (isLR(modes[i]) ? "LR" : "SR") + ")";
+            if (i > 0) {
+                ImGui::SameLine();
+            }
+            ImGui::RadioButton(label.c_str(), &m_ini_radio_sel, i);
+        }
+        NewLine(5.0f);
+    } else {
+        m_ini_radio_sel = 0;
+    }
+
+    uint16_t selMode = modes[m_ini_radio_sel];
+    ShowIniParamsForMode(selMode, m_ini_by_mode[selMode]);
 
     if (showModify) {
         if (ImGuiExtensions::ADIButton("Reset Parameters", m_is_open_device)) {
@@ -785,11 +832,22 @@ void ADIMainWindow::ShowIniWindow(bool showModify) {
             if (camera) {
                 camera->resetDepthProcessParams();
                 m_ini_params.clear();
+                m_ini_by_mode.clear();
             }
         }
         ImGuiExtensions::ADIShowTooltipFor("ControlIniResetParameters");
 
         if (ImGui::Button("Modify") && !getIsWorking()) {
+            // Stage every mode that has been viewed/edited (both halves if the
+            // user switched the radio and tuned each); applied during the next
+            // PrepareCamera() (device stopped), then contexts rebuilt from config.
+            m_pending_modified_by_mode.clear();
+            for (uint16_t mode : modes) {
+                auto it = m_ini_by_mode.find(mode);
+                if (it != m_ini_by_mode.end() && it->second.loaded) {
+                    m_pending_modified_by_mode[mode] = it->second.modified;
+                }
+            }
             setWorkingLabel("Applying parameters...");
             setIsWorking(true);
             m_modify_pending = true;

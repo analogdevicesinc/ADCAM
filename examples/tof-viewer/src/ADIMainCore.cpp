@@ -869,6 +869,7 @@ void ADIMainWindow::Render() {
                     m_view_selection_changed = m_view_selection;
                     m_is_playing = true;
                     m_ini_params.clear();
+                    m_ini_by_mode.clear();
                 } else {
                     LOG(ERROR) << "Camera not initialized!";
                 }
@@ -884,6 +885,7 @@ void ADIMainWindow::Render() {
                 m_use_modified_ini_params = true;
                 m_is_playing = true;
                 m_ini_params.clear();
+                m_ini_by_mode.clear();
             }
 
             m_start_streaming_pending = false;
@@ -1061,6 +1063,7 @@ void ADIMainWindow::ShowLoadAdsdParamsMenu() {
                       << loadconfigurationFileValue;
 
             m_ini_params.clear();
+            m_ini_by_mode.clear();
         }
     }
 
@@ -1362,6 +1365,7 @@ void ADIMainWindow::ShowStartWizard() {
                                                  m_cameraModesDropDown,
                                                  &m_mode_selection, true)) {
                     m_ini_params.clear();
+                    m_ini_by_mode.clear();
                 }
                 ImGuiExtensions::ADIShowTooltipFor("WizardOnlineSelectMode");
 
@@ -1402,6 +1406,7 @@ void ADIMainWindow::ShowStartWizard() {
                     if (camera) {
                         camera->resetDepthProcessParams();
                         m_ini_params.clear();
+                        m_ini_by_mode.clear();
                     }
                 }
                 ImGuiExtensions::ADIShowTooltipFor(
