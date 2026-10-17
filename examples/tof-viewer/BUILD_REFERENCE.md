@@ -6,7 +6,7 @@
 cd /home/analog/dev/ADCAM/build
 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 make -j$(nproc)
-./examples/tof-viewer2/ADIToFGUI
+./examples/tof-viewer/ADIToFGUI
 ```
 
 ## Build Configurations
@@ -52,10 +52,10 @@ make -j 6
 
 ### Check Binary:
 ```bash
-file ./examples/tof-viewer2/ADIToFGUI
+file ./examples/tof-viewer/ADIToFGUI
 # Should show: ELF 64-bit LSB executable, ARM aarch64...
 
-ldd ./examples/tof-viewer2/ADIToFGUI | grep cuda
+ldd ./examples/tof-viewer/ADIToFGUI | grep cuda
 # If CUDA enabled, should show libcudart.so
 ```
 
@@ -152,26 +152,26 @@ echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governo
 
 ### 1. Verify Compilation:
 ```bash
-nm examples/tof-viewer2/ADIToFGUI | grep -i neon
+nm examples/tof-viewer/ADIToFGUI | grep -i neon
 # Should show NEON function symbols if compiled
 ```
 
 ### 2. Check SIMD Instructions:
 ```bash
-objdump -d examples/tof-viewer2/ADIToFGUI | grep -E "ld1q|st1q|fmul"
+objdump -d examples/tof-viewer/ADIToFGUI | grep -E "ld1q|st1q|fmul"
 # NEON instructions if present
 ```
 
 ### 3. Profile Performance:
 ```bash
 # Run with timing
-./examples/tof-viewer2/ADIToFGUI 2>&1 | grep -E "AB|Depth|PC"
+./examples/tof-viewer/ADIToFGUI 2>&1 | grep -E "AB|Depth|PC"
 ```
 
 ## Additional Resources
 
 - **Full Documentation**: `ARM64_CUDA_README.md`
-- **Implementation Details**: `IMPLEMENTATION_SUMMARY.md`
+- **Rendering Optimizations**: `JETSON_POINT_CLOUD_OPTIMIZATIONS.md`
 - **Source Files**:
   - ARM NEON: `src/ADIView_neon.cpp`
   - CUDA Kernels: `src/ADIView_cuda.cu`
