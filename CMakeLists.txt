@@ -22,6 +22,8 @@ option(WITH_DOC "Build documentation?" OFF)
 option(WITH_PYTHON "Build python bindings?" ON)
 option(WITH_NETWORK "Build network interface?" OFF)
 option(WITH_RGB_CAMERA "Build with RGB camera support?" OFF)
+set(RGB_CAMERA_BACKEND "GSTREAMER" CACHE STRING "RGB camera backend, used with WITH_RGB_CAMERA: GSTREAMER (Argus) or V4L2 (raw Bayer)")
+set_property(CACHE RGB_CAMERA_BACKEND PROPERTY STRINGS "GSTREAMER" "V4L2")
 set(WITH_PLATFORM "AUTO" CACHE STRING "Platform selection") # Options are: "AUTO", "NVIDIA", "RPI", "WSL2", or "HOST"
 
 ################################# PLATFORM DETECTION ###############################
