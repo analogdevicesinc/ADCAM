@@ -36,7 +36,7 @@ cmake --build . -j$(nproc)
 Run tests: `cd build && ctest --output-on-failure`
 
 ### Core architecture: Multi-threaded frame pipeline
-**File**: `libaditof/sdk/src/connections/target/buffer_processor.cpp`
+**File**: `libaditof/sdk/src/connections/target/frame_pipeline/buffer_processor.cpp`
 
 Two worker threads communicate via lock-free queues; critical for understanding memory flow:
 
@@ -60,7 +60,7 @@ Two worker threads communicate via lock-free queues; critical for understanding 
 - **Logging**: `#ifdef USE_GLOG` for glog, fallback to `aditof/log.h`; avoid stdout/stderr in SDK core
 - **Depth compute library**: Closed-source `libtofi_compute.so` + `libtofi_config.so`; placed in `../libs/` (one level above repo); dual-ISP behavior is runtime-controlled via `dualPulsatrixSystemEnabled` INI parameter (no compile-time `#ifdef DUAL`)
 - **CMake organization**: Avoid in-source builds (enforced); SDK flags in `libaditof/cmake/readme.md`; top-level CMake glues submodules + apps
-- **Naming convention**: SDK core under `libaditof/sdk/src/cameras/itof-*`; sensor/driver integration under `libaditof/sdk/src/connections/target/` (e.g., `adsd3500_sensor.cpp`, `v4l_buffer_access_interface.h`)
+- **Naming convention**: SDK core under `libaditof/sdk/src/cameras/itof-*`; sensor/driver integration under `libaditof/sdk/src/connections/target/` (e.g., `adsd3500/adsd3500_sensor.cpp`, `v4l2/v4l_buffer_access_interface.h`)
 
 ### Integration points
 - **V4L2 kernel driver**: `ToF-drivers/` submodule; payload sizes depend on ISP firmware + frame mode
@@ -71,25 +71,25 @@ Two worker threads communicate via lock-free queues; critical for understanding 
 ### Key files to reference
 | Purpose | File(s) |
 |---------|---------|
-| Frame pipeline logic | `libaditof/sdk/src/connections/target/buffer_processor.cpp` (capture + process threads) |
+| Frame pipeline logic | `libaditof/sdk/src/connections/target/frame_pipeline/buffer_processor.cpp` (capture + process threads) |
 | Frame data layout | `libaditof/sdk/src/cameras/itof-frame/frame_impl.cpp` (getData, getDataDetails) |
-| Sensor driver interface | `libaditof/sdk/src/connections/target/adsd3500_sensor.cpp`, `v4l_buffer_access_interface.h` |
+| Sensor driver interface | `libaditof/sdk/src/connections/target/adsd3500/adsd3500_sensor.cpp`, `v4l2/v4l_buffer_access_interface.h` |
 | Example: all modes | `examples/first-frame/main.cpp` (use `-m <mode>` to set frame mode) |
 | Build configuration | `CMakeLists.txt` (top-level), `libaditof/cmake/readme.md` |
 | Code style | `doc/code-formatting.md` (run `scripts/format.sh` pre-commit) |
 | Tests | `tests/README.md` (log format: `@@,binary,PASS/FAIL,LN<line>`) |
 
 ### Critical memory & safety gotchas
-- **Payload bounds-checking**: Always validate `process_frame.size` before memcpy; V4L2 delivers different payload sizes per mode. See `buffer_processor.cpp` processThread for safe pattern with confidence frame (lines ~570-600).
+- **Payload bounds-checking**: Always validate `process_frame.size` before memcpy; V4L2 delivers different payload sizes per mode. See `buffer_processor.cpp` processThread for the safe pattern with the confidence frame (the `process_frame.size` clamp before the compute call).
 - **Offset arithmetic**: Offsets in `uint16_t*` units when indexing depth/AB; `reinterpret_cast<float*>()` only for confidence region. Mixing uint16 stride with byte offsets → silent corruption.
 - **Queue error recovery**: On `pop()` timeout or memcpy failure, **immediately push buffer back** to source queue to avoid permanent deadlock in multi-threaded pipeline.
-- **ToFi context pointers**: `processThread()` modifies `m_tofiComputeContext->p_depth_frame`, etc.; **must restore original pointers before pushing buffer back** (see lines ~550-570 for safe pattern).
+- **ToFi context pointers**: `processThread()` modifies `m_tofiComputeContext->p_depth_frame`, etc.; **must restore original pointers before pushing buffer back** (see the `tempDepthFrame` save/restore in `processThread()` for the safe pattern).
 - **NVIDIA build flag**: Defaults to `ON` (Jetson target). Host-only builds require `-DNVIDIA=OFF`; some frame modes or ISP features may not work. Check `CMakeLists.txt` for ON_TARGET guard.
 - **Vendored libraries**: libzmq, glog, protobuf inside `libaditof/` take precedence; avoid linking system versions.
 - **Submodule state**: `ToF-drivers` and `libaditof` are git submodules; always run `git submodule update --init` after clone/checkout.
 
 #### Current Architecture (Professional-Grade):
-- **File size**: `adsd3500_sensor.cpp` = 2,106 lines (industry acceptable: < 2,000 ideal, < 3,000 ok)
+- **File size**: `adsd3500_sensor.cpp` = 2,152 lines (industry acceptable: < 2,000 ideal, < 3,000 ok)
 - **Manager pattern**: 9 specialized managers handle all low-level operations:
   1. `ProtocolManager` - hardware command protocol (chip communication)
   2. `ChipConfigManager` - chip configuration discovery
@@ -150,7 +150,7 @@ The `Adsd3500Sensor` class is a **Facade pattern** over 9 managers. Its legitima
 - Unit testing reveals need for finer-grained mocking
 
 ❌ **Bad reasons**:
-- "Class is too long" (2,106 lines is acceptable for embedded facade)
+- "Class is too long" (2,152 lines is acceptable for embedded facade)
 - "Could extract more managers" (diminishing returns, over-engineering)
 - "Academic SOLID purity" (7.5/10 SRP is professional-grade for orchestration)
 - "Move orchestration elsewhere" (just relocates complexity, doesn't reduce it)

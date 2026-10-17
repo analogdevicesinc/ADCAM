@@ -219,7 +219,7 @@ void* mapped = glMapBufferRange(GL_ARRAY_BUFFER, 0, size,
 ## Build Configuration
 These optimizations work with existing build system:
 ```bash
-cd /home/analog/dev/ADCAM/build
+cd build
 cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
 make -j$(nproc)
 ```
@@ -257,7 +257,6 @@ To verify optimizations are working:
 ## Related Documentation
 - [ARM64_CUDA_README.md](./ARM64_CUDA_README.md) - CUDA/NEON acceleration for image processing
 - [BUILD_REFERENCE.md](./BUILD_REFERENCE.md) - Build system configuration
-- [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) - Detailed implementation notes
 
 ## References
 - [NVIDIA Jetson Orin Specifications](https://developer.nvidia.com/embedded/jetson-orin)

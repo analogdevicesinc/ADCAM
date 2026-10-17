@@ -72,7 +72,7 @@ make -j$(nproc)
 ### New Files Created
 
 ```
-examples/tof-viewer2/
+examples/tof-viewer/
 ├── src/
 │   ├── ADIView_neon.cpp          # ARM NEON implementations
 │   ├── ADIView_cuda.cu           # CUDA kernel implementations
@@ -85,7 +85,7 @@ examples/tof-viewer2/
 ### Modified Files
 
 ```
-examples/tof-viewer2/
+examples/tof-viewer/
 ├── src/ADIView.cpp               # Updated thread creation logic
 └── include/ADIView.h             # Added NEON/CUDA function declarations
 ```
@@ -139,7 +139,7 @@ cmake -DAB_TIME=ON -DDEPTH_TIME=ON -DPC_TIME=ON ..
 make
 
 # Run and check output
-./examples/tof-viewer2/ADIToFGUI
+./examples/tof-viewer/ADIToFGUI
 
 # Look for timing output:
 # "AB (CUDA): X.X ms"   - CUDA active
