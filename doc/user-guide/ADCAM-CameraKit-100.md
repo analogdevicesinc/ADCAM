@@ -375,17 +375,11 @@ This tool uses Pygame to show streaming frames from the device in real-time.
 pygame 2.6.1 (SDL 2.28.4, Python 3.10.12)
 Hello from the pygame community. https://www.pygame.org/contribute.html
 depth-image-animation-pygame.py usage:
+Target: depth-image-animation-pygame.py <mode number>
+Network connection: depth-image-animation-pygame.py <mode number> <ip>
 
-**On the Jetson Orin Nano Dev Kit or Raspberry Pi 5**
-depth-image-animation-pygame.py <mode number>
-For example:
-python depth-image-animation-pygame.py 0
-
-**For a network connected device**
-depth-image-animation-pygame.py <mode number> <ip>
 For example:
 python depth-image-animation-pygame.py 0 192.168.56.1
-
 ```
 
 #### Example Usage
@@ -1612,8 +1606,7 @@ For the following discussion [example-cfg.json](other/example-cfg.json) will be 
 
 These should not be changed in the context of the eval kit unless explicitly asked to do so by ADI.
 
-* *errata1*: Drops the first frame after streaming starts to avoid invalid sensor data (`1` = drop, `0` = keep). **DO NOT CHANGE unless instructed by ADI.**
-  * **Manual trigger** (`fsyncMode = 0`): Set `errata1 = 0` to avoid needing an extra fsync pulse for the dropped frame.
+* *errata1*: No longer used. The SDK does not drop the first frame and ignores this key; it is only accepted so that older configuration files still load.
 * *fsyncMode*: DO NOT CHANGE
 * *mipiOutputSpeed*: DO NOT CHANGE
 * *isdeskewEnabled*: DO NOT CHANGE
