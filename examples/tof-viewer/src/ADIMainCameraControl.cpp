@@ -262,9 +262,8 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
 #ifdef WITH_RGB_SUPPORT
     // Load RGBD calibration from chip for proper geometric coregistration.
     // MUST be BEFORE start()/STREAMON and AFTER setMode(): the 0x30 GET_RGBD
-    // burst read requires a valid mode (firmware returns per-mode ToF
-    // intrinsics), and issuing the burst command during streaming disrupts
-    // V4L2 frame delivery.
+    // burst read requires a valid mode and issuing the burst command during 
+    // streaming disrupts V4L2 frame delivery.
     if (m_enable_rgb_display && !m_off_line) {
         uint8_t calibData[160] = {};
         auto calibStatus =
