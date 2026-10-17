@@ -10,3 +10,10 @@ doc/user-guide/tof-viewer.md
 .vs/
 __pycache__/
 *.pyc
+
+# Local captures, prebuilt binaries and notes
+/recordings/
+/mode*.bin
+*.cpython-*.so
+/work-report-*.md
+/bindings/python/pybind11/
