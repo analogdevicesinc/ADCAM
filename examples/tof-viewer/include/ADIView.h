@@ -193,6 +193,13 @@ class ADIView {
      * Call once after PrepareCamera() succeeds with an RGB-enabled mode.
      */
     void initRGBDCoregistration(const uint8_t *data, std::size_t size);
+
+    /**
+     * @brief Recolour point cloud vertices (x y z r g b per pixel) from the RGB frame.
+     * Invalid points and points that map outside the RGB image keep their colour.
+     */
+    void colourPointCloudFromRgb(float *vertices, const int16_t *xyz, int width,
+                                 int height);
 #endif
 
     std::shared_ptr<adicontroller::ADIController> m_ctrl;

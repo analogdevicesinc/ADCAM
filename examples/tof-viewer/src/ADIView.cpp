@@ -1458,4 +1458,68 @@ void ADIView::initRGBDCoregistration(const uint8_t *data, std::size_t size) {
     }
 }
 
+void ADIView::colourPointCloudFromRgb(float *vertices, const int16_t *xyz,
+                                      int width, int height) {
+    if (vertices == nullptr || xyz == nullptr || width <= 0 || height <= 0) {
+        return;
+    }
+
+    {
+        std::unique_lock<std::mutex> lock(rgb_data_ready_mtx);
+        rgb_data_ready_cv.wait(lock, [this] { return rgb_data_ready; });
+    }
+    if (rgb_video_data_8bit == nullptr || rgbFrameWidth <= 0 ||
+        rgbFrameHeight <= 0) {
+        return;
+    }
+
+    const size_t pixelCount = static_cast<size_t>(width) * height;
+
+    bool haveLut = false;
+    if (m_rgbdCalibLoaded) {
+        uint16_t *depth_mm = nullptr;
+        m_capturedFrame->getData("depth", &depth_mm);
+        if (depth_mm != nullptr) {
+            if (m_tofToRgbU.size() != pixelCount) {
+                m_tofToRgbU.assign(pixelCount, -1);
+                m_tofToRgbV.assign(pixelCount, -1);
+            }
+            m_rgbdCoreg.buildToFToRGBMap(depth_mm, static_cast<uint32_t>(width),
+                                         static_cast<uint32_t>(height),
+                                         m_tofToRgbU.data(), m_tofToRgbV.data(),
+                                         static_cast<uint32_t>(rgbFrameWidth),
+                                         static_cast<uint32_t>(rgbFrameHeight));
+            haveLut = true;
+        }
+    }
+
+    for (size_t idx = 0; idx < pixelCount; ++idx) {
+        if (xyz[idx * 3 + 2] == 0) {
+            continue;
+        }
+
+        int32_t col, row;
+        if (haveLut) {
+            col = m_tofToRgbU[idx];
+            row = m_tofToRgbV[idx];
+        } else {
+            col = static_cast<int32_t>((idx % width) * rgbFrameWidth / width);
+            row = static_cast<int32_t>((idx / width) * rgbFrameHeight / height);
+        }
+        if (col < 0 || row < 0 || col >= rgbFrameWidth ||
+            row >= rgbFrameHeight) {
+            continue;
+        }
+
+        // The buffer is BGR; the vertex colour is RGB.
+        const uint8_t *px =
+            rgb_video_data_8bit +
+            (static_cast<size_t>(row) * rgbFrameWidth + col) * 3;
+        float *colour = vertices + idx * 6 + 3;
+        colour[0] = px[2] / 255.0f;
+        colour[1] = px[1] / 255.0f;
+        colour[2] = px[0] / 255.0f;
+    }
+}
+
 #endif // WITH_RGB_SUPPORT
