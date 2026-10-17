@@ -272,6 +272,14 @@ void ADIView::_displayPointCloudImage_CUDA() {
             haveAb ? ab_video_data_8bit : nullptr, frameWidth, frameHeight,
             Max_X, Max_Y, Max_Z, minRange, maxRange, m_pccolour, haveAb);
 
+#ifdef WITH_RGB_SUPPORT
+        // The kernel has no RGB mode, so recolour its output from the RGB frame.
+        if (m_pccolour == 3 && m_capturedFrame->haveDataType("rgb")) {
+            colourPointCloudFromRgb(normalized_vertices, pointCloud_video_data,
+                                    frameWidth, frameHeight);
+        }
+#endif
+
         vertexArraySize = (pointcloudTableSize + 1) * sizeof(float) * 3;
 
 #ifdef PC_TIME
