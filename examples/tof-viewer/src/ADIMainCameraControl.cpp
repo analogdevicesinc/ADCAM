@@ -405,107 +405,46 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
 #endif
             }
 
-            uint32_t numberAvailableDataTypes = 0;
+            UpdateFramePaneLayout();
 
-            // RGB shares the AB window, so count as AB/RGB window (not separate)
-            numberAvailableDataTypes += (haveAB || haveRGB) ? 1 : 0;
-            numberAvailableDataTypes += haveDepth ? 1 : 0;
-            numberAvailableDataTypes += haveXYZ ? 1 : 0;
-
-            ImGuiIO &io = ImGui::GetIO();
-            if (io.KeyShift) {
-
-                if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) {
-                    m_depth_line_values.clear();
-                    m_depthLine.clear();
-                    m_frame_window_position_state++;
-                    if (m_frame_window_position_state >
-                        numberAvailableDataTypes)
-                        m_frame_window_position_state = 0;
-                }
-
-                if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) {
-                    m_depth_line_values.clear();
-                    m_depthLine.clear();
-                    m_frame_window_position_state--;
-                    if (m_frame_window_position_state < 0)
-                        m_frame_window_position_state =
-                            numberAvailableDataTypes;
-                }
-            }
-
-            if (numberAvailableDataTypes == 3) {
-                if (m_frame_window_position_state == 0) {
-                    m_xyz_position = &m_dict_win_position["fr-main"];
-                    m_ab_position = &m_dict_win_position["fr-sub1"];
-                    m_depth_position = &m_dict_win_position["fr-sub2"];
-                } else if (m_frame_window_position_state == 1) {
-                    m_xyz_position = &m_dict_win_position["fr-sub2"];
-                    m_ab_position = &m_dict_win_position["fr-main"];
-                    m_depth_position = &m_dict_win_position["fr-sub1"];
-                } else if (m_frame_window_position_state == 2) {
-                    m_xyz_position = &m_dict_win_position["fr-sub1"];
-                    m_ab_position = &m_dict_win_position["fr-sub2"];
-                    m_depth_position = &m_dict_win_position["fr-main"];
-                }
-            } else if (numberAvailableDataTypes == 2) {
-
-                if (!haveAB) {
-
-                    if (m_frame_window_position_state == 0) {
-                        m_xyz_position = &m_dict_win_position["fr-main"];
-                        m_depth_position = &m_dict_win_position["fr-sub1"];
-                    } else {
-                        m_xyz_position = &m_dict_win_position["fr-sub1"];
-                        m_depth_position = &m_dict_win_position["fr-main"];
-                    }
-                } else if (!haveDepth) {
-
-                    if (m_frame_window_position_state == 0) {
-                        m_xyz_position = &m_dict_win_position["fr-main"];
-                        m_ab_position = &m_dict_win_position["fr-sub1"];
-                    } else {
-                        m_xyz_position = &m_dict_win_position["fr-sub1"];
-                        m_ab_position = &m_dict_win_position["fr-main"];
-                    }
-                } else if (!haveXYZ) {
-
-                    if (m_frame_window_position_state == 0) {
-                        m_depth_position = &m_dict_win_position["fr-main"];
-                        m_ab_position = &m_dict_win_position["fr-sub1"];
-                    } else {
-                        m_depth_position = &m_dict_win_position["fr-sub1"];
-                        m_ab_position = &m_dict_win_position["fr-main"];
-                    }
-                }
-            } else {
+            if (IsPaneVisible(FramePane::Depth)) {
                 if (haveDepth) {
-                    m_depth_position = &m_dict_win_position["fr-main"];
-                } else if (haveAB) {
-                    m_ab_position = &m_dict_win_position["fr-main"];
-                } else if (haveXYZ) {
-                    m_xyz_position = &m_dict_win_position["fr-main"];
+                    DisplayDepthWindow(overlayFlags);
+                } else {
+                    DisplayUnavailableWindow(FramePane::Depth, "Depth",
+                                             m_depth_position, overlayFlags);
                 }
             }
-
-            if (haveXYZ) {
-                DisplayPointCloudWindow(overlayFlags);
+            if (IsPaneVisible(FramePane::AB)) {
+                if (haveAB) {
+                    DisplayActiveBrightnessWindow(overlayFlags);
+                } else {
+                    DisplayUnavailableWindow(FramePane::AB, "AB", m_ab_position,
+                                             overlayFlags);
+                }
             }
 #ifdef WITH_RGB_SUPPORT
-            if (haveRGB) {
-                DisplayRGBWindow(overlayFlags);
-            }
-#else
-            if (haveAB) {
-                DisplayActiveBrightnessWindow(overlayFlags);
+            if (IsPaneVisible(FramePane::RGB)) {
+                if (haveRGB) {
+                    DisplayRGBWindow(overlayFlags);
+                } else {
+                    DisplayUnavailableWindow(FramePane::RGB, "RGB",
+                                             m_rgb_position, overlayFlags);
+                }
             }
 #endif
-            if (haveDepth) {
-                DisplayDepthWindow(overlayFlags);
+            if (IsPaneVisible(FramePane::PointCloud)) {
+                if (haveXYZ) {
+                    DisplayPointCloudWindow(overlayFlags);
+                } else {
+                    DisplayUnavailableWindow(FramePane::PointCloud,
+                                             "Point Cloud", m_xyz_position,
+                                             overlayFlags);
+                }
             }
             DisplayInfoWindow(overlayFlags, diverging);
             DisplayControlWindow(overlayFlags, haveAB, haveDepth, haveXYZ);
-            if (haveDepth) {
+            if (haveDepth && IsPaneVisible(FramePane::Depth)) {
                 DepthLinePlot(overlayFlags);
             }
         }

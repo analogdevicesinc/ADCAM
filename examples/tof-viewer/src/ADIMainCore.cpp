@@ -520,42 +520,10 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
     m_dict_win_position["control"].width = m_dict_win_position["info"].width;
     m_dict_win_position["control"].height = m_dict_win_position["info"].height;
 
-    m_dict_win_position["fr-main"].x =
-        WindowCalcX(m_dict_win_position["control"], 10.0f);
-    m_dict_win_position["fr-main"].y = m_dict_win_position["info"].y;
-    m_dict_win_position["fr-main"].width = 640.0f;
-    m_dict_win_position["fr-main"].height = 640.0f;
-
-    m_dict_win_position["fr-sub1"].x =
-        WindowCalcX(m_dict_win_position["fr-main"], 10.0f);
-    m_dict_win_position["fr-sub1"].y = m_dict_win_position["fr-main"].y;
-    m_dict_win_position["fr-sub1"].width = 256.0f;
-    m_dict_win_position["fr-sub1"].height = 256.0f;
-
-    m_dict_win_position["fr-sub2"].x = m_dict_win_position["fr-sub1"].x;
-    m_dict_win_position["fr-sub2"].y =
-        WindowCalcY(m_dict_win_position["fr-sub1"], 10.0f);
-    m_dict_win_position["fr-sub2"].width = 256.0f;
-    m_dict_win_position["fr-sub2"].height = 256.0f;
-
-#ifdef WITH_RGB_SUPPORT
-    // RGB window: 1920x1200 native, scale to 16:10 aspect ratio at ~410px width
-    m_dict_win_position["fr-rgb"].x =
-        WindowCalcX(m_dict_win_position["fr-main"], 10.0f);
-    m_dict_win_position["fr-rgb"].y = m_dict_win_position["fr-main"].y;
-    m_dict_win_position["fr-rgb"].width = 409.6f;
-    m_dict_win_position["fr-rgb"].height = 256.0f; // 16:10 aspect ratio
-#endif
-
-    m_dict_win_position["plotA"].x = m_dict_win_position["fr-main"].x;
-    m_dict_win_position["plotA"].y =
-        WindowCalcY(m_dict_win_position["fr-main"], 10.0f);
-    m_dict_win_position["plotA"].width = m_dict_win_position["fr-main"].width;
-    m_dict_win_position["plotA"].height = 315.0f;
-
-    m_xyz_position = &m_dict_win_position["fr-main"];
-    m_ab_position = &m_dict_win_position["fr-sub1"];
-    m_depth_position = &m_dict_win_position["fr-sub2"];
+    // Pane and plot rects are recomputed every frame by UpdateFramePaneLayout()
+    m_xyz_position = &m_dict_win_position["fr-xyz"];
+    m_ab_position = &m_dict_win_position["fr-ab"];
+    m_depth_position = &m_dict_win_position["fr-depth"];
 #ifdef WITH_RGB_SUPPORT
     m_rgb_position = &m_dict_win_position["fr-rgb"];
 #endif
@@ -857,7 +825,7 @@ void ADIMainWindow::Render() {
                     m_offline_change_frame = true;
                     camera->setPlaybackFile(m_offline_filename);
                     m_off_line_frame_index = 0;
-                    m_frame_window_position_state = 0;
+                    m_expanded_pane = FramePane::None;
                     m_view_selection_changed = m_view_selection;
                     m_is_playing = true;
                     m_ini_params.clear();
@@ -877,7 +845,7 @@ void ADIMainWindow::Render() {
                     camera->adsd3500setEnableDynamicModeSwitching(false);
                 }
 
-                m_frame_window_position_state = 0;
+                m_expanded_pane = FramePane::None;
                 m_view_selection_changed = m_view_selection;
                 m_last_mode = m_mode_selection;
                 m_use_modified_ini_params = true;
@@ -980,11 +948,10 @@ void ADIMainWindow::Render() {
 }
 
 void ADIMainWindow::ShowMainMenu() {
-    static bool show_app_log = true;
     static bool show_help_window = false;
 
-    if (show_app_log) {
-        ShowLogWindow(&show_app_log);
+    if (m_show_app_log) {
+        ShowLogWindow(&m_show_app_log);
     }
 
     if (show_help_window) {
@@ -997,7 +964,7 @@ void ADIMainWindow::ShowMainMenu() {
             if (ImGui::MenuItem("Help")) {
                 show_help_window = true;
             }
-            ImGui::MenuItem("Debug Log", nullptr, &show_app_log);
+            ImGui::MenuItem("Debug Log", nullptr, &m_show_app_log);
             ImGui::Separator();
             if (ImGui::MenuItem("Exit")) {
                 glfwSetWindowShouldClose(window, true);

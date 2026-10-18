@@ -226,6 +226,8 @@ struct Rect {
 
 enum class MouseMovementType { None, Rotation, Translation };
 
+enum class FramePane { None, Depth, AB, RGB, PointCloud };
+
 namespace adiMainWindow {
 
 class ADIMainWindow {
@@ -479,6 +481,28 @@ class ADIMainWindow {
 		* @brief Displays Point Cloud Window
 		*/
     void DisplayPointCloudWindow(ImGuiWindowFlags overlayFlags);
+
+    /**
+     * @brief Places the frame panes in a 2x2 grid, or gives the whole area to
+     *        the expanded pane
+     */
+    void UpdateFramePaneLayout();
+    bool IsPaneVisible(FramePane pane) const {
+        return m_expanded_pane == FramePane::None || m_expanded_pane == pane;
+    }
+
+    /**
+     * @brief Draws the pane name and its Expand/Collapse button on top of the
+     *        window being built
+     */
+    void DrawPaneHeader(const char *name, FramePane pane);
+
+    /**
+     * @brief Fills a pane with a message when its data is not in the stream
+     */
+    void DisplayUnavailableWindow(FramePane pane, const char *name,
+                                  const Rect *position,
+                                  ImGuiWindowFlags overlayFlags);
 #ifdef WITH_RGB_SUPPORT
     /**
      * @brief Initialize OpenGL RGB texture
@@ -594,6 +618,7 @@ class ADIMainWindow {
         "WARNING: Logging before InitGoogleLogging() is written to "
         "STDERR\n";
     const int32_t MAX_RECORD_TIME = 60;
+    const float LOG_WINDOW_HEIGHT = 235.0f;
     const float OFFSETFROMTOPOFGUI = 38;
     const float OFFSETFROMLEFT = 38;
     const float INITIALRAD = 0.0f;
@@ -698,7 +723,8 @@ class ADIMainWindow {
 #ifdef WITH_RGB_SUPPORT
     Rect *m_rgb_position;
 #endif
-    uint32_t m_frame_window_position_state;
+    FramePane m_expanded_pane = FramePane::None;
+    bool m_show_app_log = true;
     std::shared_ptr<adiviewer::ADIView> m_view_instance = nullptr;
     AppLog m_log;
 

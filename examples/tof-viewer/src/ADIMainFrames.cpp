@@ -75,9 +75,13 @@ void ADIMainWindow::RenderFrameHoverInfo(ImVec2 hoveredImagePixel,
         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
         ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoScrollbar;
 
-    ImGui::SetNextWindowPos(ImGui::GetCursorScreenPos(), ImGuiCond_Always);
+    // Bottom-left of the pane, clear of the pane header at the top
+    const float edgePad = 8.0f * m_dpi_scale_factor;
+    ImGui::SetNextWindowPos(
+        ImVec2(ImGui::GetWindowPos().x + edgePad,
+               ImGui::GetWindowPos().y + ImGui::GetWindowHeight() - edgePad),
+        ImGuiCond_Always, ImVec2(0.0f, 1.0f));
     ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
-    ImGui::Begin("hover", nullptr, overlayFlags2);
 
     if (format == ADI_Image_Format_t::ADI_IMAGE_FORMAT_DEPTH16) {
         imageType = "Depth";
@@ -88,6 +92,10 @@ void ADIMainWindow::RenderFrameHoverInfo(ImVec2 hoveredImagePixel,
         imageType = "RGB";
 #endif
     }
+
+    // One overlay per image type so panes shown together do not share it
+    const std::string overlayName = "hover##" + imageType;
+    ImGui::Begin(overlayName.c_str(), nullptr, overlayFlags2);
 
     if (isHovered || ImGui::IsWindowHovered()) {
         ImGui::Text("%s: %d, %d, %d %s", imageType.c_str(),
@@ -327,6 +335,111 @@ bool ADIMainWindow::SaveAllFramesUpdate() {
     return true; // Should never get here since this use case should never occur
 }
 
+void ADIMainWindow::UpdateFramePaneLayout() {
+    constexpr float gap = 10.0f;
+    constexpr float margin = 5.0f;
+    constexpr float maxPlotHeight = 315.0f;
+
+    // Everything right of the control window and above the log, in unscaled units
+    const float logReserved = m_show_app_log ? LOG_WINDOW_HEIGHT + gap : 0.0f;
+    Rect area;
+    area.x = WindowCalcX(m_dict_win_position["control"], gap);
+    area.y = m_dict_win_position["info"].y;
+    area.width = std::fmax(1.0f, m_main_window_width / m_dpi_scale_factor -
+                                     area.x - margin);
+    area.height = std::fmax(1.0f, m_main_window_height / m_dpi_scale_factor -
+                                      area.y - margin - logReserved);
+
+    if (!m_depth_line_values.empty() && IsPaneVisible(FramePane::Depth)) {
+        Rect &plot = m_dict_win_position["plotA"];
+        plot.height = std::fmin(maxPlotHeight, area.height * 0.35f);
+        plot.x = area.x;
+        plot.width = area.width;
+        plot.y = area.y + area.height - plot.height;
+        area.height -= plot.height + gap;
+    }
+
+    struct Slot {
+        FramePane pane;
+        Rect *rect;
+    };
+    const Slot slots[] = {{FramePane::Depth, m_depth_position},
+                          {FramePane::AB, m_ab_position},
+#ifdef WITH_RGB_SUPPORT
+                          {FramePane::RGB, m_rgb_position},
+#endif
+                          {FramePane::PointCloud, m_xyz_position}};
+
+    if (m_expanded_pane != FramePane::None) {
+        for (const Slot &slot : slots) {
+            if (slot.pane == m_expanded_pane) {
+                *slot.rect = area;
+            }
+        }
+        return;
+    }
+
+    const float paneWidth = (area.width - gap) / 2.0f;
+    const float paneHeight = (area.height - gap) / 2.0f;
+    int index = 0;
+    for (const Slot &slot : slots) {
+        slot.rect->x = area.x + (index % 2) * (paneWidth + gap);
+        slot.rect->y = area.y + (index / 2) * (paneHeight + gap);
+        slot.rect->width = paneWidth;
+        slot.rect->height = paneHeight;
+        ++index;
+    }
+}
+
+void ADIMainWindow::DrawPaneHeader(const char *name, FramePane pane) {
+    const float pad = 6.0f * m_dpi_scale_factor;
+    const bool expanded = (m_expanded_pane == pane);
+    const char *buttonLabel = expanded ? "Collapse" : "Expand";
+
+    // Image placement and the hover overlay read the cursor, so leave it as found
+    const ImVec2 cursor = ImGui::GetCursorPos();
+
+    ImGui::SetCursorPos(ImVec2(pad, pad));
+    const ImVec2 textPos = ImGui::GetCursorScreenPos();
+    const ImVec2 textSize = ImGui::CalcTextSize(name);
+    ImGui::GetWindowDrawList()->AddRectFilled(
+        ImVec2(textPos.x - 3.0f, textPos.y - 1.0f),
+        ImVec2(textPos.x + textSize.x + 3.0f, textPos.y + textSize.y + 1.0f),
+        IM_COL32(0, 0, 0, 140));
+    ImGui::TextUnformatted(name);
+
+    const float buttonWidth = ImGui::CalcTextSize(buttonLabel).x +
+                              ImGui::GetStyle().FramePadding.x * 2.0f;
+    ImGui::SetCursorPos(
+        ImVec2(ImGui::GetWindowWidth() - buttonWidth - pad, pad));
+    if (ImGui::SmallButton(buttonLabel)) {
+        m_expanded_pane = expanded ? FramePane::None : pane;
+    }
+
+    ImGui::SetCursorPos(cursor);
+}
+
+void ADIMainWindow::DisplayUnavailableWindow(FramePane pane, const char *name,
+                                             const Rect *position,
+                                             ImGuiWindowFlags overlayFlags) {
+    SetWindowPosition(position->x, position->y);
+    SetWindowSize(position->width, position->height);
+
+    const std::string title = std::string(name) + " Window";
+    const std::string message =
+        std::string("No ") + name + " data in this stream";
+    if (ImGui::Begin(title.c_str(), nullptr,
+                     overlayFlags | ImGuiWindowFlags_NoTitleBar)) {
+        const ImVec2 textSize = ImGui::CalcTextSize(message.c_str());
+        ImGui::SetCursorPos(
+            ImVec2((ImGui::GetWindowWidth() - textSize.x) * 0.5f,
+                   (ImGui::GetWindowHeight() - textSize.y) * 0.5f));
+        ImGui::TextDisabled("%s", message.c_str());
+        DrawPaneHeader(name, pane);
+    }
+    ImGui::End();
+}
+
 void ADIMainWindow::DepthLinePlot(ImGuiWindowFlags overlayFlags) {
 
     if (m_depth_line_values.size() == 0) {
@@ -460,6 +573,7 @@ void ADIMainWindow::DisplayActiveBrightnessWindow(
             hoveredImagePixel, m_view_instance->ab_video_data,
             m_view_instance->frameWidth, ImGui::IsWindowHovered(),
             ADI_Image_Format_t::ADI_IMAGE_FORMAT_AB16, "Intensity");
+        DrawPaneHeader("AB", FramePane::AB);
     }
 
     ImGui::End();
@@ -625,6 +739,7 @@ void ADIMainWindow::DisplayDepthWindow(ImGuiWindowFlags overlayFlags) {
             hoveredImagePixel, m_view_instance->depth_video_data,
             m_view_instance->frameWidth, ImGui::IsWindowHovered(),
             ADI_Image_Format_t::ADI_IMAGE_FORMAT_DEPTH16, "mm");
+        DrawPaneHeader("Depth", FramePane::Depth);
     }
 
     ImGui::End();
@@ -743,7 +858,8 @@ void ADIMainWindow::DisplayPointCloudWindow(ImGuiWindowFlags overlayFlags) {
     SetWindowPosition(m_xyz_position->x, m_xyz_position->y);
     SetWindowSize(m_xyz_position->width, m_xyz_position->height);
 
-    if (ImGui::Begin("Point Cloud Window", nullptr, overlayFlags)) {
+    if (ImGui::Begin("Point Cloud Window", nullptr,
+                     overlayFlags | ImGuiWindowFlags_NoTitleBar)) {
 
         ImGui::SetCursorPos(ImVec2(0, 0));
 
@@ -825,6 +941,7 @@ void ADIMainWindow::DisplayPointCloudWindow(ImGuiWindowFlags overlayFlags) {
             ImOGuizmo::DrawGizmo(modelMatrix, projMatrix, 10.0f);
             glDisable(GL_DEPTH_TEST);
         }
+        DrawPaneHeader("Point Cloud", FramePane::PointCloud);
     }
     ImGui::End();
 }
@@ -1240,6 +1357,7 @@ void ADIMainWindow::DisplayRGBWindow(ImGuiWindowFlags overlayFlags) {
                     rotationangleradians);
             }
         }
+        DrawPaneHeader("RGB", FramePane::RGB);
     }
 
     ImGui::End();
