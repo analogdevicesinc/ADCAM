@@ -27,8 +27,9 @@
 using namespace adiMainWindow;
 
 void ADIMainWindow::ShowLogWindow(bool *p_open) {
-    SetWindowSize(m_main_window_width / m_dpi_scale_factor, 235.0f);
-    SetWindowPosition(0, m_main_window_height / m_dpi_scale_factor - 235.0f);
+    SetWindowSize(m_main_window_width / m_dpi_scale_factor, LOG_WINDOW_HEIGHT);
+    SetWindowPosition(0, m_main_window_height / m_dpi_scale_factor -
+                             LOG_WINDOW_HEIGHT);
     ImGuiWindowFlags windowFlags =
         ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
     m_log.Draw("Camera: Log", p_open, windowFlags);
