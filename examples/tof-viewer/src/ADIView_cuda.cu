@@ -273,6 +273,190 @@ __global__ void processPointCloudKernel(int16_t *xyz, float *vertices,
 
 // Host functions implementations
 
+// Same maths as RGBDCoregistration::undistortToFPoint
+__device__ static void undistortToFPoint_device(const CudaIntrinsics &K,
+                                                float xNorm, float yNorm,
+                                                float &xUndist,
+                                                float &yUndist) {
+    constexpr int kIterations = 5;
+
+    const float x0 = xNorm - K.codx;
+    const float y0 = yNorm - K.cody;
+    float xp = x0;
+    float yp = y0;
+
+    for (int i = 0; i < kIterations; ++i) {
+        const float r2 = xp * xp + yp * yp;
+        const float r4 = r2 * r2;
+        const float r6 = r4 * r2;
+        const float numer = 1.0f + K.k1 * r2 + K.k2 * r4 + K.k3 * r6;
+        const float denom = 1.0f + K.k4 * r2 + K.k5 * r4 + K.k6 * r6;
+        const float radial = numer / denom;
+        if (!(radial > 0.0f)) {
+            xp = x0;
+            yp = y0;
+            break;
+        }
+        const float dx = 2.0f * K.p1 * xp * yp + K.p2 * (r2 + 2.0f * xp * xp);
+        const float dy = K.p1 * (r2 + 2.0f * yp * yp) + 2.0f * K.p2 * xp * yp;
+        xp = (x0 - dx) / radial;
+        yp = (y0 - dy) / radial;
+    }
+
+    xUndist = xp + K.codx;
+    yUndist = yp + K.cody;
+}
+
+// Same maths as RGBDCoregistration::projectToRGB
+__device__ static void projectToRGB_device(const CudaIntrinsics &K, float xNorm,
+                                           float yNorm, float &uPx,
+                                           float &vPx) {
+    const float xp = xNorm - K.codx;
+    const float yp = yNorm - K.cody;
+    const float r2 = xp * xp + yp * yp;
+    const float r4 = r2 * r2;
+    const float r6 = r4 * r2;
+
+    const float numer = 1.0f + K.k1 * r2 + K.k2 * r4 + K.k3 * r6;
+    const float denom = 1.0f + K.k4 * r2 + K.k5 * r4 + K.k6 * r6;
+    const float radial = (fabsf(denom) > 1e-6f) ? (numer / denom) : numer;
+
+    const float xDist = xp * radial + K.codx + 2.0f * K.p1 * xp * yp +
+                        K.p2 * (r2 + 2.0f * xp * xp);
+    const float yDist = yp * radial + K.cody + K.p1 * (r2 + 2.0f * yp * yp) +
+                        2.0f * K.p2 * xp * yp;
+
+    uPx = K.fx * xDist + K.cx;
+    vPx = K.fy * yDist + K.cy;
+}
+
+// One thread per ToF pixel; mirrors RGBDCoregistration::buildToFToRGBMap
+__global__ void buildToFToRGBMapKernel(const uint16_t *depth, int tofWidth,
+                                       int tofHeight, int rgbWidth,
+                                       int rgbHeight, CudaRgbdCalib calib,
+                                       int32_t *rgbU, int32_t *rgbV) {
+    const int col = blockIdx.x * blockDim.x + threadIdx.x;
+    const int row = blockIdx.y * blockDim.y + threadIdx.y;
+    if (col >= tofWidth || row >= tofHeight) {
+        return;
+    }
+
+    const int idx = row * tofWidth + col;
+    rgbU[idx] = -1;
+    rgbV[idx] = -1;
+
+    const uint16_t d = depth[idx];
+    if (d == 0) {
+        return;
+    }
+
+    const float xNorm = ((float)col - calib.tof.cx) / calib.tof.fx;
+    const float yNorm = ((float)row - calib.tof.cy) / calib.tof.fy;
+
+    float xu, yu;
+    undistortToFPoint_device(calib.tof, xNorm, yNorm, xu, yu);
+
+    // d is radial depth, convert to Z before back-projection
+    const float rayLen = sqrtf(xu * xu + yu * yu + 1.0f);
+    const float Zf = (float)d / rayLen;
+    const float Xf = xu * Zf;
+    const float Yf = yu * Zf;
+
+    const float *R = calib.R;
+    const float *t = calib.t;
+    const float Xr = R[0] * Xf + R[1] * Yf + R[2] * Zf + t[0];
+    const float Yr = R[3] * Xf + R[4] * Yf + R[5] * Zf + t[1];
+    const float Zr = R[6] * Xf + R[7] * Yf + R[8] * Zf + t[2];
+    if (Zr <= 0.0f) {
+        return;
+    }
+
+    float uPx, vPx;
+    projectToRGB_device(calib.rgb, Xr / Zr, Yr / Zr, uPx, vPx);
+
+    const int u = (int)(uPx + 0.5f);
+    const int v = (int)(vPx + 0.5f);
+    if (u < 0 || u >= rgbWidth || v < 0 || v >= rgbHeight) {
+        return;
+    }
+
+    rgbU[idx] = u;
+    rgbV[idx] = v;
+}
+
+bool buildToFToRGBMap_CUDA(const uint16_t *h_depth, int tofWidth, int tofHeight,
+                           int rgbWidth, int rgbHeight,
+                           const CudaRgbdCalib &calib, int32_t *h_rgbU,
+                           int32_t *h_rgbV) {
+    if (h_depth == nullptr || h_rgbU == nullptr || h_rgbV == nullptr ||
+        tofWidth <= 0 || tofHeight <= 0) {
+        return false;
+    }
+
+    const size_t pixelCount = (size_t)tofWidth * tofHeight;
+
+    static uint16_t *d_depth = nullptr;
+    static int32_t *d_u = nullptr;
+    static int32_t *d_v = nullptr;
+    static size_t lastCount = 0;
+
+    cudaError_t err = cudaSuccess;
+    if (d_depth == nullptr || lastCount != pixelCount) {
+        cudaFree(d_depth);
+        cudaFree(d_u);
+        cudaFree(d_v);
+        d_depth = nullptr;
+        d_u = nullptr;
+        d_v = nullptr;
+        lastCount = 0;
+
+        err = cudaMalloc(&d_depth, pixelCount * sizeof(uint16_t));
+        if (err == cudaSuccess) {
+            err = cudaMalloc(&d_u, pixelCount * sizeof(int32_t));
+        }
+        if (err == cudaSuccess) {
+            err = cudaMalloc(&d_v, pixelCount * sizeof(int32_t));
+        }
+        if (err != cudaSuccess) {
+            std::cerr << "buildToFToRGBMap_CUDA: " << cudaGetErrorString(err)
+                      << std::endl;
+            cudaFree(d_depth);
+            cudaFree(d_u);
+            cudaFree(d_v);
+            d_depth = nullptr;
+            d_u = nullptr;
+            d_v = nullptr;
+            return false;
+        }
+        lastCount = pixelCount;
+    }
+
+    err = cudaMemcpy(d_depth, h_depth, pixelCount * sizeof(uint16_t),
+                     cudaMemcpyHostToDevice);
+    if (err == cudaSuccess) {
+        dim3 blockDim(16, 16);
+        dim3 gridDim((tofWidth + blockDim.x - 1) / blockDim.x,
+                     (tofHeight + blockDim.y - 1) / blockDim.y);
+        buildToFToRGBMapKernel<<<gridDim, blockDim>>>(
+            d_depth, tofWidth, tofHeight, rgbWidth, rgbHeight, calib, d_u, d_v);
+        err = cudaGetLastError();
+    }
+    if (err == cudaSuccess) {
+        err = cudaMemcpy(h_rgbU, d_u, pixelCount * sizeof(int32_t),
+                         cudaMemcpyDeviceToHost);
+    }
+    if (err == cudaSuccess) {
+        err = cudaMemcpy(h_rgbV, d_v, pixelCount * sizeof(int32_t),
+                         cudaMemcpyDeviceToHost);
+    }
+    if (err != cudaSuccess) {
+        std::cerr << "buildToFToRGBMap_CUDA: " << cudaGetErrorString(err)
+                  << std::endl;
+        return false;
+    }
+    return true;
+}
+
 void normalizeABBuffer_CUDA(uint16_t *d_abBuffer, uint16_t *h_abBuffer,
                             uint16_t abWidth, uint16_t abHeight,
                             bool advanceScaling, bool useLogScaling,

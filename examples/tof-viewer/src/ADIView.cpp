@@ -1458,6 +1458,20 @@ void ADIView::initRGBDCoregistration(const uint8_t *data, std::size_t size) {
     }
 }
 
+#ifdef USE_CUDA
+static CudaRgbdCalib toCudaCalib(const aditof::RGBDCalibration &calib) {
+    static_assert(sizeof(CudaIntrinsics) ==
+                      sizeof(aditof::CameraIntrinsicsCalib),
+                  "CudaIntrinsics must mirror CameraIntrinsicsCalib");
+    CudaRgbdCalib out;
+    std::memcpy(&out.tof, &calib.tof, sizeof(out.tof));
+    std::memcpy(&out.rgb, &calib.rgb, sizeof(out.rgb));
+    std::memcpy(out.R, calib.extrinsics.R, sizeof(out.R));
+    std::memcpy(out.t, calib.extrinsics.t, sizeof(out.t));
+    return out;
+}
+#endif
+
 void ADIView::colourPointCloudFromRgb(float *vertices, const int16_t *xyz,
                                       int width, int height) {
     if (vertices == nullptr || xyz == nullptr || width <= 0 || height <= 0) {
@@ -1484,11 +1498,20 @@ void ADIView::colourPointCloudFromRgb(float *vertices, const int16_t *xyz,
                 m_tofToRgbU.assign(pixelCount, -1);
                 m_tofToRgbV.assign(pixelCount, -1);
             }
-            m_rgbdCoreg.buildToFToRGBMap(depth_mm, static_cast<uint32_t>(width),
-                                         static_cast<uint32_t>(height),
-                                         m_tofToRgbU.data(), m_tofToRgbV.data(),
-                                         static_cast<uint32_t>(rgbFrameWidth),
-                                         static_cast<uint32_t>(rgbFrameHeight));
+            bool built = false;
+#ifdef USE_CUDA
+            built = buildToFToRGBMap_CUDA(
+                depth_mm, width, height, rgbFrameWidth, rgbFrameHeight,
+                toCudaCalib(m_rgbdCoreg.getCalibration()), m_tofToRgbU.data(),
+                m_tofToRgbV.data());
+#endif
+            if (!built) {
+                m_rgbdCoreg.buildToFToRGBMap(
+                    depth_mm, static_cast<uint32_t>(width),
+                    static_cast<uint32_t>(height), m_tofToRgbU.data(),
+                    m_tofToRgbV.data(), static_cast<uint32_t>(rgbFrameWidth),
+                    static_cast<uint32_t>(rgbFrameHeight));
+            }
             haveLut = true;
         }
     }
