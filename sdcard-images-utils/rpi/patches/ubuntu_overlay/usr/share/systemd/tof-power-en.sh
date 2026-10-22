@@ -19,7 +19,7 @@ declare -A GPIO
 GPIO_LIST=("ISP_RST" "EN_1P8" "EN_0P8" "P2" "I2CM_SEL" "ISP_BS3" "NET_HOST_IO_SEL" "ISP_BS0" "ISP_BS1" "HOST_IO_DIR" "ISP_BS4" "ISP_BS5" "FSYNC_DIR" "EN_VAUX" "EN_VAUX_LS" "EN_SYS")
 
 # Check for GPIO34 first and assign it directly to ISP_RST
-GPIO34_RESULT=$(sudo cat /sys/kernel/debug/gpio | grep -i "\bGPIO34\b")
+GPIO34_RESULT=$(grep -w "GPIO34" /sys/kernel/debug/gpio)
 if [[ -n "$GPIO34_RESULT" ]]; then
     gpio_num=$(echo "$GPIO34_RESULT" | sed -E 's/.*gpio-([0-9]+).*/\1/')
     if [[ -n "$gpio_num" ]]; then
