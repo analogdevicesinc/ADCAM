@@ -35,28 +35,6 @@
 #include <cstddef>
 #include <cstdint>
 
-// Same field order as aditof::CameraIntrinsicsCalib
-struct CudaIntrinsics {
-    float fx, fy, cx, cy, codx, cody;
-    float k1, k2, k3, k4, k5, k6;
-    float p2, p1;
-};
-
-// Mirrors aditof::RGBDCalibration: extrinsics are tof2rgb, t in mm
-struct CudaRgbdCalib {
-    CudaIntrinsics tof;
-    CudaIntrinsics rgb;
-    float R[9];
-    float t[3];
-};
-
-// GPU version of aditof::RGBDCoregistration::buildToFToRGBMap. Returns false
-// on a CUDA error so the caller can fall back to the CPU version.
-bool buildToFToRGBMap_CUDA(const uint16_t *h_depth, int tofWidth, int tofHeight,
-                           int rgbWidth, int rgbHeight,
-                           const CudaRgbdCalib &calib, int32_t *h_rgbU,
-                           int32_t *h_rgbV);
-
 // CUDA kernel declarations for AB buffer processing
 void normalizeABBuffer_CUDA(uint16_t *d_abBuffer, uint16_t *h_abBuffer,
                             uint16_t abWidth, uint16_t abHeight,
