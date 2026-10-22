@@ -273,10 +273,10 @@ void ADIView::_displayPointCloudImage_CUDA() {
             Max_X, Max_Y, Max_Z, minRange, maxRange, m_pccolour, haveAb);
 
 #ifdef WITH_RGB_SUPPORT
-        // The kernel has no RGB mode, so recolour its output from the RGB frame.
-        if (m_pccolour == 3 && m_capturedFrame->haveDataType("rgb")) {
-            colourPointCloudFromRgb(normalized_vertices, pointCloud_video_data,
-                                    frameWidth, frameHeight);
+        // The kernel has no RGB mode, so recolour its output from xyz_color.
+        if (m_pccolour == 3 && m_capturedFrame->haveDataType("xyz_color")) {
+            colourPointCloudFromRgb(normalized_vertices, frameWidth,
+                                    frameHeight);
         }
 #endif
 

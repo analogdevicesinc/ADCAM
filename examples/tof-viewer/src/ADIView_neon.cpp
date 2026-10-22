@@ -525,31 +525,10 @@ void ADIView::_displayPointCloudImage_NEON() {
         }
 
 #ifdef WITH_RGB_SUPPORT
-        bool haveRgb = m_capturedFrame->haveDataType("rgb");
-        if (haveRgb && m_pccolour == 3) {
-            std::unique_lock<std::mutex> lock(rgb_data_ready_mtx);
-            rgb_data_ready_cv.wait(lock, [this] { return rgb_data_ready; });
-        }
-
-        // Build the tof→rgb lookup table here (single owner: this thread) so
-        // the coregistration LUT is never shared/reallocated across threads.
-        if (m_rgbdCalibLoaded && m_pccolour == 3 && haveRgb &&
-            rgbFrameWidth > 0 && rgbFrameHeight > 0) {
-            uint16_t *depth_mm = nullptr;
-            m_capturedFrame->getData("depth", &depth_mm);
-            if (depth_mm != nullptr) {
-                const std::size_t lut_n =
-                    static_cast<std::size_t>(frameWidth) * frameHeight;
-                if (m_tofToRgbU.size() != lut_n) {
-                    m_tofToRgbU.assign(lut_n, -1);
-                    m_tofToRgbV.assign(lut_n, -1);
-                }
-                m_rgbdCoreg.buildToFToRGBMap(
-                    depth_mm, static_cast<uint32_t>(frameWidth),
-                    static_cast<uint32_t>(frameHeight), m_tofToRgbU.data(),
-                    m_tofToRgbV.data(), static_cast<uint32_t>(rgbFrameWidth),
-                    static_cast<uint32_t>(rgbFrameHeight));
-            }
+        // The SDK colours the points; the RGB image itself is not needed here.
+        uint8_t *xyzColor = nullptr;
+        if (m_pccolour == 3 && m_capturedFrame->haveDataType("xyz_color")) {
+            m_capturedFrame->getData("xyz_color", (uint16_t **)&xyzColor);
         }
 #endif // WITH_RGB_SUPPORT
 
@@ -582,43 +561,14 @@ void ADIView::_displayPointCloudImage_NEON() {
                     fBlue = (float)ab_video_data_8bit[cntr + 2] / 255.0f;
                     cntr += 3;
 #ifdef WITH_RGB_SUPPORT
-                } else if (m_pccolour == 3 && haveRgb &&
-                           rgb_video_data_8bit != nullptr &&
-                           rgbFrameWidth > 0 && rgbFrameHeight > 0) {
-                    uint32_t pixIdx = i / 3;
-                    int32_t rgb_col, rgb_row;
-                    if (m_rgbdCalibLoaded && pixIdx < m_tofToRgbU.size()) {
-                        rgb_col = m_tofToRgbU[pixIdx];
-                        rgb_row = m_tofToRgbV[pixIdx];
-                    } else {
-                        // Fallback: naive scale until calibration is loaded
-                        uint32_t tof_col =
-                            pixIdx % static_cast<uint32_t>(frameWidth);
-                        uint32_t tof_row =
-                            pixIdx / static_cast<uint32_t>(frameWidth);
-                        rgb_col = static_cast<int32_t>(
-                            tof_col * static_cast<uint32_t>(rgbFrameWidth) /
-                            static_cast<uint32_t>(frameWidth));
-                        rgb_row = static_cast<int32_t>(
-                            tof_row * static_cast<uint32_t>(rgbFrameHeight) /
-                            static_cast<uint32_t>(frameHeight));
-                    }
-                    if (rgb_col >= 0 && rgb_row >= 0 &&
-                        rgb_col < rgbFrameWidth && rgb_row < rgbFrameHeight) {
-                        uint32_t rgb_idx =
-                            (static_cast<uint32_t>(rgb_row) *
-                                 static_cast<uint32_t>(rgbFrameWidth) +
-                             static_cast<uint32_t>(rgb_col)) *
-                            3u;
-                        // Buffer stores BGR (OpenCV convention); shader expects RGB
-                        fBlue = (float)rgb_video_data_8bit[rgb_idx] / 255.0f;
-                        fGreen =
-                            (float)rgb_video_data_8bit[rgb_idx + 1] / 255.0f;
-                        fRed = (float)rgb_video_data_8bit[rgb_idx + 2] / 255.0f;
-                    } else {
-                        hsvColorMap((pointCloud_video_data[i + 2]), maxRange,
-                                    minRange, fRed, fGreen, fBlue);
-                    }
+                } else if (m_pccolour == 3 && xyzColor != nullptr &&
+                           xyzColor[(i / 3) * 4 + 3] ==
+                               static_cast<uint8_t>(
+                                   aditof::XYZColorStatus::Valid)) {
+                    const uint8_t *c = xyzColor + (i / 3) * 4;
+                    fRed = c[0] / 255.0f;
+                    fGreen = c[1] / 255.0f;
+                    fBlue = c[2] / 255.0f;
 #endif // WITH_RGB_SUPPORT
                 } else {
                     hsvColorMap((pointCloud_video_data[i + 2]), maxRange,

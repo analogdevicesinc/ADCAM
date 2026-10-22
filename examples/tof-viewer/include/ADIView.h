@@ -189,17 +189,10 @@ class ADIView {
 
 #ifdef WITH_RGB_SUPPORT
     /**
-     * @brief Initialise RGBD coregistration from the 160-byte 0x30 chip read.
-     * Call once after PrepareCamera() succeeds with an RGB-enabled mode.
+     * @brief Recolour point cloud vertices (x y z r g b per pixel) from the
+     * frame's xyz_color. Points without a valid colour keep theirs.
      */
-    void initRGBDCoregistration(const uint8_t *data, std::size_t size);
-
-    /**
-     * @brief Recolour point cloud vertices (x y z r g b per pixel) from the RGB frame.
-     * Invalid points and points that map outside the RGB image keep their colour.
-     */
-    void colourPointCloudFromRgb(float *vertices, const int16_t *xyz, int width,
-                                 int height);
+    void colourPointCloudFromRgb(float *vertices, int width, int height);
 #endif
 
     std::shared_ptr<adicontroller::ADIController> m_ctrl;
@@ -258,14 +251,6 @@ class ADIView {
     // Actual RGB frame dimensions (set dynamically from frame data)
     int rgbFrameWidth = 0;
     int rgbFrameHeight = 0;
-
-    // RGBD coregistration — proper geometric ToF→RGB pixel mapping
-    aditof::RGBDCoregistration m_rgbdCoreg;
-    std::vector<int32_t>
-        m_tofToRgbU; ///< Per-ToF-pixel RGB u coord (-1=invalid)
-    std::vector<int32_t>
-        m_tofToRgbV; ///< Per-ToF-pixel RGB v coord (-1=invalid)
-    bool m_rgbdCalibLoaded = false;
 #endif // WITH_RGB_SUPPORT
 
     float *normalized_vertices = nullptr;

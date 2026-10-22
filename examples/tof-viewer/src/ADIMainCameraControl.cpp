@@ -259,30 +259,6 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
         m_view_instance->setABMaxRange(value);
     }
 
-#ifdef WITH_RGB_SUPPORT
-    // Load RGBD calibration for proper geometric coregistration: from the
-    // chip live, from the recording header in playback.
-    // Live: MUST be BEFORE start()/STREAMON and AFTER setMode(): the 0x30
-    // GET_RGBD burst read requires a valid mode and issuing the burst command
-    // during streaming disrupts V4L2 frame delivery.
-    if (m_enable_rgb_display) {
-        uint8_t calibData[160] = {};
-        auto calibStatus =
-            GetActiveCamera()->readRGBDCalibrationFromChip(calibData);
-        if (calibStatus == aditof::Status::OK) {
-            m_view_instance->initRGBDCoregistration(calibData,
-                                                    sizeof(calibData));
-        } else if (m_off_line) {
-            LOG(INFO) << "The recording has no RGBD calibration. RGB point "
-                         "cloud uses naive pixel scaling.";
-        } else {
-            LOG(WARNING) << "RGBD calibration not available from chip (status="
-                         << static_cast<int>(calibStatus)
-                         << "). RGB point cloud uses naive pixel scaling.";
-        }
-    }
-#endif
-
     // Program the camera with cfg passed, set the mode by writing to 0x200 and start the camera
     status = GetActiveCamera()->start();
     if (status != aditof::Status::OK) {
