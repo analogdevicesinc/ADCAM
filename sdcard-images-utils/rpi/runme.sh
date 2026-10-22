@@ -401,6 +401,12 @@ build_kernel() {
     cp -v arch/arm64/boot/dts/broadcom/bcm2712-rpi-5-b.dtb "${PATCH_DIR}/" || error_exit "Failed to copy DTB" ${EXIT_BUILD_FAILURE}
     log_info "  Copied: bcm2712-rpi-5-b.dtb"
 
+    cp -v arch/arm64/boot/dts/broadcom/bcm2712-rpi-cm5-cm5io.dtb "${PATCH_DIR}/" || error_exit "Failed to copy DTB" ${EXIT_BUILD_FAILURE}
+    log_info "  Copied: bcm2712-rpi-cm5-cm5io.dtb"
+
+    cp -v arch/arm64/boot/dts/broadcom/bcm2712-rpi-cm5l-cm5io.dtb "${PATCH_DIR}/" || error_exit "Failed to copy DTB" ${EXIT_BUILD_FAILURE}
+    log_info "  Copied: bcm2712-rpi-cm5l-cm5io.dtb"
+
     if [[ -f arch/arm/boot/dts/overlays/adsd3500-adsd3100.dtbo ]]; then
         cp -v arch/arm/boot/dts/overlays/adsd3500-adsd3100.dtbo "${PATCH_DIR}/" || log_warning "Failed to copy device tree overlay"
         log_info "  Copied: adsd3500-adsd3100.dtbo"
