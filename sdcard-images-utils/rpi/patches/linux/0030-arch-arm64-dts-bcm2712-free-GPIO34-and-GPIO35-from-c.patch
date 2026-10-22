@@ -1,0 +1,78 @@
+From c0abee1bcd10851ac54054e00260e2af2cbc6389 Mon Sep 17 00:00:00 2001
+From: Sivasubramaniyan-Padmanaban_adi <sivasubramaniyan.padmanaban@analog.com>
+Date: Thu, 22 Oct 2026 16:18:39 +0530
+Subject: [PATCH] arch: arm64: dts: bcm2712: free GPIO34 and GPIO35 from camera
+ definitions
+
+- Remove unused cam0 clock and regulator nodes.
+- Drop cam1 regulator aliases and override properties.
+- Rename GPIO34 and GPIO35 to generic GPIO labels.
+
+Signed-off-by: Sivasubramaniyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ .../boot/dts/broadcom/bcm2712-rpi-cm5.dtsi    | 20 ++-----------------
+ arch/arm64/boot/dts/broadcom/bcm2712-rpi.dtsi |  3 ---
+ 2 files changed, 2 insertions(+), 21 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/broadcom/bcm2712-rpi-cm5.dtsi b/arch/arm64/boot/dts/broadcom/bcm2712-rpi-cm5.dtsi
+index e35d3abba20b..aea6f0786fae 100644
+--- a/arch/arm64/boot/dts/broadcom/bcm2712-rpi-cm5.dtsi
++++ b/arch/arm64/boot/dts/broadcom/bcm2712-rpi-cm5.dtsi
+@@ -79,19 +79,6 @@ cam1_clk: cam1_clk {
+ 		status = "disabled";
+ 	};
+ 
+-	cam0_clk: cam0_clk {
+-		compatible = "fixed-clock";
+-		#clock-cells = <0>;
+-		status = "disabled";
+-	};
+-
+-	cam0_reg: cam0_reg {
+-		compatible = "regulator-fixed";
+-		regulator-name = "cam0_reg";
+-		enable-active-high;
+-		gpio = <&rp1_gpio 34 0>;  // CD0_IO0_MICCLK, to CAM_GPIO on connector
+-	};
+-
+ 	cam_dummy_reg: cam_dummy_reg {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "cam-dummy-reg";
+@@ -196,9 +183,6 @@ &rp1_usb1 {
+ 
+ #include "bcm2712-rpi.dtsi"
+ 
+-cam1_reg: &cam0_reg { // Shares CAM_GPIO with cam0_reg
+-};
+-
+ csi0: &rp1_csi0 { };
+ csi1: &rp1_csi1 { };
+ dsi0: &rp1_dsi0 { };
+@@ -668,8 +652,8 @@ &rp1_gpio {
+ 		"ETH_RST_N", // GPIO32
+ 		"PCIE_DET_WAKE", // GPIO33
+ 
+-		"CD0_IO0_MICCLK", // GPIO34
+-		"CD0_IO0_MICDAT0", // GPIO35
++		"GPIO34", // GPIO34
++		"GPIO35", // GPIO35
+ 		"RP1_PCIE_CLKREQ_N", // GPIO36
+ 		"ETH_IRQ_N", // GPIO37
+ 		"SDA0", // GPIO38
+diff --git a/arch/arm64/boot/dts/broadcom/bcm2712-rpi.dtsi b/arch/arm64/boot/dts/broadcom/bcm2712-rpi.dtsi
+index cd346cbadbdb..4d833f4432f3 100644
+--- a/arch/arm64/boot/dts/broadcom/bcm2712-rpi.dtsi
++++ b/arch/arm64/boot/dts/broadcom/bcm2712-rpi.dtsi
+@@ -249,9 +249,6 @@ __overrides__ {
+ 		watchdog = <&watchdog>, "early-watchdog?";
+ 		wifiaddr = <&wifi>, "local-mac-address[";
+ 
+-		cam1_reg = <&cam1_reg>,"status";
+-		cam1_reg_gpio = <&cam1_reg>,"gpio:4",
+-				<&cam1_reg>,"gpio:0=", <&gpio>;
+ 	};
+ };
+ 
+-- 
+2.25.1
+
