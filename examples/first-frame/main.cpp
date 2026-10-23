@@ -198,7 +198,6 @@ int main(int argc, char *argv[]) {
                   << status;
     };
     Status registerCbStatus = Status::UNAVAILABLE;
-    // Cast to hardware-specific interface (ISP - Interface Segregation Principle)
     auto adsd3500_hw =
         std::dynamic_pointer_cast<Adsd3500HardwareInterface>(sensor);
     if (adsd3500_hw) {
