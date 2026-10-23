@@ -246,7 +246,6 @@ class ADIView {
     // RGB frame parameters
     static constexpr int RGB_WIDTH = 1920;
     static constexpr int RGB_HEIGHT = 1200;
-    static constexpr int RGB_FRAME_SIZE = 1358848; // NV12 format: typical size
 
     // Actual RGB frame dimensions (set dynamically from frame data)
     int rgbFrameWidth = 0;

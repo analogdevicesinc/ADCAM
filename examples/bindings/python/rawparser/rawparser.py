@@ -107,7 +107,7 @@ def generate_confidence(conf_frame, directory, base_filename, index):
     o3d.io.write_image(safe_join(directory, f'conf_{base_filename}_{index}{PNG_EXT}'), img)
 
 def generate_rgb(rgb_data, directory, base_filename, index, width, height):
-    """Generate RGB JPG from BGR data (SDK already converted from NV12)"""
+    """Generate RGB JPG from the BGR data returned by the SDK"""
     try:
         # SDK returns BGR format (3 bytes per pixel)
         if isinstance(rgb_data, np.ndarray):
