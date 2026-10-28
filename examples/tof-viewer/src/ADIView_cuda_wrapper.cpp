@@ -256,7 +256,8 @@ void ADIView::_displayPointCloudImage_CUDA() {
                 delete[] normalized_vertices;
             }
             pointcloudTableSize = frameSize;
-            normalized_vertices = new float[(pointcloudTableSize + 1) * 3];
+            // One x y z r g b vertex per point, plus the origin marker
+            normalized_vertices = new float[(pointcloudTableSize / 3 + 1) * 6];
         }
 
         bool haveAb = m_capturedFrame->haveDataType("ab");
@@ -280,7 +281,12 @@ void ADIView::_displayPointCloudImage_CUDA() {
         }
 #endif
 
-        vertexArraySize = (pointcloudTableSize + 1) * sizeof(float) * 3;
+        // White origin marker after the points, as in the CPU paths
+        float *origin = normalized_vertices + (pointcloudTableSize / 3) * 6;
+        origin[0] = origin[1] = origin[2] = 0.0f;
+        origin[3] = origin[4] = origin[5] = 1.0f;
+
+        vertexArraySize = (pointcloudTableSize / 3 + 1) * 6 * sizeof(float);
 
 #ifdef PC_TIME
         {
