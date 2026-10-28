@@ -1067,8 +1067,8 @@ void ADIView::_displayPointCloudImage() {
                 delete[] normalized_vertices;
             }
             pointcloudTableSize = frameSize;
-            normalized_vertices = new float[(pointcloudTableSize + 1) *
-                                            3]; //Adding RGB components
+            // One x y z r g b vertex per point, plus the origin marker
+            normalized_vertices = new float[(pointcloudTableSize / 3 + 1) * 6];
         }
 
         float fRed = 0.f;
@@ -1151,8 +1151,7 @@ void ADIView::_displayPointCloudImage() {
         normalized_vertices[bgrSize++] = 1.0f; // G
         normalized_vertices[bgrSize++] = 1.0f; //
 
-        vertexArraySize = (pointcloudTableSize + 1) * sizeof(float) *
-                          3; //Adding RGB component
+        vertexArraySize = (pointcloudTableSize / 3 + 1) * 6 * sizeof(float);
 
 #ifdef PC_TIME
         LOG(INFO) << "PC: " << endTimerAndUpdate(timerStart, &timePCQ) << " ms";
