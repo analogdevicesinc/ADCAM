@@ -74,11 +74,11 @@ static const char Help_Menu[] =
  * @brief Save a frame's data to a binary file
  * @param[in] frame The frame object containing the data to save
  * @param[in] frameType The type of frame data to save (e.g., "depth", "ab", "xyz")
- * @param[in] mode_num The mode number to include in the output filename
+ * @param[in] modeTag The mode tag for the output filename (e.g. "0" or "0_7")
  * @return Status indicating success or failure of the operation
  */
 Status save_frame(aditof::Frame &frame, std::string frameType,
-                  const int &mode_num) {
+                  const std::string &modeTag) {
 
     uint16_t *data1;
     FrameDataDetails fDetails;
@@ -102,7 +102,7 @@ Status save_frame(aditof::Frame &frame, std::string frameType,
     }
 
     std::ofstream g("out_" + frameType + "_" + fDetails.type + "mode_" +
-                        std::to_string(mode_num) + ".bin",
+                        modeTag + ".bin",
                     std::ios::binary);
     frame.getDataDetails(frameType, fDetails);
     g.write((char *)data1, fDetails.bytesCount);
@@ -281,16 +281,14 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    std::string modeTag = std::to_string(mode);
     if (fuse) {
         status = camera->setModeFusion(firstMode, secondMode);
         if (status != Status::OK) {
             LOG(ERROR) << "Could not start mode fusion!";
             return 0;
         }
-        // The fused frame is processed by the long-range compute context.
-        bool fused = false;
-        uint8_t srMode = 0;
-        camera->getModeFusion(fused, srMode, mode);
+        modeTag = std::to_string(firstMode) + "_" + std::to_string(secondMode);
     } else {
         status = camera->setMode(mode);
         if (status != Status::OK) {
@@ -314,9 +312,9 @@ int main(int argc, char *argv[]) {
         LOG(INFO) << "Successfully requested frame!";
     }
 
-    save_frame(frame, "ab", mode);
-    save_frame(frame, "depth", mode);
-    save_frame(frame, "rgb", mode);
+    save_frame(frame, "ab", modeTag);
+    save_frame(frame, "depth", modeTag);
+    save_frame(frame, "rgb", modeTag);
 
     status = camera->stop();
     if (status != Status::OK) {
