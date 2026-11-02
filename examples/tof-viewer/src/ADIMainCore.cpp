@@ -1064,6 +1064,7 @@ void ADIMainWindow::ShowLoadAdsdParamsMenu() {
 
             m_ini_params.clear();
             m_ini_by_mode.clear();
+            UpdateFusionFromConfig();
         }
     }
 
@@ -1366,24 +1367,33 @@ void ADIMainWindow::ShowStartWizard() {
                                                  &m_mode_selection, true)) {
                     m_ini_params.clear();
                     m_ini_by_mode.clear();
+                    UpdateFusionFromConfig();
                 }
                 ImGuiExtensions::ADIShowTooltipFor("WizardOnlineSelectMode");
 
-                NewLine(5.0f);
-
-                ImGuiExtensions::ADICheckbox("Mode Fusion",
-                                             &m_dms_enabled);
-                ImGuiExtensions::ADIShowTooltipFor(
-                    "WizardOnlineDynamicModeSwitching");
-
-                if (m_dms_enabled) {
+                if (m_fusion_supported) {
                     NewLine(5.0f);
-                    ImGuiExtensions::ADIComboBox(
-                        "Second Mode", "Selected Second Mode",
-                        ImGuiSelectableFlags_None, m_cameraModesDropDown,
-                        &m_dms_second_mode_selection, true);
+
+                    ImGuiExtensions::ADICheckbox("Mode Fusion",
+                                                 &m_dms_enabled);
                     ImGuiExtensions::ADIShowTooltipFor(
-                        "WizardOnlineDynamicModeSwitchingSecondMode");
+                        "WizardOnlineDynamicModeSwitching");
+
+                    if (m_dms_enabled) {
+                        NewLine(5.0f);
+                        ImGuiExtensions::ADIComboBox(
+                            "Second Mode", "Selected Second Mode",
+                            ImGuiSelectableFlags_None, m_cameraModesDropDown,
+                            &m_dms_second_mode_selection, true);
+                        ImGuiExtensions::ADIShowTooltipFor(
+                            "WizardOnlineDynamicModeSwitchingSecondMode");
+                        if (!IsValidFusionPair()) {
+                            ImGui::TextColored(
+                                ImVec4(1.0f, 0.4f, 0.4f, 1.0f),
+                                "Select one Short Range and one Long Range "
+                                "mode");
+                        }
+                    }
                 }
 
                 NewLine(5.0f);
@@ -1431,8 +1441,10 @@ void ADIMainWindow::ShowStartWizard() {
                         "WizardOnlinePreviewOff");
                 }
 
-                if (ImGuiExtensions::ADIButton("Start Streaming",
-                                               !m_is_playing)) {
+                if (ImGuiExtensions::ADIButton(
+                        "Start Streaming",
+                        !m_is_playing &&
+                            (!m_dms_enabled || IsValidFusionPair()))) {
                     setWorkingLabel("Starting streaming...");
                     setIsWorking(true);
                     m_start_streaming_offline = false;

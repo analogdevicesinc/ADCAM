@@ -637,49 +637,13 @@ def main():
     apply_param_overrides(camera1)
 
     if fusion:
-        # The primary (active/first) mode must be fixed by IsSRFrameFirst, not
-        # by which mode the user picked: IsSRFrameFirst=0 -> LR primary (SR
-        # second), =1 -> SR primary (LR second). Resolve it here so the capture
-        # is identical regardless of the selection order. ADTF3066 (hardcoded):
-        # modes 7, 8 are Long Range; all others are Short Range.
-        def is_lr(m):
-            return m == 7 or m == 8
-
-        lr_mode = sel_mode if is_lr(sel_mode) else second_mode
-        sr_mode = second_mode if is_lr(sel_mode) else sel_mode
-
-        _, sr_params = camera1.getDepthParamtersMap(sr_mode)
-        sr_first = sr_params.get("IsSRFrameFirst", "0") == "1"
-
-        sel_mode = sr_mode if sr_first else lr_mode
-        second_mode = lr_mode if sr_first else sr_mode
-
-        # Warm up both fused modes by running the full setMode() path on each
-        # (secondary first, primary last so it stays active). This mirrors the
-        # console example's two-mode discovery and leaves each mode's compute
-        # context in the same "built twice" state, so fusion output no longer
-        # depends on which mode was visited first.
-        status = camera1.setMode(second_mode)
-        print("camera1.setMode(second warm-up)", status)
-
-    status = camera1.setMode(sel_mode)
-    print("camera1.setMode()", status)
-
-    if fusion:
-        # Mirror the SDK/DMS setup: opt into fusion (off by default at the SDK
-        # level), metadata-in-AB on, reapply MIPI (setMode clears it), settle,
-        # enable Dynamic Mode Switching, then load the primary+second sequence
-        # so the chip fuses the pair.
-        camera1.setModeFusionEnabled(True)
-        camera1.adsd3500SetEnableMetadatainAB(1)
-        camera1.adsd3500SetMIPIOutputSpeed(1)
-        time.sleep(0.3)
-        status = camera1.adsd3500setEnableDynamicModeSwitching(True)
-        print("enable Dynamic Mode Switching", status)
-        sequence = [(sel_mode, 0x01), (second_mode, 0x01)]
-        status = camera1.adsds3500setDynamicModeSwitchingSequence(sequence)
-        print("set Dynamic Mode Switching sequence", status)
-        time.sleep(0.3)
+        # The camera configures Dynamic Mode Switching for the pair; the first
+        # selected mode leads (IsSRFrameFirst=1 when it is short-range).
+        status = camera1.setModeFusion(sel_mode, second_mode)
+        print("camera1.setModeFusion()", status)
+    else:
+        status = camera1.setMode(sel_mode)
+        print("camera1.setMode()", status)
 
     status = camera1.start()
     print("camera1.start()", status)
