@@ -129,10 +129,22 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
                 frame->getMetadataStruct(md) == aditof::Status::OK) {
                 delivered_mode = md.imagerMode;
             }
-            bool fused = !m_off_line &&
-                         (m_dms_enabled || delivered_mode != camera_mode);
+            bool recordedFusion = false;
+            uint8_t recordedSr = 0xFF;
+            uint8_t recordedLr = 0xFF;
+            if (m_off_line && GetActiveCamera()) {
+                GetActiveCamera()->getModeFusion(recordedFusion, recordedSr,
+                                                 recordedLr);
+            }
+            bool fused = m_off_line ? recordedFusion
+                                    : (m_dms_enabled ||
+                                       delivered_mode != camera_mode);
             if (fused) {
                 uint8_t modeB = m_dms_active_second_mode;
+                if (m_off_line) {
+                    modeB = (camera_mode == recordedSr) ? recordedLr
+                                                        : recordedSr;
+                }
                 s = std::to_string(static_cast<int>(camera_mode)) + " + " +
                     std::to_string(static_cast<int>(modeB)) + " (fused)";
             } else {
@@ -145,9 +157,10 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("Expected fps");
                 ImGui::TableSetColumnIndex(1);
-                // Mode fusion emits one output frame per two sensor frames, so
-                // the expected output rate is half the configured sensor rate.
-                ImGui::Text("%i", fused ? (m_fps_expected / 2) : m_fps_expected);
+                // Mode fusion emits one output frame per two sensor frames;
+                // recordings already store the fused rate.
+                ImGui::Text("%i", (fused && !m_off_line) ? (m_fps_expected / 2)
+                                                         : m_fps_expected);
             }
 
             static uint32_t fps;
