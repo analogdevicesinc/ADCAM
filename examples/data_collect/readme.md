@@ -49,6 +49,13 @@ To run the example, run data_collect.exe with config_adsd3500_adsd3100.json file
 ./data_collect.exe --f "../data_output" --m 10 --n 4 "config_adsd3500_adsd3100.json"
 ```
 
+## Mode fusion (ADTF3066 only)
+`--fuse <firstMode>,<secondMode>` fuses a short-range mode (0, 1, 3, 6) with a long-range mode (7, 8). The first mode leads the sequence, so the SR frame comes first when the first mode is short-range. No JSON config is required. It overrides `--m` and is not supported with `--ip`. `--fps` is the sensor rate, so fused frames arrive at fps/2; the recording header stores the fusion pair so tof-viewer playback shows it.
+
+```
+./data_collect --fuse 0,7 --fps 20 --n 100 --f ../data_output
+```
+
 ## Known Issues
 None
 

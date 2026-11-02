@@ -15,7 +15,6 @@ set(PY_EXAMPLES
     skeletal_tracking_in_pointcloud
     showPointCloud
     rawparser
-    dynamic_mode_switching
 )
 
 foreach(ex ${PY_EXAMPLES})
