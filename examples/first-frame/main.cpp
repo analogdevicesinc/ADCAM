@@ -35,6 +35,7 @@
 #include <ios>
 #include <iostream>
 #include <map>
+#include <sstream>
 
 using namespace aditof;
 
@@ -43,6 +44,7 @@ static const char Help_Menu[] =
     first-frame
     first-frame (-h | --help)
     first-frame [-ip | --ip <ip>] [-m | --m <mode>] [-config | --config <config_file.json>]
+    first-frame [-fuse | --fuse <firstMode>,<secondMode>] [-config | --config <config_file.json>]
 
     Arguments:
       config_file.json   Input config_default.json file (which has *.ccb and *.cfg)
@@ -50,6 +52,10 @@ static const char Help_Menu[] =
     Options:
       -h --help          Show this screen.
       -m --m <mode>      Mode to capture data in. [default: 0]
+      -fuse --fuse <firstMode>,<secondMode>
+                         ADTF3066 only: fuse a short-range mode (0, 1, 3, 6)
+                         with a long-range mode (7, 8), e.g. -fuse 0,7.
+                         Overrides -m. Not supported with -ip.
 
     NOTE: -m | --m argument supports both index and string (0/sr-native)
 
@@ -105,11 +111,37 @@ Status save_frame(aditof::Frame &frame, std::string frameType,
     return status;
 }
 
+/**
+ * @brief Parse a "<firstMode>,<secondMode>" fusion pair
+ * @param[in] value The argument value
+ * @param[out] firstMode The mode leading the fusion sequence
+ * @param[out] secondMode The other mode of the pair
+ * @return true if the value holds two mode numbers
+ */
+static bool parseFusePair(const std::string &value, uint8_t &firstMode,
+                          uint8_t &secondMode) {
+    std::istringstream iss(value);
+    int first = -1;
+    int second = -1;
+    char comma = 0;
+    if (!(iss >> first >> comma >> second) || comma != ',') {
+        return false;
+    }
+    iss >> std::ws;
+    if (!iss.eof() || first < 0 || first > 255 || second < 0 || second > 255) {
+        return false;
+    }
+    firstMode = static_cast<uint8_t>(first);
+    secondMode = static_cast<uint8_t>(second);
+    return true;
+}
+
 int main(int argc, char *argv[]) {
     std::map<std::string, struct Argument> command_map = {
         {"-h", {"--help", false, "", "", false}},
         {"-ip", {"--ip", false, "", "", true}},
         {"-m", {"--m", false, "", "0", true}},
+        {"-fuse", {"--fuse", false, "", "", true}},
         {"-config", {"--config", false, "last", "", false}}};
 
     CommandParser command;
@@ -174,6 +206,22 @@ int main(int argc, char *argv[]) {
         ip = "ip:" + command_map["-ip"].value;
     }
 
+    const bool fuse = !command_map["-fuse"].value.empty();
+    uint8_t firstMode = 0;
+    uint8_t secondMode = 0;
+    if (fuse) {
+        if (!parseFusePair(command_map["-fuse"].value, firstMode, secondMode)) {
+            LOG(ERROR) << "Invalid -fuse value '" << command_map["-fuse"].value
+                       << "': expected <firstMode>,<secondMode>, e.g. -fuse "
+                          "0,7";
+            return -1;
+        }
+        if (!ip.empty()) {
+            LOG(ERROR) << "Mode fusion is not supported with -ip";
+            return -1;
+        }
+    }
+
     System system;
 
     std::vector<std::shared_ptr<Camera>> cameras;
@@ -233,10 +281,22 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    status = camera->setMode(mode);
-    if (status != Status::OK) {
-        LOG(ERROR) << "Could not set camera mode!";
-        return 0;
+    if (fuse) {
+        status = camera->setModeFusion(firstMode, secondMode);
+        if (status != Status::OK) {
+            LOG(ERROR) << "Could not start mode fusion!";
+            return 0;
+        }
+        // The fused frame is processed by the long-range compute context.
+        bool fused = false;
+        uint8_t srMode = 0;
+        camera->getModeFusion(fused, srMode, mode);
+    } else {
+        status = camera->setMode(mode);
+        if (status != Status::OK) {
+            LOG(ERROR) << "Could not set camera mode!";
+            return 0;
+        }
     }
 
     status = camera->start();

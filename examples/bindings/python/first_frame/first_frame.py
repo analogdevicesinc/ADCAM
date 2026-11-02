@@ -44,10 +44,17 @@ Examples:
 
   # Target with mode 5, dump binary files
   python %(prog)s -m 5 -o bin
+
+  # ADTF3066: fuse short-range mode 0 with long-range mode 7
+  python %(prog)s --fuse 0,7 -o show
 """
 )
-parser.add_argument('-m', '--mode', type=int, required=True,
-                    help='Frame mode number (0-6)')
+parser.add_argument('-m', '--mode', type=int, default=None,
+                    help='Frame mode number ; required unless --fuse is given')
+parser.add_argument('-f', '--fuse', type=str, default='',
+                    help='ADTF3066 only: fuse an SR mode (0, 1, 3, 6) with an LR mode (7, 8), '
+                         'given as FIRST,SECOND e.g. --fuse 0,7 (the first mode leads). '
+                         'Overrides -m. Not supported with --ip')
 parser.add_argument('-i', '--ip', type=str, default='',
                     help='IP address for network connection (omit for target)')
 parser.add_argument('-o', '--output', type=str, choices=['bin', 'snap', 'show'], default='show',
@@ -58,6 +65,22 @@ args = parser.parse_args()
 mode = args.mode
 ip = args.ip
 output_type = args.output
+
+
+fuse_pair = None
+if args.fuse:
+    try:
+        fuse_pair = tuple(int(v) for v in args.fuse.split(','))
+    except ValueError:
+        fuse_pair = ()
+    if len(fuse_pair) != 2:
+        print(f"Error: invalid --fuse '{args.fuse}': expected FIRST,SECOND e.g. --fuse 0,7")
+        exit(-1)
+    if ip:
+        print("Error: mode fusion is not supported with --ip")
+        exit(-1)
+elif mode is None:
+    parser.error("-m/--mode is required unless --fuse is given")
 
 system = tof.System()
 
@@ -90,7 +113,7 @@ status = camera1.getAvailableModes(modes)
 print("camera1.getAvailableModes()", status)
 print(modes)
 
-if int(mode) not in modes:
+if fuse_pair is None and int(mode) not in modes:
     print(f"Error: Unknown mode - {mode}")
     exit(-3)
 
@@ -99,18 +122,22 @@ status = camera1.getDetails(camDetails)
 print("camera1.getDetails()", status)
 print("camera1 details:", "id:", camDetails.cameraId, "connection:", camDetails.connection)
 
-status = camera1.setMode(int(mode))
-print("camera1.setMode(",mode,")", status)
+if fuse_pair is not None:
+    first_mode, second_mode = fuse_pair
+    status = camera1.setModeFusion(first_mode, second_mode)
+    print("camera1.setModeFusion(", first_mode, ",", second_mode, ")", status)
+    if status != tof.Status.Ok:
+        exit(-3)
+    # The fused frame is processed by the long-range compute context.
+    _, _, _, mode = camera1.getModeFusion()
+else:
+    status = camera1.setMode(int(mode))
+    print("camera1.setMode(",mode,")", status)
 
 # Example of getting/modifying/setting the current ADSD3500 parameters
 # status, currentFrameProcessParams = camera1.getFrameProcessParams()
 # currentFrameProcessParams["ab_thresh_min"] = "4"
 # camera1.setFrameProcessParams(currentFrameProcessParams)
-
-# Example of configuring the Dynamic Mode Switching
-# The expected sequence of frame is: mode2, mode2, mode2, mode3, mode2, ...
-# camera1.adsd3500setEnableDynamicModeSwitching(True)
-# camera1.adsds3500setDynamicModeSwitchingSequence([(2, 3), (3, 1)])
 
 status = camera1.start()
 print("camera1.start()", status)

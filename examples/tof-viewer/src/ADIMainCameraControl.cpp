@@ -113,6 +113,10 @@ void ADIMainWindow::InitCamera(std::string filePath) {
         aditof::ImagerType imagerType = aditof::ImagerType::UNSET;
         camera->getImagerType(imagerType);
         const bool isAdtf3066 = (imagerType == aditof::ImagerType::ADTF3066);
+        m_fusion_supported = isAdtf3066;
+        if (!m_fusion_supported) {
+            m_dms_enabled = false;
+        }
 
         for (uint32_t i = 0; i < (uint32_t)_cameraModes.size(); ++i) {
             aditof::DepthSensorModeDetails modeDetails;
@@ -126,11 +130,12 @@ void ADIMainWindow::InitCamera(std::string filePath) {
             if (!modeDetails.isPCM) {
                 std::string append;
                 if (isAdtf3066) {
-                    // ADTF3066 (hardcoded): LR = modes 7, 8; SR = 0, 1, 3, 6.
-                    // Frequency count can't classify these (SR mode 1 and LR
-                    // mode 7 are both 3-frequency).
-                    uint8_t m = modeDetails.modeNumber;
-                    append = (m == 7 || m == 8) ? "Long Range" : "Short Range";
+                    // Frequency count can't classify ADTF3066 modes (SR mode
+                    // 1 and LR mode 7 are both 3-frequency).
+                    append = aditof::isAdtf3066LongRangeMode(
+                                 modeDetails.modeNumber)
+                                 ? "Long Range"
+                                 : "Short Range";
                 } else {
                     append = (modeDetails.numberOfFrequencies == 2)
                                  ? "Short Range"
@@ -147,6 +152,7 @@ void ADIMainWindow::InitCamera(std::string filePath) {
         for (uint32_t i = 0; i < (uint32_t)_cameraModes.size(); i++) {
             m_cameraModes.emplace_back(i, _cameraModes.at(i));
         }
+        UpdateFusionFromConfig();
     } else {
         // PRB25
         //camera->setPlaybackFile(filePath);
@@ -189,38 +195,44 @@ void ADIMainWindow::UpdateOfflineFrameTypeAvailability() {
     }
 }
 
+void ADIMainWindow::UpdateFusionFromConfig() {
+    auto camera = GetActiveCamera();
+    if (m_off_line || !m_fusion_supported || !camera) {
+        return;
+    }
+    std::map<std::string, std::string> params;
+    if (camera->getDepthParamtersMap(static_cast<uint16_t>(m_mode_selection),
+                                     params) != aditof::Status::OK) {
+        return;
+    }
+    auto it = params.find("modeFusionEnabled");
+    if (it != params.end() && it->second == "1") {
+        m_dms_enabled = true;
+    }
+}
+
+bool ADIMainWindow::IsValidFusionPair() const {
+    const uint8_t first = static_cast<uint8_t>(m_mode_selection);
+    const uint8_t second = static_cast<uint8_t>(m_dms_second_mode_selection);
+    return (aditof::isAdtf3066LongRangeMode(first) &&
+            aditof::isAdtf3066ShortRangeMode(second)) ||
+           (aditof::isAdtf3066ShortRangeMode(first) &&
+            aditof::isAdtf3066LongRangeMode(second));
+}
+
 bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     aditof::Status status = aditof::Status::OK;
     std::vector<aditof::FrameDetails> frameTypes;
 
-    uint8_t dmsSecondMode = static_cast<uint8_t>(m_dms_second_mode_selection);
-
-    // For fusion, the primary (active/first) mode must be fixed by
-    // IsSRFrameFirst, not by which mode the user picked: IsSRFrameFirst=0 ->
-    // LR primary (SR second), =1 -> SR primary (LR second). Resolve it here so
-    // the capture is identical regardless of the dropdown selection order.
-    if (!m_off_line && m_dms_enabled) {
-        auto isLR = [](uint8_t m) { return m == 7 || m == 8; };
-        uint8_t lrMode = isLR(mode) ? mode : dmsSecondMode;
-        uint8_t srMode = isLR(mode) ? dmsSecondMode : mode;
-
-        std::map<std::string, std::string> srParams;
-        bool srFirst = false;
-        if (GetActiveCamera()->getDepthParamtersMap(srMode, srParams) ==
-            aditof::Status::OK) {
-            auto it = srParams.find("IsSRFrameFirst");
-            srFirst = (it != srParams.end() && it->second == "1");
-        }
-
-        mode = srFirst ? srMode : lrMode;
-        dmsSecondMode = srFirst ? lrMode : srMode;
+    const bool fusion = !m_off_line && m_dms_enabled;
+    if (fusion && !IsValidFusionPair()) {
+        LOG(ERROR) << "Mode Fusion needs one Short Range mode (0, 1, 3, 6) "
+                      "and one Long Range mode (7, 8)";
+        return false;
     }
-    m_dms_active_second_mode = dmsSecondMode;
 
     // Write any params staged by the control window's Modify button into each
-    // mode's config BEFORE the setMode calls below, so each setMode() applies
-    // that mode's edited INI (chip + context). Device is stopped here, so the
-    // ADSD3500 accepts the writes even in fusion/DMS.
+    // mode's config before the mode is set, so the edited INI is applied.
     if (!m_pending_modified_by_mode.empty()) {
         for (auto &entry : m_pending_modified_by_mode) {
             GetActiveCamera()->setFrameProcessParams(
@@ -229,32 +241,22 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
         m_pending_modified_by_mode.clear();
     }
 
-    // Apply each fused mode's INI via its own setMode(): secondary first, then
-    // primary. The last active mode is irrelevant for DMS - streaming always
-    // starts from the programmed pattern - so this just ensures both modes'
-    // contexts are built from their (edited) configs.
-    if (!m_off_line && m_dms_enabled) {
-        status = GetActiveCamera()->setMode(dmsSecondMode);
+    if (fusion) {
+        const uint8_t second =
+            static_cast<uint8_t>(m_dms_second_mode_selection);
+        status = GetActiveCamera()->setModeFusion(mode, second);
         if (status != aditof::Status::OK) {
-            LOG(ERROR) << "Could not warm up second fusion mode!";
+            LOG(ERROR) << "Could not start mode fusion!";
+            return false;
+        }
+        m_dms_active_second_mode = second;
+    } else {
+        status = GetActiveCamera()->setMode(mode);
+        if (status != aditof::Status::OK) {
+            LOG(ERROR) << "Could not set camera mode!";
             return false;
         }
     }
-
-    status = GetActiveCamera()->setMode(mode);
-    if (status != aditof::Status::OK) {
-        LOG(ERROR) << "Could not set camera mode!";
-        return false;
-    }
-#if 0 //Andre
-    if (!m_off_line) {
-        status = GetActiveCamera()->adsd3500SetFrameRate(m_user_frame_rate);
-        if (status != aditof::Status::OK) {
-            LOG(ERROR) << "Could not set user frame rate!";
-            return;
-        }
-    }
-#endif
     if (mode == m_last_mode) {
         if (!m_modified_ini_params.empty()) {
             if (m_use_modified_ini_params) {
@@ -321,64 +323,6 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
         std::string value;
         GetActiveCamera()->getSensor()->getControl("abBits", value);
         m_view_instance->setABMaxRange(value);
-    }
-
-    // Enable Dynamic Mode Switching last, after every depth-parameter and
-    // fps chip write above. The ADSD3500 rejects control writes once DMS is
-    // active (errno=5), so enabling it earlier silently dropped those
-    // settings for the fused/alternate mode.
-    if (!m_off_line) {
-        if (m_dms_enabled) {
-            uint8_t modeB = dmsSecondMode;
-
-            // The viewer's DMS toggle means "fuse the two modes"; opt into
-            // fusion at the SDK level before configuring the sequence so the
-            // compute contexts are rebuilt with modeFusionEnabled=1.
-            GetActiveCamera()->setModeFusionEnabled(true);
-
-            // The mode-switch chip command in setMode clears the MIPI
-            // transport register; reapply it before the DMS registers are
-            // touched.
-            status = GetActiveCamera()->adsd3500SetMIPIOutputSpeed(1);
-            if (status != aditof::Status::OK) {
-                LOG(ERROR) << "Could not reapply MIPI output speed before "
-                              "Dynamic Mode Switching setup!";
-                return false;
-            }
-
-            // Chip bus needs to settle after the mode-switch reset before
-            // it will reliably accept the DMS register writes.
-            std::this_thread::sleep_for(std::chrono::milliseconds(300));
-
-            status =
-                GetActiveCamera()->adsd3500setEnableDynamicModeSwitching(true);
-            if (status != aditof::Status::OK) {
-                LOG(ERROR) << "Could not enable Dynamic Mode Switching!";
-                return false;
-            }
-
-            std::vector<std::pair<uint8_t, uint8_t>> sequence = {
-                {mode, 1},  // Mode A, repeat 1 time
-                {modeB, 1}, // Mode B, repeat 1 time
-            };
-            status = GetActiveCamera()->adsds3500setDynamicModeSwitchingSequence(
-                sequence);
-            if (status != aditof::Status::OK) {
-                LOG(ERROR) << "Could not set Dynamic Mode Switching sequence!";
-                return false;
-            }
-
-            LOG(INFO) << "Dynamic Mode Switching enabled: mode "
-                      << (int)mode << " <-> mode " << (int)modeB;
-            m_dms_was_enabled = true;
-        } else if (m_dms_was_enabled) {
-            // Only touch the DMS register if it was previously turned on;
-            // the default (never-used) path stays byte-identical to the
-            // pre-DMS behavior with no extra chip communication.
-            GetActiveCamera()->setModeFusionEnabled(false);
-            GetActiveCamera()->adsd3500setEnableDynamicModeSwitching(false);
-            m_dms_was_enabled = false;
-        }
     }
 
     // Program the camera with cfg passed, set the mode by writing to 0x200 and start the camera
