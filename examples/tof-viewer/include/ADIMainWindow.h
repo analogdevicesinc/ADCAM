@@ -399,6 +399,16 @@ class ADIMainWindow {
     void CameraPlay(int modeSelect, int viewSelect);
 
     /**
+		* @brief Ticks Mode Fusion if the selected mode's config has modeFusionEnabled=1
+		*/
+    void UpdateFusionFromConfig();
+
+    /**
+		* @brief True if the selected modes form one ADTF3066 SR + one LR mode
+		*/
+    bool IsValidFusionPair() const;
+
+    /**
 		* @brief Initializes OpenGL and AB + Depth settings
 		*/
     void InitCaptureABDepthVideo();
@@ -686,7 +696,7 @@ class ADIMainWindow {
     int32_t m_mode_selection = 0;
     int32_t m_mode_select_changed = 0; //flag when changed
     bool m_dms_enabled = false;
-    bool m_dms_was_enabled = false;
+    bool m_fusion_supported = false; // ADTF3066 only
     int32_t m_dms_second_mode_selection = 0;
     // Resolved fusion pair actually programmed (primary = active camera mode);
     // the secondary may differ from m_dms_second_mode_selection once the pair

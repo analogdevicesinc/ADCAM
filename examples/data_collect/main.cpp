@@ -53,6 +53,7 @@
 #include <inttypes.h>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -84,6 +85,7 @@ static const char kUsagePublic[] =
     Usage:
       data_collect 
       data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--m <mode>] [--ccb FILE] [--ip <ip>] [-scf <save-configuration-file>] [-lcf <load-configuration-file>]
+      data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--fuse <firstMode>,<secondMode>] [-lcf <load-configuration-file>]
       data_collect (-h | --help)
 
     Options:
@@ -92,6 +94,11 @@ static const char kUsagePublic[] =
       --fps <frame rate>   Frame rate in frames per second [default: 10]
       --n <ncapture>     Capture frame num. [default: 1]
       --m <mode>         Mode to capture data in. [default: 0]
+      --fuse <firstMode>,<secondMode>
+                         ADTF3066 only: fuse a short-range mode (0, 1, 3, 6)
+                         with a long-range mode (7, 8), e.g. --fuse 0,7.
+                         Overrides --m. Fused frames arrive at fps/2.
+                         Not supported with --ip.
       --ccb <FILE>       The path to store CCB content
       --ip <ip>          Camera IP
       --scf <save-configuration-file>    Save current configuration to json file
@@ -109,6 +116,31 @@ static const char kUsagePublic[] =
         6: short-range mixed
 )";
 
+/**
+ * @brief Parse a "<firstMode>,<secondMode>" fusion pair
+ * @param[in] value The argument value
+ * @param[out] firstMode The mode leading the fusion sequence
+ * @param[out] secondMode The other mode of the pair
+ * @return true if the value holds two mode numbers
+ */
+static bool parseFusePair(const std::string &value, uint8_t &firstMode,
+                          uint8_t &secondMode) {
+    std::istringstream iss(value);
+    int first = -1;
+    int second = -1;
+    char comma = 0;
+    if (!(iss >> first >> comma >> second) || comma != ',') {
+        return false;
+    }
+    iss >> std::ws;
+    if (!iss.eof() || first < 0 || first > 255 || second < 0 || second > 255) {
+        return false;
+    }
+    firstMode = static_cast<uint8_t>(first);
+    secondMode = static_cast<uint8_t>(second);
+    return true;
+}
+
 int main(int argc, char *argv[]) {
     std::map<std::string, struct Argument> command_map = {
         {"-h", {"--help", false, "", "", false}},
@@ -116,6 +148,7 @@ int main(int argc, char *argv[]) {
         {"-fps", {"--fps", false, "", "10", true}},
         {"-n", {"--n", false, "", "1", true}},
         {"-m", {"--m", false, "", "0", true}},
+        {"-fuse", {"--fuse", false, "", "", true}},
         {"-ip", {"--ip", false, "", "", true}},
         {"-ccb", {"--ccb", false, "", "", true}},
         {"-scf", {"--scf", false, "", "", true}},
@@ -214,6 +247,22 @@ int main(int argc, char *argv[]) {
         ip = command_map["-ip"].value;
     }
 
+    const bool fuse = !command_map["-fuse"].value.empty();
+    uint8_t firstMode = 0;
+    uint8_t secondMode = 0;
+    if (fuse) {
+        if (!parseFusePair(command_map["-fuse"].value, firstMode, secondMode)) {
+            LOG(ERROR) << "Invalid --fuse value '" << command_map["-fuse"].value
+                       << "': expected <firstMode>,<secondMode>, e.g. --fuse "
+                          "0,7";
+            return -1;
+        }
+        if (!ip.empty()) {
+            LOG(ERROR) << "Mode fusion is not supported with --ip";
+            return -1;
+        }
+    }
+
     //Parsing CCB path
     std::string ccbFilePath;
     if (!command_map["-ccb"].value.empty()) {
@@ -231,7 +280,12 @@ int main(int argc, char *argv[]) {
     }
 
     LOG(INFO) << "Output folder: " << folder_path;
-    LOG(INFO) << "Mode: " << command_map["-m"].value;
+    if (fuse) {
+        LOG(INFO) << "Mode fusion: first mode " << (int)firstMode
+                  << " + second mode " << (int)secondMode;
+    } else {
+        LOG(INFO) << "Mode: " << command_map["-m"].value;
+    }
     LOG(INFO) << "Number of frames: " << n_frames;
     LOG(INFO) << "Json file: " << json_file_path;
 
@@ -292,10 +346,18 @@ int main(int argc, char *argv[]) {
     std::string sensorName;
     status = depthSensor->getName(sensorName);
 
-    status = camera->setMode(mode);
-    if (status != Status::OK) {
-        LOG(ERROR) << "Could not set camera mode!";
-        return -1;
+    if (fuse) {
+        status = camera->setModeFusion(firstMode, secondMode);
+        if (status != Status::OK) {
+            LOG(ERROR) << "Could not start mode fusion!";
+            return -1;
+        }
+    } else {
+        status = camera->setMode(mode);
+        if (status != Status::OK) {
+            LOG(ERROR) << "Could not set camera mode!";
+            return -1;
+        }
     }
 
     if (json_file_path.empty()) {
@@ -345,13 +407,19 @@ int main(int argc, char *argv[]) {
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    long long runtime_in_ms = (((long long)n_frames * 1000) / (long long)fps);
+    // Fusion delivers one frame per SR/LR pair, i.e. at fps/2.
+    const long long sensorFramesPerOutput = fuse ? 2 : 1;
+    long long runtime_in_ms =
+        (((long long)n_frames * 1000 * sensorFramesPerOutput) / (long long)fps);
     long long max_runtime_in_ms = 600000; // 10 minutes
 
     LOG(INFO) << "Starting capture of " << n_frames << " frames.";
     LOG(INFO) << "Expected capture time (ms): " << runtime_in_ms;
     LOG(INFO) << "Maximum allowed capture time (ms): " << max_runtime_in_ms;
     LOG(INFO) << "FPS: " << fps;
+    if (fuse) {
+        LOG(INFO) << "Fused output FPS: " << (double)fps / 2.0;
+    }
 
     if (runtime_in_ms > max_runtime_in_ms) {
         runtime_in_ms = max_runtime_in_ms;
