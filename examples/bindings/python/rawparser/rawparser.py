@@ -126,7 +126,7 @@ def generate_rgb(rgb_data, directory, base_filename, index, width, height):
     except Exception as e:
         print(f"\nWarning: Failed to generate RGB frame {index}: {e}")
 
-def generate_pcloud(xyz_frame, directory, base_filename, index, height, width):
+def generate_pcloud(xyz_frame, directory, base_filename, index, height, width, xyz_color=None):
     # Reinterpret uint16 storage as signed int16 (XYZ values are signed mm)
     # then convert to float64 required by o3d.utility.Vector3dVector
     xyz_frame = xyz_frame.astype(np.int16).reshape(-1, 3).astype(np.float64)
@@ -136,6 +136,13 @@ def generate_pcloud(xyz_frame, directory, base_filename, index, height, width):
     xyz_frame[:, 2] *= -1
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(xyz_frame)
+    if xyz_color is not None:
+        rgba = np.asarray(xyz_color, dtype=np.uint8).reshape(-1, 4)
+        # Grey where the point has no colour (A is the XYZColorStatus)
+        colors = np.full((rgba.shape[0], 3), 0.5)
+        valid = rgba[:, 3] == int(tof.XYZColorStatus.Valid)
+        colors[valid] = rgba[valid, :3] / 255.0
+        point_cloud.colors = o3d.utility.Vector3dVector(colors)
     o3d.io.write_point_cloud(safe_join(directory, f'pointcloud_{base_filename}_{index}{PLY_EXT}'), point_cloud)
 
 def generate_vid(main_dir, base_filename, processed_frames, width, height):
@@ -298,10 +305,13 @@ def main():
             except Exception as e:
                 print(f"  Error processing RGB: {e}")
 
-        # Get the confidence frame
+        # Get the point cloud, coloured from xyz_color when the recording has RGB
         if "xyz" in available_types:
             image_xyz = np.asarray(frame.getData("xyz"))
-            generate_pcloud(image_xyz, frame_dir, base_filename, str_frame_idx, height, width)
+            xyz_color = None
+            if "xyz_color" in available_types:
+                xyz_color = np.asarray(frame.getData("xyz_color"))
+            generate_pcloud(image_xyz, frame_dir, base_filename, str_frame_idx, height, width, xyz_color)
 
         frame_idx += 1
         if frame_idx > end_frame:
