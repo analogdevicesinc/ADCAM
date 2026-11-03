@@ -79,6 +79,8 @@ camera1 = cameras[0]
 
 status = camera1.initialize()
 print("camera1.initialize()", status)
+if status != tof.Status.Ok:
+    sys.exit(-1)
 
 modes = []
 status = camera1.getAvailableModes(modes)
@@ -97,9 +99,13 @@ print("camera1 details:", "id:", camDetails.cameraId, "connection:", camDetails.
 
 status = camera1.setMode(int(mode))
 print("camera1.setMode()", status)
+if status != tof.Status.Ok:
+    sys.exit(-1)
 
 status = camera1.start()
 print("camera1.start()", status)
+if status != tof.Status.Ok:
+    sys.exit(-1)
 
 sensor = camera1.getSensor()
 modeDetails = tof.DepthSensorModeDetails()
@@ -131,6 +137,9 @@ def normalize(image_scalar, width, height):
 def animate():
     frame = tof.Frame()
     status = camera1.requestFrame(frame)
+    if status != tof.Status.Ok:
+        print("camera1.requestFrame() failed with status: ", status)
+        return None
     frameDataDetails = tof.FrameDataDetails()
     status = frame.getDataDetails("depth", frameDataDetails)
     image = np.asarray(frame.getData("depth"))
@@ -150,7 +159,10 @@ def main():
             if event.type == pygame.QUIT:
                 done = True
 
-        screen.blit(animate(), (0, 0))
+        surface = animate()
+        if surface is None:
+            break
+        screen.blit(surface, (0, 0))
         pygame.display.flip()
 
     # quit Pygame

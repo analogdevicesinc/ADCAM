@@ -107,26 +107,30 @@ if __name__ == "__main__":
         status = system.getCameraList(cameras, "ip:"+args.ip)
     else:
         status = system.getCameraList(cameras, "")
-    if not status:
+    if status != tof.Status.Ok or not cameras:
         print("system.getCameraList(): ", status)
+        sys.exit(-1)
 
     camera1 = cameras[0]
 
     status = camera1.initialize()
-    if not status:
+    if status != tof.Status.Ok:
         print("camera1.initialize() failed with status: ", status)
+        sys.exit(-1)
        
     status = camera1.setMode(mode)
-    if not status:
+    if status != tof.Status.Ok:
         print("camera1.setMode() failed with status:", status)
+        sys.exit(-1)
    
     status = camera1.start()
-    if not status:
+    if status != tof.Status.Ok:
         print("camera1.start() failed with status:", status)
+        sys.exit(-1)
    
     camDetails = tof.CameraDetails()
     status = camera1.getDetails(camDetails)
-    if not status:
+    if status != tof.Status.Ok:
         print("system.getDetails() failed with status: ", status)
 
     # Enable noise reduction for better results
@@ -164,8 +168,9 @@ if __name__ == "__main__":
     while True:          
         # Capture frame-by-frame
         status = camera1.requestFrame(frame)
-        if not status:
+        if status != tof.Status.Ok:
             print("camera1.requestFrame() failed with status: ", status)
+            break
        
         frame_count = frame_count + 1
         elapsed_time = time.time() - start_time

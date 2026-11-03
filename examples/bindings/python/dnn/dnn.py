@@ -84,31 +84,35 @@ if __name__ == "__main__":
         status = system.getCameraList(cameras, "ip:"+args.ip)
     else:
         status = system.getCameraList(cameras)
-    if not status:
+    if status != tof.Status.Ok or not cameras:
         print("system.getCameraList(): ", status)
+        sys.exit(-1)
 
     camera1 = cameras[0]
 
     status = camera1.initialize()
-    if not status:
+    if status != tof.Status.Ok:
         print("camera1.initialize() failed with status: ", status)
+        sys.exit(-1)
 
     modes = []
     status = camera1.getAvailableModes(modes)
-    if not status:
+    if status != tof.Status.Ok:
         print("system.getAvailableModes() failed with status: ", status)
         
     status = camera1.setMode(mode)
-    if not status:
+    if status != tof.Status.Ok:
         print("camera1.setSetMode() failed with status:", status)
+        sys.exit(-1)
     
     status = camera1.start()
-    if not status:
+    if status != tof.Status.Ok:
         print("camera1.start() failed with status:", status)
+        sys.exit(-1)
    
     camDetails = tof.CameraDetails()
     status = camera1.getDetails(camDetails)
-    if not status:
+    if status != tof.Status.Ok:
         print("system.getDetails() failed with status: ", status)
 
     # Enable noise reduction for better results
@@ -131,8 +135,9 @@ if __name__ == "__main__":
             
         # Capture frame-by-frame
         status = camera1.requestFrame(frame)
-        if not status:
+        if status != tof.Status.Ok:
             print("camera1.requestFrame() failed with status: ", status)
+            break
 
         depth_map = np.asarray(frame.getData("depth"), dtype="uint16")
         ab_map = np.asarray(frame.getData("ab"), dtype="uint16")
