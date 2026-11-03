@@ -8,7 +8,12 @@ metadata is saved as a text file.
 
 Usage:
 - put raw recording files in the same directory of the `rawparser.py`
-- run `python rawparser.py --filename [RAW_RECORDING_FILENAME]`
+- run `python rawparser.py [RAW_RECORDING_FILENAME]`
+- optional `-r MIN MAX` / `--range MIN MAX`: depth color range in mm (default `0 5000`)
+
+Depth PNGs use the same jet colormap as the pygame streaming example: `MIN`..`MAX` mm is spread
+across the colormap (invalid pixels at the bottom color) and a colorbar with the min/mid/max
+depth in mm is drawn next to the image.
 
 A folder with the same name as the raw recording file will be created
 first point cloud frame 3d image will be visualized. Close the visualize window to proceed saving all data
@@ -19,6 +24,7 @@ first point cloud frame 3d image will be visualized. Close the visualize window 
 pip install opencv-python
 pip install numpy
 pip install open3d
+pip install matplotlib
 pip install argparse
 ```
 
