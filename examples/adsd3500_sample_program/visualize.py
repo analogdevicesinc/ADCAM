@@ -12,7 +12,7 @@ Supported resolutions:
 
 Usage:
     ./visualize.py              # Display frames interactively (requires working matplotlib)
-    ./visualize.py --save       # Save frames as PNG images (uses PIL/Pillow)
+    ./visualize.py --save       # Save frames as PNG images 
     ./visualize.py 2            # Display frame index 2
     ./visualize.py 2 --save     # Save all frames including frame 2
 
@@ -31,8 +31,30 @@ Colormaps:
     AB/Conf:     Grayscale
 """
 import numpy as np
+import struct
 import sys
 import os
+import zlib
+
+def write_png(path, image):
+    """Write a uint8 HxW (grayscale) or HxWx3 (RGB) array as an 8-bit PNG."""
+    image = np.ascontiguousarray(image, dtype=np.uint8)
+    height, width = image.shape[:2]
+    color_type = 2 if image.ndim == 3 else 0
+    # Each scanline is prefixed with filter type 0 (None).
+    raw = np.hstack([np.zeros((height, 1), dtype=np.uint8),
+                     image.reshape(height, -1)]).tobytes()
+
+    def chunk(tag, data):
+        return (struct.pack(">I", len(data)) + tag + data +
+                struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
+
+    with open(path, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n")
+        f.write(chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8,
+                                           color_type, 0, 0, 0)))
+        f.write(chunk(b"IDAT", zlib.compress(raw, 6)))
+        f.write(chunk(b"IEND", b""))
 
 def detect_frame_dimensions_and_count(depth_file):
     """Detect frame dimensions and count based on file size."""
@@ -172,29 +194,20 @@ def apply_jet_colormap(data_norm):
     return (rgb * 255).astype(np.uint8)
 
 def save_frames_as_images(depth_array, ab_array, conf_array, output_prefix="frame"):
-    """Save frames as PNG images using PIL with enhanced colormaps."""
-    try:
-        from PIL import Image
-        
-        for i in range(len(depth_array)):
-            # Depth: Apply jet colormap (classic rainbow)
-            depth_norm = depth_array[i].astype(np.float32) / max(depth_array[i].max(), 1)
-            depth_rgb = apply_jet_colormap(depth_norm)
-            Image.fromarray(depth_rgb).save(f"{output_prefix}_{i:03d}_depth.png")
-            
-            # AB: Grayscale
-            ab_norm = (ab_array[i].astype(np.float32) / max(ab_array[i].max(), 1) * 255).astype(np.uint8)
-            Image.fromarray(ab_norm).save(f"{output_prefix}_{i:03d}_ab.png")
-            
-            # Confidence: Grayscale
-            Image.fromarray(conf_array[i]).save(f"{output_prefix}_{i:03d}_conf.png")
-        
-        print(f"Saved {len(depth_array)} frame(s) (depth: jet colormap, AB/conf: grayscale)")
-        return
-    except ImportError:
-        print("Error: PIL (Pillow) not available")
-        print("Install with: pip3 install Pillow")
-        return
+    """Save frames as PNG images with enhanced colormaps."""
+    for i in range(len(depth_array)):
+        # Depth: Apply jet colormap (classic rainbow)
+        depth_norm = depth_array[i].astype(np.float32) / max(depth_array[i].max(), 1)
+        write_png(f"{output_prefix}_{i:03d}_depth.png", apply_jet_colormap(depth_norm))
+
+        # AB: Grayscale
+        ab_norm = (ab_array[i].astype(np.float32) / max(ab_array[i].max(), 1) * 255).astype(np.uint8)
+        write_png(f"{output_prefix}_{i:03d}_ab.png", ab_norm)
+
+        # Confidence: Grayscale
+        write_png(f"{output_prefix}_{i:03d}_conf.png", conf_array[i])
+
+    print(f"Saved {len(depth_array)} frame(s) (depth: jet colormap, AB/conf: grayscale)")
 
 def main():
     """Main function."""
