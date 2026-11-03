@@ -28,9 +28,14 @@ import sys
 import os
 import argparse
 import cv2 as cv
+import matplotlib
 import open3d as o3d
 import struct
 import re
+
+# Same colormap as the pygame streaming example.
+JET_COLORMAP = (matplotlib.colormaps['jet'] if hasattr(matplotlib, 'colormaps')
+                else matplotlib.cm.get_cmap('jet'))
 
 # ---- CONSTANTS ----
 MEGA_PIXEL = 1024
@@ -43,6 +48,8 @@ DEFAULT_CONF_BYTES = 4
 DEFAULT_AB_BYTES = 2
 DEFAULT_XYZ_BYTES = 6
 DEFAULT_DEPTH_BYTES = 2
+DEFAULT_DEPTH_MIN_MM = 0
+DEFAULT_DEPTH_MAX_MM = 5000
 
 def safe_join(*args):
     return os.path.join(*args)
@@ -81,11 +88,38 @@ def generate_metadata(metadata, directory, base_filename, index):
         outfile.writelines(f'sensorTemp: {metadata.sensorTemperature}\n')
         outfile.writelines(f'laserTemp: {metadata.laserTemperature}\n')
 
-def generate_depth(depth_data, directory, base_filename, index):
+def colorize_depth(depth, dmin, dmax):
+    """Map [dmin, dmax] mm across the jet colormap; invalid (0) pixels go to the floor."""
+    if dmax <= dmin:
+        dmax = dmin + 1
+    norm = np.clip((depth.astype(np.float32) - dmin) / (dmax - dmin), 0.0, 1.0)
+    norm[depth == 0] = 0.0
+    return (JET_COLORMAP(norm)[:, :, :3] * 255).astype(np.uint8)
+
+def depth_colorbar(height, dmin, dmax):
+    """RGB panel with a vertical colorbar (top = dmax, bottom = dmin) and mm labels."""
+    panel_w, bar_x, bar_w, top = 90, 12, 16, 24
+    bar_h = max(20, height - 40)
+    panel = np.zeros((height, panel_w, 3), dtype=np.uint8)
+    fr = np.linspace(1.0, 0.0, bar_h, dtype=np.float32)
+    panel[top:top + bar_h, bar_x:bar_x + bar_w] = \
+        (JET_COLORMAP(fr)[:, :3] * 255).astype(np.uint8)[:, None, :]
+    color = (220, 220, 220)
+    cv.rectangle(panel, (bar_x, top), (bar_x + bar_w - 1, top + bar_h - 1), color, 1)
+    cv.putText(panel, "mm", (bar_x - 2, top - 8), cv.FONT_HERSHEY_SIMPLEX, 0.4,
+               color, 1, cv.LINE_AA)
+    for frac, val in ((0.0, dmax), (0.5, (dmin + dmax) // 2), (1.0, dmin)):
+        ty = int(top + frac * (bar_h - 1))
+        cv.putText(panel, str(int(val)), (bar_x + bar_w + 4, ty + 4),
+                   cv.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv.LINE_AA)
+    return panel
+
+def generate_depth(depth_data, directory, base_filename, index, dmin, dmax):
     depth_frame = np.reshape(depth_data, (depth_data.shape[0], depth_data.shape[1]))
-    norm_depth = cv.normalize(depth_frame, None, 0, 255, cv.NORM_MINMAX, dtype=cv.CV_8U)
-    color_depth = cv.applyColorMap(norm_depth, cv.COLORMAP_TURBO)
-    img = o3d.geometry.Image(color_depth)
+    color_depth = colorize_depth(depth_frame, dmin, dmax)
+    image = np.ascontiguousarray(
+        np.hstack([color_depth, depth_colorbar(color_depth.shape[0], dmin, dmax)]))
+    img = o3d.geometry.Image(image)
     o3d.io.write_image(safe_join(directory, f'depth_{base_filename}_{index}{PNG_EXT}'), img)
 
 def generate_ab(ab_frame, directory, base_filename, index, log_image = False):
@@ -161,6 +195,9 @@ def main():
     parser.add_argument("-o", "--outdir", type=str, default=None, help="Output directory (optional)")
     parser.add_argument("-f", "--frames", type=str, default=None,
                         help="Frame range: N (just N), N- (from N to end), N-M (N to M inclusive)")
+    parser.add_argument("-r", "--range", type=int, nargs=2, metavar=("MIN", "MAX"),
+                        default=[DEFAULT_DEPTH_MIN_MM, DEFAULT_DEPTH_MAX_MM],
+                        help="Depth color range in mm (default: %(default)s)")
     args = parser.parse_args()
 
     if not os.path.exists(args.filename):
@@ -188,6 +225,10 @@ def main():
                 end_frame = sys.maxsize
         except Exception as e:
             sys.exit(f"Invalid --frames argument: {e}")
+
+    if args.range[0] < 0 or args.range[1] <= args.range[0]:
+        sys.exit(f"Invalid --range {args.range[0]} {args.range[1]}: need 0 <= MIN < MAX")
+    print(f"Depth color range: {args.range[0]}-{args.range[1]} mm")
 
     cameras = []
     status = system.getCameraList(cameras, "offline:")
@@ -250,7 +291,8 @@ def main():
         # Get the depth frame
         if "depth" in available_types:
             image_depth = np.asarray(frame.getData("depth"))
-            generate_depth(image_depth, frame_dir, base_filename, str_frame_idx)
+            generate_depth(image_depth, frame_dir, base_filename, str_frame_idx,
+                           args.range[0], args.range[1])
 
         # Get the AB frame
         if "ab" in available_types:
