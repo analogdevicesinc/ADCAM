@@ -8,8 +8,6 @@ on:
 jobs:
   merge:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # required to push the merged dev-1.1.0 branch
 
     steps:
       - name: Checkout rel-1.1.0 branch
