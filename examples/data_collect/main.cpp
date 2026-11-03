@@ -431,6 +431,7 @@ int main(int argc, char *argv[]) {
 
     long long milliseconds = 0;
     uint32_t frames_captured = 0;
+    bool requestFailed = false;
 
     status = camera->startRecording(folder_path);
     if (status != Status::OK) {
@@ -451,6 +452,7 @@ int main(int argc, char *argv[]) {
         status = camera->requestFrame(&frame);
         if (status != Status::OK) {
             LOG(ERROR) << "Unable to request frame!";
+            requestFailed = true;
             break;
         }
         frames_captured++;
@@ -458,10 +460,15 @@ int main(int argc, char *argv[]) {
             std::chrono::milliseconds(5)); // Sleep for 5ms
     }
 
-    // Camera does not expose a recorded-frame counter; give the recorder
-    // a brief grace period to flush any frames still being written.
     LOG(INFO) << "Waiting for frames to be written...";
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    uint32_t framesWritten = 0;
+    framesWritten = camera->getRecordedFrameCount();
+    int waitCount = 0;
+    while (!requestFailed && framesWritten < n_frames && waitCount < 100) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        framesWritten = camera->getRecordedFrameCount();
+        waitCount++;
+    }
 
     LOG(INFO) << "Capture complete. Frames requested: " << frames_captured;
     status = camera->stopRecording();

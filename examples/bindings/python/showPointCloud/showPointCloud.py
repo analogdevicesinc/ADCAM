@@ -64,16 +64,19 @@ if __name__ == "__main__":
     if fileName is None:
         status = system.getCameraList(cameras, ip)
         print("system.getCameraList()", status)
+        if status != tof.Status.Ok or not cameras:
+            sys.exit(-1)
 
         camera1 = cameras[0]
 
         status = cameras[0].initialize()
-        if not status:
+        if status != tof.Status.Ok:
             print("cameras[0].initialize() failed with status: ", status)
+            sys.exit(-1)
 
         modes = []
         status = cameras[0].getAvailableModes(modes)
-        if not status:
+        if status != tof.Status.Ok:
             print("system.getAvailableModes() failed with status: ", status)
 
         if int(mode) not in modes:
@@ -82,20 +85,27 @@ if __name__ == "__main__":
             exit(-3)
 
         status = cameras[0].setMode(mode)
-        if not status:
+        if status != tof.Status.Ok:
             print("cameras[0].setMode() failed with status:", status)
+            sys.exit(-1)
 
         camDetails = tof.CameraDetails()
         status = cameras[0].getDetails(camDetails)
-        if not status:
+        if status != tof.Status.Ok:
             print("system.getDetails() failed with status: ", status)
 
         status = camera1.start()
         print("camera1.start()", status)
+        if status != tof.Status.Ok:
+            sys.exit(-1)
 
         # Get the first frame for details
         frame = tof.Frame()
         status = cameras[0].requestFrame(frame)
+        if status != tof.Status.Ok:
+            print("cameras[0].requestFrame() failed with status: ", status)
+            camera1.stop()
+            sys.exit(-1)
 
         frameDataDetails = tof.FrameDataDetails()
         status = frame.getDataDetails("depth", frameDataDetails)
@@ -138,8 +148,9 @@ if __name__ == "__main__":
         while True:
             # Capture frame-by-frame
             status = cameras[0].requestFrame(frame)
-            if not status:
+            if status != tof.Status.Ok:
                 print("cameras[0].requestFrame() failed with status: ", status)
+                break
             
             # Get frame details to check which data types are available
             frameDetails_check = tof.FrameDetails()
@@ -221,8 +232,9 @@ if __name__ == "__main__":
         frame = tof.Frame()
         frameHandler = tof.FrameHandler()
         status = frameHandler.readNextFrame(frame, fileName)
-        if not status:
+        if status != tof.Status.Ok:
             print('Failed to read frame with status: ', status)
+            sys.exit(-1)
 
         frameDataDetails = tof.FrameDataDetails()
         status = frame.getDataDetails("depth", frameDataDetails)

@@ -111,6 +111,8 @@ status = sensor.adsd3500_register_interrupt_callback(callbackFunction)
 
 status = camera1.initialize()
 print("camera1.initialize()", status)
+if status != tof.Status.Ok:
+    sys.exit(-1)
 
 modes = []
 status = camera1.getAvailableModes(modes)
@@ -131,11 +133,13 @@ if fuse_pair is not None:
     status = camera1.setModeFusion(first_mode, second_mode)
     print("camera1.setModeFusion(", first_mode, ",", second_mode, ")", status)
     if status != tof.Status.Ok:
-        exit(-3)
+        sys.exit(-1)
     mode = f"{first_mode}_{second_mode}"
 else:
     status = camera1.setMode(int(mode))
     print("camera1.setMode(",mode,")", status)
+    if status != tof.Status.Ok:
+        sys.exit(-1)
 
 # Example of getting/modifying/setting the current ADSD3500 parameters
 # status, currentFrameProcessParams = camera1.getFrameProcessParams()
@@ -144,11 +148,16 @@ else:
 
 status = camera1.start()
 print("camera1.start()", status)
+if status != tof.Status.Ok:
+    sys.exit(-1)
 
 frame = tof.Frame()
 
 status = camera1.requestFrame(frame)
 print("camera1.requestFrame()", status)
+if status != tof.Status.Ok:
+    camera1.stop()
+    sys.exit(-1)
 
 frameDataDetails = tof.FrameDataDetails()
 status = frame.getDataDetails("depth", frameDataDetails)
