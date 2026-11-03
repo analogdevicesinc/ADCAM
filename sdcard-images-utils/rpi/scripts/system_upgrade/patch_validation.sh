@@ -273,6 +273,18 @@ function validate_kernel_files() {
         print_fail "Device tree blob not found: /boot/firmware/bcm2712-rpi-5-b.dtb"
     fi
 
+    if [[ -f "/boot/firmware/bcm2712-rpi-cm5-cm5io.dtb" ]]; then
+        print_pass "Device tree blob exists: /boot/firmware/bcm2712-rpi-cm5-cm5io.dtb"
+    else
+        print_fail "Device tree blob not found: /boot/firmware/bcm2712-rpi-cm5-cm5io.dtb"
+    fi
+
+    if [[ -f "/boot/firmware/bcm2712-rpi-cm5l-cm5io.dtb" ]]; then
+        print_pass "Device tree blob exists: /boot/firmware/bcm2712-rpi-cm5l-cm5io.dtb"
+    else
+        print_fail "Device tree blob not found: /boot/firmware/bcm2712-rpi-cm5l-cm5io.dtb"
+    fi
+
     # Software versions file
     if [[ -f "/boot/sw-versions" ]]; then
         print_pass "Software versions file exists: /boot/sw-versions"

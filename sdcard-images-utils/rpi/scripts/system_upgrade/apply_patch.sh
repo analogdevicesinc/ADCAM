@@ -142,6 +142,16 @@ create_backup() {
         log_info "Backed up: bcm2712-rpi-5-b.dtb"
     fi
 
+    if [[ -f /boot/firmware/bcm2712-rpi-cm5-cm5io.dtb ]]; then
+        cp /boot/firmware/bcm2712-rpi-cm5-cm5io.dtb "${BACKUP_DIR}/" || log_warning "Failed to backup bcm2712-rpi-cm5-cm5io.dtb"
+        log_info "Backed up: bcm2712-rpi-cm5-cm5io.dtb"
+    fi
+
+    if [[ -f /boot/firmware/bcm2712-rpi-cm5l-cm5io.dtb ]]; then
+        cp /boot/firmware/bcm2712-rpi-cm5l-cm5io.dtb "${BACKUP_DIR}/" || log_warning "Failed to backup bcm2712-rpi-cm5l-cm5io.dtb"
+        log_info "Backed up: bcm2712-rpi-cm5l-cm5io.dtb"
+    fi
+
     # Backup config.txt
     if [[ -f "${CONFIG_FILE}" ]]; then
         cp "${CONFIG_FILE}" "${BACKUP_DIR}/config.txt.bak" || log_warning "Failed to backup config.txt"
@@ -199,6 +209,12 @@ update_kernel() {
     log_info "Installing device tree blob..."
     chmod 755 "${ROOTDIR}/bcm2712-rpi-5-b.dtb" || log_warning "Failed to set permissions on dtb"
     cp "${ROOTDIR}/bcm2712-rpi-5-b.dtb" /boot/firmware/ || error_exit "Failed to copy device tree blob" ${EXIT_FILE_ERROR}
+
+    chmod 755 "${ROOTDIR}/bcm2712-rpi-cm5-cm5io.dtb" || log_warning "Failed to set permissions on dtb"
+    cp "${ROOTDIR}/bcm2712-rpi-cm5-cm5io.dtb" /boot/firmware/ || error_exit "Failed to copy device tree blob" ${EXIT_FILE_ERROR}
+
+    chmod 755 "${ROOTDIR}/bcm2712-rpi-cm5l-cm5io.dtb" || log_warning "Failed to set permissions on dtb"
+    cp "${ROOTDIR}/bcm2712-rpi-cm5l-cm5io.dtb" /boot/firmware/ || error_exit "Failed to copy device tree blob" ${EXIT_FILE_ERROR}
 
     # Copy device tree overlay
     log_info "Installing device tree overlay..."
@@ -298,7 +314,7 @@ display_summary() {
 
     echo "Installed components:"
     echo "  - Kernel: kernel_adi.img (6.12.47-adi+)"
-    echo "  - Device Tree: bcm2712-rpi-5-b.dtb"
+    echo "  - Device Tree: bcm2712-rpi-5-b.dtb, bcm2712-rpi-cm5-cm5io.dtb, bcm2712-rpi-cm5l-cm5io.dtb"
     echo "  - Overlay: adsd3500-adsd3100.dtbo"
     echo "  - Kernel modules: /lib/modules/6.12.47*"
     echo ""
