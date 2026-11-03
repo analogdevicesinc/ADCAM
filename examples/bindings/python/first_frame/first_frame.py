@@ -128,8 +128,7 @@ if fuse_pair is not None:
     print("camera1.setModeFusion(", first_mode, ",", second_mode, ")", status)
     if status != tof.Status.Ok:
         exit(-3)
-    # The fused frame is processed by the long-range compute context.
-    _, _, _, mode = camera1.getModeFusion()
+    mode = f"{first_mode}_{second_mode}"
 else:
     status = camera1.setMode(int(mode))
     print("camera1.setMode(",mode,")", status)
