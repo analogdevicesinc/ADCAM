@@ -396,6 +396,9 @@ def config_window():
                                   else camera1.initialize())
                         print("camera1.initialize(%s)" %
                               (config_dd.selected[0]), status)
+                        if status != tof.Status.Ok:
+                            load_msg = "initialize() failed - check the config."
+                            continue
                         available_modes = []
                         camera1.getAvailableModes(available_modes)
                         if not available_modes:
@@ -558,7 +561,10 @@ def animate(view):
     equalised colours smoothed across frames ("cdf"), otherwise the manual
     linear range "rng" = [min, max] mm."""
     frame = tof.Frame()
-    camera1.requestFrame(frame)
+    status = camera1.requestFrame(frame)
+    if status != tof.Status.Ok:
+        print("camera1.requestFrame() failed with status: ", status)
+        return None
     frameDataDetails = tof.FrameDataDetails()
     frame.getDataDetails("depth", frameDataDetails)
     depth = np.rot90(np.asarray(frame.getData("depth")))
@@ -621,7 +627,12 @@ def run_window(title, modeDetails, dmin, dmax, auto):
     min_w = 640
 
     view = {"auto": auto, "rng": [float(dmin), float(dmax)], "cdf": None}
-    first = animate(view)[0]
+    result = animate(view)
+    if result is None:
+        pygame.quit()
+        camera1.stop()
+        return
+    first = result[0]
     win_w = max(first.get_width(), min_w)
     win_h = first.get_height() + panel_h
     screen = pygame.display.set_mode((win_w, win_h), pygame.RESIZABLE)
@@ -649,7 +660,10 @@ def run_window(title, modeDetails, dmin, dmax, auto):
     done = False
     while not done:
         # Grab this iteration's frame first so a save uses the current frame.
-        surf, depth = animate(view)
+        result = animate(view)
+        if result is None:
+            break
+        surf, depth = result
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 done = True
@@ -748,9 +762,13 @@ def main():
     else:
         status = camera1.setMode(sel_mode)
         print("camera1.setMode()", status)
+    if status != tof.Status.Ok:
+        sys.exit(-1)
 
     status = camera1.start()
     print("camera1.start()", status)
+    if status != tof.Status.Ok:
+        sys.exit(-1)
 
     sensor = camera1.getSensor()
     modeDetails = tof.DepthSensorModeDetails()
