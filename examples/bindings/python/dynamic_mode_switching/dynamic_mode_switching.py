@@ -24,6 +24,8 @@
 import numpy as np
 import sys
 import argparse
+import json
+import tempfile
 import time
 import os
 from dataclasses import dataclass
@@ -31,15 +33,9 @@ from dataclasses import dataclass
 minV = 0
 maxV = 7000
 
-VALID_MODES_BY_IMAGER = {
-    "mp": [0, 2, 5],
-    "vga": [0, 2, 5, 8],
-}
-
 
 @dataclass
 class AppConfig:
-    imager: str
     mode_a: int
     mode_b: int
     fps: int
@@ -58,53 +54,43 @@ def positive_int(value):
 def build_parser():
     parser = argparse.ArgumentParser(
         description="Dynamic mode switch viewer",
-        usage="%(prog)s <imager>,<mode> [--ip <ip>] [--config <config.json>] [--fps <fps>] [--dry-run]"
+        usage="%(prog)s <modeA>,<modeB> [--ip <ip>] [--config <config.json>] [--fps <fps>] [--dry-run]"
     )
     parser.add_argument(
-        "imager_mode",
-        help="Imager and mode in format: imager,mode\n"
-             "  Valid MP: mp,0 mp,2 mp,5\n"
-             "  Valid VGA: vga,0 vga,2 vga,5 vga,8\n"
+        "modes",
+        help="Two modes of the same resolution to alternate, e.g. 0,1 or 3,6\n"
     )
     parser.add_argument("--ip", "--ipconfig", dest="ip", default="",
                         help="Optional camera IP address (e.g., 192.168.1.10)")
     parser.add_argument("--config", dest="config", default="",
                         help="Optional config JSON file path")
-    parser.add_argument("--fps", type=positive_int, default=20,
-                        help="Frame rate in fps (default: 20, must be a positive integer)")
+    parser.add_argument("--fps", type=positive_int, default=None,
+                        help="Frame rate in fps for both modes (default: mode setting)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Validate arguments and camera setup without opening the pygame window")
     return parser
 
 
-def parse_imager_mode(parser, imager_mode_value):
-    imager_mode_parts = imager_mode_value.split(',')
-    if len(imager_mode_parts) != 2:
-        parser.error("imager_mode must be in format: imager,mode (e.g., mp,2)")
-
-    imager = imager_mode_parts[0]
-    if imager not in VALID_MODES_BY_IMAGER:
-        parser.error(f"Invalid imager '{imager}'. Must be one of: {', '.join(VALID_MODES_BY_IMAGER)}")
+def parse_modes(parser, modes_value):
+    mode_parts = modes_value.split(',')
+    if len(mode_parts) != 2:
+        parser.error("modes must be in format: modeA,modeB (e.g., 0,1)")
 
     try:
-        mode_a = int(imager_mode_parts[1])
+        mode_a, mode_b = (int(m) for m in mode_parts)
     except ValueError:
-        parser.error(f"Invalid mode '{imager_mode_parts[1]}'. Mode must be an integer")
+        parser.error(f"Invalid modes '{modes_value}'. Modes must be integers")
 
-    valid_modes = VALID_MODES_BY_IMAGER[imager]
-    if mode_a not in valid_modes:
-        parser.error(
-            f"Invalid mode {mode_a} for imager '{imager}'. "
-            f"Valid modes: {', '.join(map(str, valid_modes))}"
-        )
+    if mode_a == mode_b:
+        parser.error("modeA and modeB must be different")
 
-    return imager, mode_a
+    return mode_a, mode_b
 
 
 def parse_args():
     parser = build_parser()
     args = parser.parse_args()
-    imager, mode_a = parse_imager_mode(parser, args.imager_mode)
+    mode_a, mode_b = parse_modes(parser, args.modes)
 
     config_path = ""
     if args.config:
@@ -115,9 +101,8 @@ def parse_args():
         print(f"Using config file: {config_path}")
 
     return AppConfig(
-        imager=imager,
         mode_a=mode_a,
-        mode_b=mode_a + 1,
+        mode_b=mode_b,
         fps=args.fps,
         ip=args.ip,
         config_path=config_path,
@@ -125,35 +110,37 @@ def parse_args():
     )
 
 
-def get_mode_mapping(config):
-    imager = config.imager
-    if imager == 'vga':
-        modemapping = {
-            3: {"height": 256, "width": 320},
-            5: {"height": 256, "width": 320},
-            6: {"height": 256, "width": 320},
-            8: {"height": 256, "width": 320},
-            9: {"height": 256, "width": 320},
-            0: {"height": 512, "width": 640},
-            1: {"height": 512, "width": 640},
-            7: {"height": 512, "width": 640},
-        }
+def write_configs(camera, config, tof_module):
+    """Writes temporary config JSONs: depth params only, and params + DMS sequence.
+
+    Without --config, the camera's own depth parameters are used as the base.
+    """
+    params_path = tempfile.mkstemp(suffix=".json")[1]
+    dms_path = tempfile.mkstemp(suffix=".json")[1]
+    if config.config_path:
+        with open(config.config_path) as f:
+            params = json.load(f)
     else:
-        modemapping = {
-            2: {"height": 512, "width": 512},
-            3: {"height": 512, "width": 512},
-            5: {"height": 512, "width": 512},
-            6: {"height": 512, "width": 512},
-            0: {"width": 1024, "height": 1024},
-            1: {"width": 1024, "height": 1024},
-        }
+        if camera.saveDepthParamsToJsonFile(params_path) != tof_module.Status.Ok:
+            sys.exit("Could not read the camera depth parameters!")
+        with open(params_path) as f:
+            params = json.load(f)
 
-    if config.mode_a not in modemapping:
-        print(f"Error: Mode {config.mode_a} is not available for imager '{config.imager}'")
-        print(f"Available modes: {', '.join(sorted(map(str, modemapping.keys())))}")
-        sys.exit(1)
+    params.pop("dynamicModeSwitching", None)
+    if config.fps:
+        for mode in (config.mode_a, config.mode_b):
+            params.setdefault(str(mode), {}).setdefault(
+                "configuration-parameters", {})["fps"] = config.fps
+    with open(params_path, "w") as f:
+        json.dump(params, f, indent=4)
 
-    return modemapping
+    params["dynamicModeSwitching"] = [
+        {"mode": config.mode_a, "repeat": 1},
+        {"mode": config.mode_b, "repeat": 1},
+    ]
+    with open(dms_path, "w") as f:
+        json.dump(params, f, indent=4)
+    return params_path, dms_path
 
 
 def get_camera_list(system, ip, tof_module):
@@ -190,60 +177,50 @@ def configure_camera(camera, config, tof_module):
     print("folder serial number: ", serial_number)
 
     available_modes = []
-    if config.config_path:
-        print("Loading configuration from JSON file: ", config.config_path)
-        status = camera.loadDepthParamsFromJsonFile(config.config_path, int(config.mode_a))
-        if status != tof_module.Status.Ok:
-            sys.exit("Could not load depth parameters from JSON file!")
-    else:
-        status = camera.adsd3500SetABinvalidationThreshold(5)
-        if status != tof_module.Status.Ok:
-            sys.exit("Could not set AB invalidation threshold!")
-        status = camera.adsd3500SetConfidenceThreshold(25)
-        if status != tof_module.Status.Ok:
-            sys.exit("Could not set confidence threshold!")
-        status = camera.adsd3500SetRadialThresholdMin(50)
-        if status != tof_module.Status.Ok:
-            sys.exit("Could not set radial threshold min!")
-        status = camera.adsd3500SetRadialThresholdMax(7000)
-        if status != tof_module.Status.Ok:
-            sys.exit("Could not set radial threshold max!")
-
     status = camera.getAvailableModes(available_modes)
     if status != tof_module.Status.Ok or len(available_modes) == 0:
         sys.exit('Could not acquire available modes')
 
-    status = camera.setMode(config.mode_a)
-    if status != tof_module.Status.Ok:
-        sys.exit("Could not set camera mode!")
+    sensor = camera.getSensor()
+    resolutions = []
+    for mode in (config.mode_a, config.mode_b):
+        if mode not in available_modes:
+            sys.exit(f"Mode {mode} is not available. Available modes: {available_modes}")
+        details = tof_module.DepthSensorModeDetails()
+        sensor.getModeDetails(mode, details)
+        resolutions.append((details.baseResolutionWidth, details.baseResolutionHeight))
+    if resolutions[0] != resolutions[1]:
+        sys.exit(f"Modes {config.mode_a} and {config.mode_b} must have the same resolution")
 
-    # Enable embedded header in AB frame
+    # Embedded metadata identifies which mode produced each frame
     status = camera.adsd3500SetEnableMetadatainAB(1)
     if status != tof_module.Status.Ok:
         sys.exit("Could not set embedded header in AB frame!")
 
-    # Set desired frame rate
-    status = camera.adsd3500SetFrameRate(config.fps)
-    if status != tof_module.Status.Ok:
-        sys.exit("Could not set FPS!")
+    # setMode() writes only its own mode's params to the ADSD3500, so set mode B
+    # before the sequence is loaded; setMode(mode A) then enables DMS.
+    params_path, dms_path = write_configs(camera, config, tof_module)
+    try:
+        status = camera.loadDepthParamsFromJsonFile(params_path, -1)
+        if status != tof_module.Status.Ok:
+            sys.exit("Could not load depth parameters!")
+        status = camera.setMode(config.mode_b)
+        if status != tof_module.Status.Ok:
+            sys.exit(f"Could not set mode {config.mode_b}!")
+        status = camera.loadDepthParamsFromJsonFile(dms_path, -1)
+        if status != tof_module.Status.Ok:
+            sys.exit("Could not load the dynamic mode switching sequence!")
+    finally:
+        os.remove(params_path)
+        os.remove(dms_path)
 
-    # Enable dynamic mode switching
-    status = camera.adsd3500setEnableDynamicModeSwitching(True)
+    status = camera.setMode(config.mode_a)
     if status != tof_module.Status.Ok:
         sys.exit("Error setting dynamic mode switching!")
+    print(f"Dynamic mode switching: mode {config.mode_a} <-> mode {config.mode_b}")
 
-    sequence = [
-        (config.mode_a, 0x01), # Mode A repeat 1 time
-        (config.mode_b, 0x01), # Mode B repeat 1 time
-    ]
-    status = camera.adsds3500setDynamicModeSwitchingSequence(sequence)
-    if status != tof_module.Status.Ok:
-        sys.exit("Error setting dynamic mode switching!")
-
-    status, dynamic_mode_switch_status = camera.adsd3500GetGenericTemplate(0x0085)
-    if status != tof_module.Status.Ok:
-        sys.exit("Error setting dynamic mode switching!")
-    print('Dynamic Mode Status: ', dynamic_mode_switch_status)
+    # The ADSD3500 needs a moment to apply the sequence before streaming
+    time.sleep(0.3)
 
 
 def start_camera(camera, tof_module):
@@ -291,7 +268,7 @@ def normalize(min_depth, max_depth, image_scalar):
     return surface
 
 
-def animate(camera, frame, config, modemapping, pygame, tof_module, min_depth, max_depth):
+def animate(camera, frame, config, pygame, tof_module, min_depth, max_depth):
     frame_A_loaded = False
     frame_B_loaded = False
     tries = 0
@@ -322,22 +299,24 @@ def animate(camera, frame, config, modemapping, pygame, tof_module, min_depth, m
             print('10 Tries to get consecutive frames')
             raise RuntimeError('Could not get consecutive frames for both modes')
 
-    final_image = np.ones((modemapping[config.mode_a]["width"] * 2, modemapping[config.mode_a]["height"]))
-    final_image[0:modemapping[config.mode_a]["width"], :] = image1
-    final_image[modemapping[config.mode_a]["width"]:modemapping[config.mode_a]["width"] * 2, :] = image2
+    final_image = np.concatenate((image1, image2), axis=0)
     surface = pygame.surfarray.make_surface(normalize(min_depth, max_depth, final_image))
     return surface, laser_temp, sensor_temp
     
 
-def run_viewer(camera, config, modemapping, tof_module, min_depth, max_depth):
+def run_viewer(camera, config, tof_module, min_depth, max_depth):
     import pygame
+
+    frame = tof_module.Frame()
+    status = camera.requestFrame(frame)
+    if status != tof_module.Status.Ok:
+        sys.exit("Could not request frame!")
+    rows, cols = np.array(frame.getData("depth"), copy=False).shape
 
     pygame.init()
 
-    window_size = (modemapping[config.mode_a]["width"] * 2, modemapping[config.mode_a]["height"])
-
-    screen = pygame.display.set_mode(window_size)
-    frame = tof_module.Frame()
+    screen = pygame.display.set_mode((rows * 2, cols))
+    pygame.display.set_caption(f"Mode {config.mode_a} | Mode {config.mode_b}")
 
     done = False
     fc = 0
@@ -350,7 +329,7 @@ def run_viewer(camera, config, modemapping, tof_module, min_depth, max_depth):
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     done = True
 
-            pygame_surface, laser_temp, sensor_temp = animate(camera, frame, config, modemapping, pygame, tof_module, min_depth, max_depth)
+            pygame_surface, laser_temp, sensor_temp = animate(camera, frame, config, pygame, tof_module, min_depth, max_depth)
             screen.blit(pygame_surface, (0, 0))
             fc = fc + 1.0
             elapsed_time = time.time() - start_time
@@ -367,7 +346,6 @@ def run_viewer(camera, config, modemapping, tof_module, min_depth, max_depth):
 
 def main():
     config = parse_args()
-    modemapping = get_mode_mapping(config)
     tof_module = load_tof()
     system = tof_module.System()
     cameras = get_camera_list(system, config.ip, tof_module)
@@ -380,7 +358,7 @@ def main():
             return
 
         start_camera(camera, tof_module)
-        run_viewer(camera, config, modemapping, tof_module, minV, maxV)
+        run_viewer(camera, config, tof_module, minV, maxV)
     finally:
         stop_camera(camera)
 
