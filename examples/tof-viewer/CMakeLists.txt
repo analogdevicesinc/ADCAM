@@ -168,7 +168,6 @@ endif()
 
 # Export executable symbols (-rdynamic) so the zeroalloc.c malloc/free
 # interposers override the closed libtofi_compute.so allocation calls.
-endif()
 if(UNIX AND NOT APPLE)
     set_target_properties(ADIToFGUI PROPERTIES ENABLE_EXPORTS ON)
 endif()
