@@ -12,6 +12,7 @@ var searchData=
   ['setframeprocessparams',['setFrameProcessParams',['../classaditof_1_1_camera.html#a53b63781974ebaebb499258cb4fd72b2',1,'aditof::Camera']]],
   ['setinputfilename',['setInputFileName',['../classaditof_1_1_frame_handler.html#abba60905e09e9b2a500efad320044f3e',1,'aditof::FrameHandler']]],
   ['setmode',['setMode',['../classaditof_1_1_camera.html#af8a6a52fcfaa7da318082bc702af1df9',1,'aditof::Camera::setMode()'],['../classaditof_1_1_depth_sensor_interface.html#a36e966e8feafc8bcf5b9ed5569297d7c',1,'aditof::DepthSensorInterface::setMode(const uint8_t &amp;mode)=0'],['../classaditof_1_1_depth_sensor_interface.html#af43a61c941c75db7dea3d523a3ca4803',1,'aditof::DepthSensorInterface::setMode(const aditof::DepthSensorModeDetails &amp;type)=0']]],
+  ['setmodefusion',['setModeFusion',['../classaditof_1_1_camera.html#aaa6774e9418f09c2f4cd30ed1da8db36',1,'aditof::Camera']]],
   ['setoutputfilepath',['setOutputFilePath',['../classaditof_1_1_frame_handler.html#a0ba3cd06b9dd6ad6bf751cf56f713677',1,'aditof::FrameHandler']]],
   ['setplaybackfile',['setPlaybackFile',['../classaditof_1_1_camera.html#ab804b4f577a88d30845984ebceb1da92',1,'aditof::Camera']]],
   ['setrotationenabled',['setRotationEnabled',['../classaditof_1_1_camera.html#aa0d644acdaaf280c3e3c6e6336696e59',1,'aditof::Camera']]],

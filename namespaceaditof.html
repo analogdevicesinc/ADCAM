@@ -268,6 +268,14 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
 <tr class="memitem:ae738ee4af66432ccded73edd4db8084a"><td class="memItemLeft" align="right" valign="top">SDK_API bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceaditof.html#ae738ee4af66432ccded73edd4db8084a">operator!=</a> (const <a class="el" href="structaditof_1_1_frame_details.html">FrameDetails</a> &amp;lhs, const <a class="el" href="structaditof_1_1_frame_details.html">FrameDetails</a> &amp;rhs)</td></tr>
 <tr class="memdesc:ae738ee4af66432ccded73edd4db8084a"><td class="mdescLeft">&#160;</td><td class="mdescRight">operator !=  <a href="#ae738ee4af66432ccded73edd4db8084a">More...</a><br /></td></tr>
 <tr class="separator:ae738ee4af66432ccded73edd4db8084a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afe036531e60146233f432bc8029ac2fb"><td class="memItemLeft" align="right" valign="top"><a id="afe036531e60146233f432bc8029ac2fb"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceaditof.html#afe036531e60146233f432bc8029ac2fb">isAdtf3066LongRangeMode</a> (uint8_t mode)</td></tr>
+<tr class="memdesc:afe036531e60146233f432bc8029ac2fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether a mode is an ADTF3066 long-range (LR) mode (7, 8). <br /></td></tr>
+<tr class="separator:afe036531e60146233f432bc8029ac2fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae91b9891c558604d0484487bf5e0b0dd"><td class="memItemLeft" align="right" valign="top"><a id="ae91b9891c558604d0484487bf5e0b0dd"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceaditof.html#ae91b9891c558604d0484487bf5e0b0dd">isAdtf3066ShortRangeMode</a> (uint8_t mode)</td></tr>
+<tr class="memdesc:ae91b9891c558604d0484487bf5e0b0dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Whether a mode is an ADTF3066 short-range (SR) mode (0, 1, 3, 6). <br /></td></tr>
+<tr class="separator:ae91b9891c558604d0484487bf5e0b0dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9de8aeb4ac39597e497a44312ab4dd22"><td class="memItemLeft" align="right" valign="top">SDK_API std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceaditof.html#a9de8aeb4ac39597e497a44312ab4dd22">operator&lt;&lt;</a> (std::ostream &amp;os, <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">aditof::Status</a> status)</td></tr>
 <tr class="memdesc:a9de8aeb4ac39597e497a44312ab4dd22"><td class="mdescLeft">&#160;</td><td class="mdescRight">operator &lt;&lt; which make possible to print out items from <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9" title="Status of any operation that the TOF sdk performs.">aditof::Status</a> enum  <a href="#a9de8aeb4ac39597e497a44312ab4dd22">More...</a><br /></td></tr>
 <tr class="separator:a9de8aeb4ac39597e497a44312ab4dd22"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -457,7 +465,7 @@ Variables</h2></td></tr>
 </td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="camera__definitions_8h_source.html#l00175">175</a> of file <a class="el" href="camera__definitions_8h_source.html">camera_definitions.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="camera__definitions_8h_source.html#l00176">176</a> of file <a class="el" href="camera__definitions_8h_source.html">camera_definitions.h</a>.</p>
 
 </div>
 </div>
@@ -747,7 +755,7 @@ Variables</h2></td></tr>
 <b>Initial value:</b><div class="fragment"><div class="line">{</div><div class="line">    {ImagerType::ADSD3100, <span class="stringliteral">&quot;1&quot;</span>},</div><div class="line">    {ImagerType::ADSD3030, <span class="stringliteral">&quot;2&quot;</span>},</div><div class="line">    {ImagerType::ADTF3080, <span class="stringliteral">&quot;3&quot;</span>},</div><div class="line">    {ImagerType::ADTF3066, <span class="stringliteral">&quot;4&quot;</span>}}</div></div><!-- fragment -->
 <p>Types of imagers based on ControlValue. </p>
 
-<p class="definition">Definition at line <a class="el" href="camera__definitions_8h_source.html#l00187">187</a> of file <a class="el" href="camera__definitions_8h_source.html">camera_definitions.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="camera__definitions_8h_source.html#l00188">188</a> of file <a class="el" href="camera__definitions_8h_source.html">camera_definitions.h</a>.</p>
 
 </div>
 </div>
@@ -765,7 +773,7 @@ Variables</h2></td></tr>
 <b>Initial value:</b><div class="fragment"><div class="line">{</div><div class="line">    {ImagerType::ADSD3100, <span class="stringliteral">&quot;adsd3100&quot;</span>},</div><div class="line">    {ImagerType::ADSD3030, <span class="stringliteral">&quot;adsd3030&quot;</span>},</div><div class="line">    {ImagerType::ADTF3080, <span class="stringliteral">&quot;adtf3080&quot;</span>},</div><div class="line">    {ImagerType::ADTF3066, <span class="stringliteral">&quot;adtf3066&quot;</span>}}</div></div><!-- fragment -->
 <p>Types of imagers. </p>
 
-<p class="definition">Definition at line <a class="el" href="camera__definitions_8h_source.html#l00195">195</a> of file <a class="el" href="camera__definitions_8h_source.html">camera_definitions.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="camera__definitions_8h_source.html#l00196">196</a> of file <a class="el" href="camera__definitions_8h_source.html">camera_definitions.h</a>.</p>
 
 </div>
 </div>

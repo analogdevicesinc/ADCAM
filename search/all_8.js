@@ -29,6 +29,8 @@ var searchData=
   ['invalid_5fmode',['INVALID_MODE',['../namespaceaditof.html#a320673d4700814b3be0f55bc2efcf9d6a3850fef095f068e996766fd34f9a567b',1,'aditof']]],
   ['invalid_5fphase_5finvalid_5fvalue',['INVALID_PHASE_INVALID_VALUE',['../namespaceaditof.html#a320673d4700814b3be0f55bc2efcf9d6ac6b2b885fef86ee2a4590fe90547718b',1,'aditof']]],
   ['invalidphasevalue',['invalidPhaseValue',['../structaditof_1_1_metadata.html#acd004f2785c77e8f055817c173ca4cff',1,'aditof::Metadata']]],
+  ['isadtf3066longrangemode',['isAdtf3066LongRangeMode',['../namespaceaditof.html#afe036531e60146233f432bc8029ac2fb',1,'aditof']]],
+  ['isadtf3066shortrangemode',['isAdtf3066ShortRangeMode',['../namespaceaditof.html#ae91b9891c558604d0484487bf5e0b0dd',1,'aditof']]],
   ['ispcm',['isPCM',['../structaditof_1_1_depth_sensor_mode_details.html#a93749dffafff556003a0cb9ab43beb26',1,'aditof::DepthSensorModeDetails']]],
   ['israwbypass',['isRawBypass',['../structaditof_1_1_depth_sensor_mode_details.html#a4efd32533eb0ba5ced37df1cd31151e2',1,'aditof::DepthSensorModeDetails']]]
 ];

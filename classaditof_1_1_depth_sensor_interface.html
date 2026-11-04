@@ -138,6 +138,15 @@ virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="c
 <tr class="memitem:a13d6a05b1cd6f0f356842f3451feac00"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">aditof::Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classaditof_1_1_depth_sensor_interface.html#a13d6a05b1cd6f0f356842f3451feac00">getIniParamsArrayForMode</a> (int mode, std::string &amp;iniStr)=0</td></tr>
 <tr class="memdesc:a13d6a05b1cd6f0f356842f3451feac00"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get ini parameters for Depth Compute library as string.  <a href="#a13d6a05b1cd6f0f356842f3451feac00">More...</a><br /></td></tr>
 <tr class="separator:a13d6a05b1cd6f0f356842f3451feac00"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa1ef55398615df323ac4063de5dc6b74"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">aditof::Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classaditof_1_1_depth_sensor_interface.html#aa1ef55398615df323ac4063de5dc6b74">enableDynamicModeSwitchingSupport</a> (uint8_t alternateMode, uint8_t *iniFile, uint16_t iniFileLength, uint8_t *calData, uint32_t calDataLength, bool ispEnabled, uint8_t repeatPrimary, uint8_t repeatAlternate)</td></tr>
+<tr class="memdesc:aa1ef55398615df323ac4063de5dc6b74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Registers a second ("alternate") mode's buffer/compute configuration and activates per-frame dispatch for it, so frames produced by hardware Dynamic Mode Switching (DMS) are processed with the correct layout even when the alternate mode's resolution/bit depths differ from the mode set via <a class="el" href="classaditof_1_1_depth_sensor_interface.html#a36e966e8feafc8bcf5b9ed5569297d7c" title="Set the sensor frame mode to the given type.">setMode()</a>. Sensors that don't support DMS may leave this unimplemented.  <a href="#aa1ef55398615df323ac4063de5dc6b74">More...</a><br /></td></tr>
+<tr class="separator:aa1ef55398615df323ac4063de5dc6b74"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a378147cb8a86d934f629d2e7ddb7fa22"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">aditof::Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classaditof_1_1_depth_sensor_interface.html#a378147cb8a86d934f629d2e7ddb7fa22">disableDynamicModeSwitchingSupport</a> ()</td></tr>
+<tr class="memdesc:a378147cb8a86d934f629d2e7ddb7fa22"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disables per-frame DMS dispatch enabled via <a class="el" href="classaditof_1_1_depth_sensor_interface.html#aa1ef55398615df323ac4063de5dc6b74" title="Registers a second (&quot;alternate&quot;) mode&#39;s buffer/compute configuration and activates per-frame dispatch...">enableDynamicModeSwitchingSupport()</a>, reverting to the single active configuration set via <a class="el" href="classaditof_1_1_depth_sensor_interface.html#a36e966e8feafc8bcf5b9ed5569297d7c" title="Set the sensor frame mode to the given type.">setMode()</a>.  <a href="#a378147cb8a86d934f629d2e7ddb7fa22">More...</a><br /></td></tr>
+<tr class="separator:a378147cb8a86d934f629d2e7ddb7fa22"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af77a85c8577b946b7714fb7d5e49fff6"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">aditof::Status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classaditof_1_1_depth_sensor_interface.html#af77a85c8577b946b7714fb7d5e49fff6">getLastDeliveredFrameMode</a> (uint8_t &amp;mode)</td></tr>
+<tr class="memdesc:af77a85c8577b946b7714fb7d5e49fff6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the mode number of the most recently delivered frame. Ground truth for callers when Dynamic Mode Switching is active, since the chip's embedded per-frame metadata can land at the wrong buffer offset when the primary and alternate modes differ in resolution/bit layout.  <a href="#af77a85c8577b946b7714fb7d5e49fff6">More...</a><br /></td></tr>
+<tr class="separator:af77a85c8577b946b7714fb7d5e49fff6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Core interface for depth sensors (SOLID ISP refactoring completed). </p>
@@ -153,6 +162,126 @@ Implementations should inherit only the interfaces they truly support, eliminati
 
 <p class="definition">Definition at line <a class="el" href="depth__sensor__interface_8h_source.html#l00061">61</a> of file <a class="el" href="depth__sensor__interface_8h_source.html">depth_sensor_interface.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="a378147cb8a86d934f629d2e7ddb7fa22"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a378147cb8a86d934f629d2e7ddb7fa22">&#9670;&nbsp;</a></span>disableDynamicModeSwitchingSupport()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">aditof::Status</a> aditof::DepthSensorInterface::disableDynamicModeSwitchingSupport </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Disables per-frame DMS dispatch enabled via <a class="el" href="classaditof_1_1_depth_sensor_interface.html#aa1ef55398615df323ac4063de5dc6b74" title="Registers a second (&quot;alternate&quot;) mode&#39;s buffer/compute configuration and activates per-frame dispatch...">enableDynamicModeSwitchingSupport()</a>, reverting to the single active configuration set via <a class="el" href="classaditof_1_1_depth_sensor_interface.html#a36e966e8feafc8bcf5b9ed5569297d7c" title="Set the sensor frame mode to the given type.">setMode()</a>. </p>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9ae0aa021e21dddbd6d8cecec71e9cf564" title="Success.">Status::OK</a> on success, <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9a084f4ca2c0fe703e46514a144b4d6ead" title="The requested action or resource is unavailable.">Status::UNAVAILABLE</a> if unsupported </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="depth__sensor__interface_8h_source.html#l00255">255</a> of file <a class="el" href="depth__sensor__interface_8h_source.html">depth_sensor_interface.h</a>.</p>
+
+</div>
+</div>
+<a id="aa1ef55398615df323ac4063de5dc6b74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa1ef55398615df323ac4063de5dc6b74">&#9670;&nbsp;</a></span>enableDynamicModeSwitchingSupport()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">aditof::Status</a> aditof::DepthSensorInterface::enableDynamicModeSwitchingSupport </td>
+          <td>(</td>
+          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramname"><em>alternateMode</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint8_t *&#160;</td>
+          <td class="paramname"><em>iniFile</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint16_t&#160;</td>
+          <td class="paramname"><em>iniFileLength</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint8_t *&#160;</td>
+          <td class="paramname"><em>calData</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>calDataLength</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>ispEnabled</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramname"><em>repeatPrimary</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramname"><em>repeatAlternate</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Registers a second ("alternate") mode's buffer/compute configuration and activates per-frame dispatch for it, so frames produced by hardware Dynamic Mode Switching (DMS) are processed with the correct layout even when the alternate mode's resolution/bit depths differ from the mode set via <a class="el" href="classaditof_1_1_depth_sensor_interface.html#a36e966e8feafc8bcf5b9ed5569297d7c" title="Set the sensor frame mode to the given type.">setMode()</a>. Sensors that don't support DMS may leave this unimplemented. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">alternateMode</td><td>- the second mode number in the DMS pair </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">iniFile</td><td>- ini file content for the alternate mode </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">iniFileLength</td><td>- ini file content length </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">calData</td><td>- calibration data for the alternate mode </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">calDataLength</td><td>- calibration data length </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ispEnabled</td><td>- true if ISP pre-computes depth for that mode </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">repeatPrimary</td><td>- consecutive frames using the current mode </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">repeatAlternate</td><td>- consecutive frames using alternateMode </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9ae0aa021e21dddbd6d8cecec71e9cf564" title="Success.">Status::OK</a> on success, <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9a084f4ca2c0fe703e46514a144b4d6ead" title="The requested action or resource is unavailable.">Status::UNAVAILABLE</a> if unsupported </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="depth__sensor__interface_8h_source.html#l00234">234</a> of file <a class="el" href="depth__sensor__interface_8h_source.html">depth_sensor_interface.h</a>.</p>
+
+</div>
+</div>
 <a id="aa3ea1e91140c8746b7aa59e725b83bd0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa3ea1e91140c8746b7aa59e725b83bd0">&#9670;&nbsp;</a></span>getAvailableControls()</h2>
 
@@ -463,6 +592,43 @@ Implementations should inherit only the interfaces they truly support, eliminati
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Status </dd></dl>
+
+</div>
+</div>
+<a id="af77a85c8577b946b7714fb7d5e49fff6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af77a85c8577b946b7714fb7d5e49fff6">&#9670;&nbsp;</a></span>getLastDeliveredFrameMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9">aditof::Status</a> aditof::DepthSensorInterface::getLastDeliveredFrameMode </td>
+          <td>(</td>
+          <td class="paramtype">uint8_t &amp;&#160;</td>
+          <td class="paramname"><em>mode</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the mode number of the most recently delivered frame. Ground truth for callers when Dynamic Mode Switching is active, since the chip's embedded per-frame metadata can land at the wrong buffer offset when the primary and alternate modes differ in resolution/bit layout. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">mode</td><td>- the mode number of the last delivered frame </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9ae0aa021e21dddbd6d8cecec71e9cf564" title="Success.">Status::OK</a> on success, <a class="el" href="namespaceaditof.html#a44f136ae2a9a546362d75a5d73443da9a084f4ca2c0fe703e46514a144b4d6ead" title="The requested action or resource is unavailable.">Status::UNAVAILABLE</a> if unsupported </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="depth__sensor__interface_8h_source.html#l00268">268</a> of file <a class="el" href="depth__sensor__interface_8h_source.html">depth_sensor_interface.h</a>.</p>
 
 </div>
 </div>
