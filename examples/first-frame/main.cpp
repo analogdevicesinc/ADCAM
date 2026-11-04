@@ -105,7 +105,7 @@ Status save_frame(aditof::Frame &frame, std::string frameType,
                         modeTag + ".bin",
                     std::ios::binary);
     frame.getDataDetails(frameType, fDetails);
-    g.write((char *)data1, fDetails.bytesCount);
+    g.write((char *)data1, fDetails.width * fDetails.height * sizeof(uint16_t));
     g.close();
 
     return status;
@@ -314,7 +314,6 @@ int main(int argc, char *argv[]) {
 
     save_frame(frame, "ab", modeTag);
     save_frame(frame, "depth", modeTag);
-    save_frame(frame, "rgb", modeTag);
 
     status = camera->stop();
     if (status != Status::OK) {
