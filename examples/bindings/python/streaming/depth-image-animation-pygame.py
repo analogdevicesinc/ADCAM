@@ -120,9 +120,10 @@ def find_configs():
     search_dirs = [
         here,
         os.path.join(here, "config"),
-        os.path.join(here, "..", "..", "..", "..", "eval", "C++", "ADIToFGUI"),
-        os.path.expanduser(
-            "~/ADI/Robotics/Camera/ADCAM/1.0.0/eval/C++/ADIToFGUI"),
+        # Installed package: eval/Python -> eval/C++/ADIToFGUI
+        os.path.join(here, "..", "C++", "ADIToFGUI"),
+        # Build tree: examples/bindings/python/streaming -> examples/tof-viewer
+        os.path.join(here, "..", "..", "..", "tof-viewer"),
     ]
     found = []
     seen = set()
