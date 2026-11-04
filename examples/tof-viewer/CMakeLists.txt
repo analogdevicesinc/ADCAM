@@ -166,15 +166,6 @@ else()
     )
 endif()
 
-# Add RGB support compile definition if enabled
-if(NOT DEFINED WITH_RGB_CAMERA)
-    set(WITH_RGB_CAMERA OFF)
-endif()
-if(WITH_RGB_CAMERA)
-    target_compile_definitions(ADIToFGUI PRIVATE WITH_RGB_SUPPORT)
-    message(STATUS "RGB camera support enabled in tof-viewer")
-else()
-    message(STATUS "RGB camera support disabled in tof-viewer (original AB-only behavior)")
 # Export executable symbols (-rdynamic) so the zeroalloc.c malloc/free
 # interposers override the closed libtofi_compute.so allocation calls.
 endif()
