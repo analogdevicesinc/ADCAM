@@ -15,7 +15,6 @@ opencv-contrib-python
 opencv-python
 opt-einsum
 packaging
-pillow
 protobuf
 pycparser
 pygame
