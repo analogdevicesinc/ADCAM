@@ -8,3 +8,5 @@ doc/user-guide/tof-viewer.md
 *.temp/
 .vscode/
 .vs/
+__pycache__/
+*.pyc

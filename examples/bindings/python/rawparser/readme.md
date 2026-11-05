@@ -24,7 +24,6 @@ first point cloud frame 3d image will be visualized. Close the visualize window 
 pip install opencv-python
 pip install numpy
 pip install open3d
-pip install matplotlib
 pip install argparse
 ```
 
