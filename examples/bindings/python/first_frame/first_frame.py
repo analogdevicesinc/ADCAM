@@ -24,8 +24,7 @@
 
 import aditofpython as tof
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+import cv2
 import sys
 import os
 import struct
@@ -229,54 +228,56 @@ print("Laser temperature from metadata: ", laser_temp)
 print("Frame number from metadata: ", frame_num)
 print("Mode from metadata: ", imager_mode)
 
+def make_panel(image, title, colormap=None, size=400):
+    """Render an image as a BGR panel with a title and a min/max colorbar."""
+    img = np.nan_to_num(np.asarray(image, dtype=np.float32))
+    vmin, vmax = float(img.min()), float(img.max())
+    u8 = ((img - vmin) / max(vmax - vmin, 1e-6) * 255).astype(np.uint8)
+    width = max(1, round(img.shape[1] * size / img.shape[0]))
+    u8 = cv2.resize(u8, (width, size), interpolation=cv2.INTER_NEAREST)
+    ramp = np.repeat(np.linspace(255, 0, size).astype(np.uint8)[:, None], 20, axis=1)
+    if colormap is None:
+        body, bar = cv2.cvtColor(u8, cv2.COLOR_GRAY2BGR), cv2.cvtColor(ramp, cv2.COLOR_GRAY2BGR)
+    else:
+        body, bar = cv2.applyColorMap(u8, colormap), cv2.applyColorMap(ramp, colormap)
+    panel = np.full((size + 40, width + 100, 3), 255, dtype=np.uint8)
+    panel[30:30 + size, :width] = body
+    panel[30:30 + size, width + 10:width + 30] = bar
+    text = dict(fontFace=cv2.FONT_HERSHEY_SIMPLEX, color=(0, 0, 0), lineType=cv2.LINE_AA)
+    cv2.putText(panel, title, (5, 20), fontScale=0.6, thickness=1, **text)
+    cv2.putText(panel, f"{vmax:.0f}", (width + 34, 42), fontScale=0.45, thickness=1, **text)
+    cv2.putText(panel, f"{vmin:.0f}", (width + 34, size + 30), fontScale=0.45, thickness=1, **text)
+    return panel
+
 if output_type == 'show':
-    # Count available frames and create dynamic layout
-    subplot_idx = 1
-    
-    # Create a figure with dynamic subplots
-    fig = plt.figure(figsize=(20, 8))
-    
-    # Plot the depth image if available
+    panels = []
     if image_depth is not None:
-        ax1 = fig.add_subplot(2, 3, subplot_idx)
-        im1 = ax1.imshow(image_depth, cmap='jet')
-        ax1.set_title("Depth Image")
-        ax1.axis("off")
-        fig.colorbar(im1, ax=ax1)
-        subplot_idx += 1
-
-    # Plot the AB image if available
+        panels.append(make_panel(image_depth, "Depth Image", cv2.COLORMAP_JET))
     if image_ab is not None:
-        ax2 = fig.add_subplot(2, 3, subplot_idx)
-        im2 = ax2.imshow(image_ab, cmap='gray')
-        ax2.set_title("AB Image")
-        ax2.axis("off")
-        fig.colorbar(im2, ax=ax2)
-        subplot_idx += 1
-
-    # Plot the Confidence image if available
+        panels.append(make_panel(image_ab, "AB Image"))
     if image_conf is not None:
-        ax3 = fig.add_subplot(2, 3, subplot_idx)
-        im3 = ax3.imshow(image_conf, cmap='gray')
-        ax3.set_title("Confidence Image")
-        ax3.axis("off")
-        fig.colorbar(im3, ax=ax3)
-        subplot_idx += 1
+        panels.append(make_panel(image_conf, "Confidence Image"))
 
     # Metadata as text
-    ax4 = fig.add_subplot(2, 3, subplot_idx)
-    ax4.axis("off")  # Hide axes
-    metadata_text = (
-        f"Sensor Temp: {sensor_temp}°C\n"
-        f"Laser Temp: {laser_temp}°C\n"
-        f"Frame #: {frame_num}\n"
-        f"Mode: {imager_mode}\n"
-    )
-    ax4.text(0.1, 0.5, metadata_text, fontsize=12, verticalalignment='center')
-    subplot_idx += 1
+    info = np.full_like(panels[0], 255) if panels else np.full((440, 500, 3), 255, dtype=np.uint8)
+    metadata_lines = [
+        f"Sensor Temp: {sensor_temp} C",
+        f"Laser Temp: {laser_temp} C",
+        f"Frame #: {frame_num}",
+        f"Mode: {imager_mode}",
+    ]
+    for i, line in enumerate(metadata_lines):
+        cv2.putText(info, line, (20, 180 + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                    (0, 0, 0), 1, cv2.LINE_AA)
+    panels.append(info)
 
-    plt.tight_layout()
-    plt.show()
+    # 2-column grid
+    if len(panels) % 2:
+        panels.append(np.full_like(panels[0], 255))
+    grid = np.vstack([np.hstack(panels[i:i + 2]) for i in range(0, len(panels), 2)])
+    cv2.imshow("ADCAM First Frame", grid)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 elif output_type == 'snap':
     handler = tof.FrameHandler()
     base_name = "snapshot_mode_" + str(mode)

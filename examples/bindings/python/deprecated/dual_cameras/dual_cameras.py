@@ -24,7 +24,7 @@
 
 import aditofpython as tof
 import numpy as np
-import matplotlib.pyplot as plt
+import cv2
 import sys
 import os
 
@@ -132,11 +132,8 @@ print("camera1.stop()", status)
 image1 = np.asarray(frame1.getData("depth"))
 image2 = np.asarray(frame2.getData("depth"))
 
-plt.figure(10)
-plt.imshow(image1, cmap = 'jet')
-plt.colorbar()
-
-plt.figure(20)
-plt.imshow(image2, cmap = 'jet')
-plt.colorbar()
-plt.show()
+for name, image in (("Camera 1 depth", image1), ("Camera 2 depth", image2)):
+    norm = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    cv2.imshow(name, cv2.applyColorMap(norm, cv2.COLORMAP_JET))
+cv2.waitKey(0)
+cv2.destroyAllWindows()

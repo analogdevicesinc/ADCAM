@@ -1,13 +1,8 @@
 absl-py
 attrs
 cffi
-contourpy
-cycler
 flatbuffers
-fonttools
 jax
-kiwisolver
-matplotlib
 mediapipe
 ml-dtypes
 numpy

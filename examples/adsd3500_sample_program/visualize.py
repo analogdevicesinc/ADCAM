@@ -11,7 +11,7 @@ Supported resolutions:
     - Custom square:         Auto-detected
 
 Usage:
-    ./visualize.py              # Display frames interactively (requires working matplotlib)
+    ./visualize.py              # Display frames interactively (requires OpenCV with GUI support)
     ./visualize.py --save       # Save frames as PNG images 
     ./visualize.py 2            # Display frame index 2
     ./visualize.py 2 --save     # Save all frames including frame 2
@@ -131,15 +131,13 @@ def load_frames(depth_path, ab_path, conf_path, width, height, num_frames=1):
     return depth_array, ab_array, conf_array
 
 def visualize_frames(depth_array, ab_array, conf_array, frame_idx=0):
-    """Visualize frames using matplotlib."""
+    """Visualize frames using OpenCV."""
     try:
-        import matplotlib
-        matplotlib.use('TkAgg')  # Try TkAgg backend
-        import matplotlib.pyplot as plt
+        import cv2
     except Exception as e:
-        print(f"Error: matplotlib not available: {e}")
-        print("\nTo fix matplotlib issues, try:")
-        print("  pip3 install --force-reinstall numpy==1.26.4 matplotlib")
+        print(f"Error: OpenCV not available: {e}")
+        print("\nTo install OpenCV, try:")
+        print("  pip3 install opencv-python")
         print("\nOr use --save option to export images without GUI:")
         print("  ./visualize.py --save")
         return
@@ -151,29 +149,37 @@ def visualize_frames(depth_array, ab_array, conf_array, frame_idx=0):
     depth = depth_array[frame_idx]
     ab = ab_array[frame_idx]
     conf = conf_array[frame_idx]
-    
-    # Create figure with 3 subplots
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    
-    # Depth map - use 'jet' colormap
-    im1 = axes[0].imshow(depth, cmap='jet', interpolation='nearest')
-    axes[0].set_title(f'Depth (Frame {frame_idx})\nRange: {depth.min()}-{depth.max()}')
-    axes[0].axis('off')
-    plt.colorbar(im1, ax=axes[0], fraction=0.046, pad=0.04, label='Depth (mm)')
-    
-    # AB (Active Brightness) - grayscale
-    im2 = axes[1].imshow(ab, cmap='gray', interpolation='nearest')
-    axes[1].set_title(f'Active Brightness (Frame {frame_idx})\nRange: {ab.min()}-{ab.max()}')
-    axes[1].axis('off')
-    plt.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04, label='Intensity')
-    
-    # Confidence - grayscale
-    im3 = axes[2].imshow(conf, cmap='gray', interpolation='nearest')
-    axes[2].set_title(f'Confidence (Frame {frame_idx})\nRange: {conf.min()}-{conf.max()}')
-    axes[2].axis('off')
-    plt.colorbar(im3, ax=axes[2], fraction=0.046, pad=0.04, label='Confidence')
-    
-    plt.tight_layout()
+
+    def make_panel(image, title, label, colormap=None, size=480):
+        """BGR panel: scaled image, title and a min/max colorbar."""
+        img = image.astype(np.float32)
+        vmin, vmax = float(img.min()), float(img.max())
+        u8 = ((img - vmin) / max(vmax - vmin, 1e-6) * 255).astype(np.uint8)
+        width = max(1, round(img.shape[1] * size / img.shape[0]))
+        u8 = cv2.resize(u8, (width, size), interpolation=cv2.INTER_NEAREST)
+        ramp = np.repeat(np.linspace(255, 0, size).astype(np.uint8)[:, None], 20, axis=1)
+        if colormap is None:
+            body = cv2.cvtColor(u8, cv2.COLOR_GRAY2BGR)
+            bar = cv2.cvtColor(ramp, cv2.COLOR_GRAY2BGR)
+        else:
+            body = cv2.applyColorMap(u8, colormap)
+            bar = cv2.applyColorMap(ramp, colormap)
+        panel = np.full((size + 70, width + 110, 3), 255, dtype=np.uint8)
+        panel[50:50 + size, :width] = body
+        panel[50:50 + size, width + 10:width + 30] = bar
+        font, black = cv2.FONT_HERSHEY_SIMPLEX, (0, 0, 0)
+        cv2.putText(panel, f"{title} (Frame {frame_idx})", (5, 20), font, 0.55, black, 1, cv2.LINE_AA)
+        cv2.putText(panel, f"Range: {image.min()}-{image.max()}", (5, 42), font, 0.5, black, 1, cv2.LINE_AA)
+        cv2.putText(panel, f"{vmax:.0f}", (width + 34, 62), font, 0.45, black, 1, cv2.LINE_AA)
+        cv2.putText(panel, f"{vmin:.0f}", (width + 34, size + 50), font, 0.45, black, 1, cv2.LINE_AA)
+        cv2.putText(panel, label, (width + 10, size + 65), font, 0.4, black, 1, cv2.LINE_AA)
+        return panel
+
+    combined = np.hstack([
+        make_panel(depth, "Depth", "Depth (mm)", cv2.COLORMAP_JET),
+        make_panel(ab, "Active Brightness", "Intensity"),
+        make_panel(conf, "Confidence", "Confidence"),
+    ])
     
     # Print statistics
     print(f"\nFrame {frame_idx} Statistics:")
@@ -181,7 +187,9 @@ def visualize_frames(depth_array, ab_array, conf_array, frame_idx=0):
     print(f"  AB:         min={ab.min()}, max={ab.max()}, mean={ab.mean():.1f}")
     print(f"  Confidence: min={conf.min()}, max={conf.max()}, mean={conf.mean():.1f}")
     
-    plt.show()
+    cv2.imshow("ADSD3500 Frames", combined)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 def apply_jet_colormap(data_norm):
     """Apply jet colormap (blue->cyan->yellow->red) to normalized data [0-1]."""
