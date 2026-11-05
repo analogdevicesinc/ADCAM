@@ -27,8 +27,7 @@ import numpy as np
 import pygame
 import sys
 import time
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
+import cv2
 import os
 import json
 
@@ -77,7 +76,11 @@ if "--help" in sys.argv or "-h" in sys.argv:
     help()
     exit(-1)
 
-jet_colormap = plt.get_cmap('jet')
+def jet_rgb(norm):
+    """Map values in [0, 1] to RGB uint8 using OpenCV's jet colormap."""
+    u8 = (np.clip(norm, 0.0, 1.0) * 255).astype(np.uint8)
+    bgr = cv2.applyColorMap(u8.reshape(-1, 1), cv2.COLORMAP_JET)
+    return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB).reshape(norm.shape + (3,))
 
 system = tof.System()
 
@@ -480,8 +483,7 @@ def normalize(image_scalar, dmin, dmax):
     norm = np.clip((image_scalar.astype(np.float32) - dmin) / (dmax - dmin),
                    0.0, 1.0)
     norm[image_scalar == 0] = 0.0  # invalid pixels -> colormap floor
-    image_rgb = jet_colormap(norm)
-    return (image_rgb[:, :, :3] * 255).astype(np.uint8)
+    return jet_rgb(norm)
 
 
 def animate(dmin, dmax):
@@ -517,7 +519,7 @@ def draw_colorbar(surface, font, rect, dmin, dmax):
     map as the image, with min/mid/max labels in mm."""
     x, y, w, h = rect
     fr = np.linspace(1.0, 0.0, h, dtype=np.float32)  # top=max, bottom=min
-    rgb = (jet_colormap(fr)[:, :3] * 255).astype(np.uint8)  # (h, 3)
+    rgb = jet_rgb(fr)  # (h, 3)
     strip = np.repeat(rgb[:, None, :], w, axis=1)  # (h, w, 3)
     bar = pygame.surfarray.make_surface(np.transpose(strip, (1, 0, 2)))
     surface.blit(bar, (x, y))

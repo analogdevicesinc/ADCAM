@@ -245,26 +245,17 @@ def load_tof():
     return tof
 
 def normalize(min_depth, max_depth, image_scalar):
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import ListedColormap
+    import cv2
 
-    original_cmap = plt.cm.turbo
-    colors = original_cmap(np.linspace(0, 1, 256))
-    colors[0] = [0, 0, 0, 0]  # RGBA for red
-    modified_cmap = ListedColormap(colors)
+    depth_range = max(max_depth - min_depth, 1)
+    image_scalar_norm = np.clip(
+        (image_scalar.astype(np.float32) - min_depth) / depth_range, 0.0, 1.0)
+    index = (image_scalar_norm * 255).astype(np.uint8)
 
-    visualization_depth_range_max = max_depth
-    min_value = min_depth
-
-    image_scalar = (image_scalar - min_value)
-    visualization_depth_range_max = visualization_depth_range_max - min_value
-
-    image_scalar_norm = image_scalar / visualization_depth_range_max
-
-    # Apply the colormap to the scalar image to obtain an RGB image
-    image_rgb = modified_cmap(image_scalar_norm)
-        
-    surface = (image_rgb[:, :, :3] * 255).astype(np.uint8)
+    # Apply the turbo colormap to the scalar image to obtain an RGB image
+    surface = cv2.cvtColor(cv2.applyColorMap(index, cv2.COLORMAP_TURBO),
+                           cv2.COLOR_BGR2RGB)
+    surface[index == 0] = 0  # lowest bin (invalid/near) is drawn black
     return surface
 
 
