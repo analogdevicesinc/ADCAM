@@ -28,14 +28,16 @@ import sys
 import os
 import argparse
 import cv2 as cv
-import matplotlib
 import open3d as o3d
 import struct
 import re
 
-# Same colormap as the pygame streaming example.
-JET_COLORMAP = (matplotlib.colormaps['jet'] if hasattr(matplotlib, 'colormaps')
-                else matplotlib.cm.get_cmap('jet'))
+
+def jet_rgb(norm):
+    """Map values in [0, 1] to RGB uint8 using OpenCV's jet colormap (same as the pygame example)."""
+    u8 = (np.clip(norm, 0.0, 1.0) * 255).astype(np.uint8)
+    bgr = cv.applyColorMap(u8.reshape(-1, 1), cv.COLORMAP_JET)
+    return cv.cvtColor(bgr, cv.COLOR_BGR2RGB).reshape(norm.shape + (3,))
 
 # ---- CONSTANTS ----
 MEGA_PIXEL = 1024
@@ -94,7 +96,7 @@ def colorize_depth(depth, dmin, dmax):
         dmax = dmin + 1
     norm = np.clip((depth.astype(np.float32) - dmin) / (dmax - dmin), 0.0, 1.0)
     norm[depth == 0] = 0.0
-    return (JET_COLORMAP(norm)[:, :, :3] * 255).astype(np.uint8)
+    return jet_rgb(norm)
 
 def depth_colorbar(height, dmin, dmax):
     """RGB panel with a vertical colorbar (top = dmax, bottom = dmin) and mm labels."""
@@ -102,8 +104,7 @@ def depth_colorbar(height, dmin, dmax):
     bar_h = max(20, height - 40)
     panel = np.zeros((height, panel_w, 3), dtype=np.uint8)
     fr = np.linspace(1.0, 0.0, bar_h, dtype=np.float32)
-    panel[top:top + bar_h, bar_x:bar_x + bar_w] = \
-        (JET_COLORMAP(fr)[:, :3] * 255).astype(np.uint8)[:, None, :]
+    panel[top:top + bar_h, bar_x:bar_x + bar_w] = jet_rgb(fr)[:, None, :]
     color = (220, 220, 220)
     cv.rectangle(panel, (bar_x, top), (bar_x + bar_w - 1, top + bar_h - 1), color, 1)
     cv.putText(panel, "mm", (bar_x - 2, top - 8), cv.FONT_HERSHEY_SIMPLEX, 0.4,
