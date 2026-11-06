@@ -22,12 +22,13 @@ Output files (from adsd3500_sample_program):
     out_conf.bin     - Confidence (uint8)
 
 Generated PNG files (with --save):
-    frame_000_depth.png  - Depth with jet colormap (classic rainbow)
+    frame_000_depth.png  - Depth with jet colormap, auto (equalised)
     frame_000_ab.png     - Active Brightness (grayscale)
     frame_000_conf.png   - Confidence (grayscale)
 
 Colormaps:
-    Depth:       Jet colormap (blue→cyan→green→yellow→red)
+    Depth:       Jet colormap (blue→cyan→green→yellow→red), histogram-equalised so
+                 depths shared by many pixels (e.g. a face) get more colours
     AB/Conf:     Grayscale
 """
 import numpy as np
@@ -55,6 +56,42 @@ def write_png(path, image):
                                            color_type, 0, 0, 0)))
         f.write(chunk(b"IDAT", zlib.compress(raw, 6)))
         f.write(chunk(b"IEND", b""))
+
+EQ_TRIM = 0.005  # ignore this fraction of valid pixels at each end (stray / flying pixels)
+EQ_BLEND = 0.75  # 1 = fully equalised (most detail), 0 = linear (colour tracks distance)
+MM_RANGE = np.arange(65536, dtype=np.float32)
+
+def equalize_cdf(depth):
+    """Auto colour scale: clip-limited histogram equalisation of valid depth.
+
+    Returns a 65536-entry table mapping depth (mm) to its colour position in
+    [0, 1], or None if no pixel is valid. Colours go where the pixels are, but no
+    single mm value may take more than 1/256 of them, so a large flat surface
+    (e.g. a wall) can't swallow the colormap. The outer EQ_TRIM of pixels at each
+    end are clamped, and the result is blended with a linear scale (EQ_BLEND).
+    """
+    hist = np.bincount(depth[::2, ::2].astype(np.uint16, copy=False).ravel(),
+                       minlength=65536).astype(np.float32)
+    hist[0] = 0  # invalid depth
+    total = hist.sum()
+    if total == 0:
+        return None
+    cum = np.cumsum(hist)
+    lo = int(np.searchsorted(cum, EQ_TRIM * total))
+    hi = int(np.searchsorted(cum, (1 - EQ_TRIM) * total))
+    hist[:lo] = 0
+    hist[hi + 1:] = 0
+    np.minimum(hist, max(1.0, hist.sum() / 256), out=hist)
+    eq = np.cumsum(hist)
+    eq /= eq[-1]
+    lin = np.clip((MM_RANGE - lo) / max(hi - lo, 1), 0.0, 1.0)
+    cdf = EQ_BLEND * eq + (1 - EQ_BLEND) * lin
+    cdf[0] = 0.0
+    return cdf
+
+def cdf_ticks(cdf):
+    """(colour position, mm) colorbar labels for an equalised scale."""
+    return [(f, float(np.searchsorted(cdf, max(f, 1e-6)))) for f in (1.0, 0.75, 0.5, 0.25, 0.0)]
 
 def detect_frame_dimensions_and_count(depth_file):
     """Detect frame dimensions and count based on file size."""
@@ -154,33 +191,50 @@ def visualize_frames(depth_array, ab_array, conf_array, frame_idx=0):
     ab = ab_array[frame_idx]
     conf = conf_array[frame_idx]
 
-    def make_panel(image, title, label, colormap=None, size=480):
-        """BGR panel: scaled image, title and a min/max colorbar."""
-        img = image.astype(np.float32)
-        vmin, vmax = float(img.min()), float(img.max())
-        u8 = ((img - vmin) / max(vmax - vmin, 1e-6) * 255).astype(np.uint8)
-        width = max(1, round(img.shape[1] * size / img.shape[0]))
-        u8 = cv2.resize(u8, (width, size), interpolation=cv2.INTER_NEAREST)
-        ramp = np.repeat(np.linspace(255, 0, size).astype(np.uint8)[:, None], 20, axis=1)
-        if colormap is None:
-            body = cv2.cvtColor(u8, cv2.COLOR_GRAY2BGR)
-            bar = cv2.cvtColor(ramp, cv2.COLOR_GRAY2BGR)
+    def make_panel(image, title, label, jet=False, size=480, cdf=None):
+        """BGR panel: scaled image, title and a colorbar.
+
+        cdf (from equalize_cdf) colours depth by histogram equalisation; otherwise
+        the image min/max is used.
+        """
+        if cdf is not None:
+            norm = cdf.take(image.astype(np.uint16, copy=False)).astype(np.float32)
+            ticks = cdf_ticks(cdf)
         else:
-            body = cv2.applyColorMap(u8, colormap)
-            bar = cv2.applyColorMap(ramp, colormap)
+            img = image.astype(np.float32)
+            vmin, vmax = float(img.min()), float(img.max())
+            norm = np.clip((img - vmin) / max(vmax - vmin, 1e-6), 0.0, 1.0)
+            ticks = [(1.0, vmax), (0.0, vmin)]
+        width = max(1, round(norm.shape[1] * size / norm.shape[0]))
+        norm = cv2.resize(norm, (width, size), interpolation=cv2.INTER_NEAREST)
+        ramp = np.repeat(np.linspace(1.0, 0.0, size, dtype=np.float32)[:, None], 20, axis=1)
+        if jet:
+            body = apply_jet_colormap(norm)[..., ::-1]  # RGB -> BGR
+            bar = apply_jet_colormap(ramp)[..., ::-1]
+            if cdf is not None:
+                invalid = cv2.resize((image == 0).astype(np.uint8), (width, size),
+                                     interpolation=cv2.INTER_NEAREST) > 0
+                body[invalid] = 0  # black, not the nearest-depth colour
+        else:
+            body = cv2.cvtColor((norm * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
+            bar = cv2.cvtColor((ramp * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
         panel = np.full((size + 70, width + 110, 3), 255, dtype=np.uint8)
         panel[50:50 + size, :width] = body
         panel[50:50 + size, width + 10:width + 30] = bar
         font, black = cv2.FONT_HERSHEY_SIMPLEX, (0, 0, 0)
         cv2.putText(panel, f"{title} (Frame {frame_idx})", (5, 20), font, 0.55, black, 1, cv2.LINE_AA)
-        cv2.putText(panel, f"Range: {image.min()}-{image.max()}", (5, 42), font, 0.5, black, 1, cv2.LINE_AA)
-        cv2.putText(panel, f"{vmax:.0f}", (width + 34, 62), font, 0.45, black, 1, cv2.LINE_AA)
-        cv2.putText(panel, f"{vmin:.0f}", (width + 34, size + 50), font, 0.45, black, 1, cv2.LINE_AA)
+        if cdf is not None:
+            cv2.putText(panel, "Colours: auto (equalised)", (5, 42), font, 0.5, black, 1, cv2.LINE_AA)
+        else:
+            cv2.putText(panel, f"Range: {image.min()}-{image.max()}", (5, 42), font, 0.5, black, 1, cv2.LINE_AA)
+        for frac, val in ticks:
+            y = 50 + round((1.0 - frac) * (size - 1))
+            cv2.putText(panel, f"{val:.0f}", (width + 34, y + 5), font, 0.45, black, 1, cv2.LINE_AA)
         cv2.putText(panel, label, (width + 10, size + 65), font, 0.4, black, 1, cv2.LINE_AA)
         return panel
 
     combined = np.hstack([
-        make_panel(depth, "Depth", "Depth (mm)", cv2.COLORMAP_JET),
+        make_panel(depth, "Depth", "Depth (mm)", jet=True, cdf=equalize_cdf(depth)),
         make_panel(ab, "Active Brightness", "Intensity"),
         make_panel(conf, "Confidence", "Confidence"),
     ])
@@ -196,7 +250,10 @@ def visualize_frames(depth_array, ab_array, conf_array, frame_idx=0):
     cv2.destroyAllWindows()
 
 def apply_jet_colormap(data_norm):
-    """Apply jet colormap (blue->cyan->yellow->red) to normalized data [0-1]."""
+    """Apply jet colormap (blue->cyan->yellow->red) to normalized data [0-1].
+
+    Computed at full 8-bit precision: 1020 distinct colours (cv2.COLORMAP_JET has 256).
+    """
     # Classic jet colormap: blue -> cyan -> green -> yellow -> red
     r = np.clip(1.5 - 4 * np.abs(data_norm - 0.75), 0, 1)
     g = np.clip(1.5 - 4 * np.abs(data_norm - 0.5), 0, 1)
@@ -208,9 +265,16 @@ def apply_jet_colormap(data_norm):
 def save_frames_as_images(depth_array, ab_array, conf_array, output_prefix="frame"):
     """Save frames as PNG images with enhanced colormaps."""
     for i in range(len(depth_array)):
-        # Depth: Apply jet colormap (classic rainbow)
-        depth_norm = depth_array[i].astype(np.float32) / max(depth_array[i].max(), 1)
-        write_png(f"{output_prefix}_{i:03d}_depth.png", apply_jet_colormap(depth_norm))
+        # Depth: equalised jet colours (invalid 0 pixels black)
+        cdf = equalize_cdf(depth_array[i])
+        depth_norm = (np.zeros(depth_array[i].shape, np.float32) if cdf is None
+                      else cdf.take(depth_array[i]).astype(np.float32))
+        depth_rgb = apply_jet_colormap(depth_norm)
+        depth_rgb[depth_array[i] == 0] = 0  # invalid -> black
+        write_png(f"{output_prefix}_{i:03d}_depth.png", depth_rgb)
+        if cdf is not None:
+            print(f"  frame {i}: depth colours (auto, equalised), mm at colorbar ticks:",
+                  [round(v) for _, v in cdf_ticks(cdf)])
 
         # AB: Grayscale
         ab_norm = (ab_array[i].astype(np.float32) / max(ab_array[i].max(), 1) * 255).astype(np.uint8)
