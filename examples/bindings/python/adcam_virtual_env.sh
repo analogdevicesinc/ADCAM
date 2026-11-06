@@ -14,6 +14,18 @@ else
   INTERNET_CONNECTION=false
 fi
 
+# Use the system default python3; CMake builds aditofpython against the same interpreter.
+PYBIN="$(command -v python3 || true)"
+
+if [[ -z "${PYBIN}" ]]; then
+  echo "python3 not found. Please install python3 and retry." >&2
+  exit 1
+fi
+
+# Get major.minor version (e.g., 3.10 or 3.13)
+PYVER_FULL="$("$PYBIN" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+echo "Using $("$PYBIN" -V) at $PYBIN (detected version: $PYVER_FULL)"
+
 packages=(
   "v4l-utils"
   "build-essential"
@@ -27,8 +39,7 @@ packages=(
   "libglfw3-dev"
   "doxygen"
   "graphviz"
-  "python3.10-dev"
-  "python3.13-dev"
+  "python${PYVER_FULL}-dev"
   # Add more packages to this list
 )
 
@@ -62,26 +73,6 @@ echo "Package check and installation complete."
 
 # Setup Python venv
 VENV_NAME="adcam_virtual_env"
-
-# Prefer Python 3.10, otherwise attempt Python 3.13
-CANDIDATES=(python3.10 python3.13)
-
-PYBIN=""
-for c in "${CANDIDATES[@]}"; do
-  if command -v "$c" >/dev/null 2>&1; then
-    PYBIN="$(command -v "$c")"
-    break
-  fi
-done
-
-if [[ -z "${PYBIN}" ]]; then
-  echo "No suitable Python found. Please install python3.10 or python3.13 and retry." >&2
-  exit 1
-fi
-
-# Get major.minor version (e.g., 3.10 or 3.13)
-PYVER_FULL="$("$PYBIN" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
-echo "Using $("$PYBIN" -V) at $PYBIN (detected version: $PYVER_FULL)"
 
 # Ensure venv support (install pythonX.Y-venv if needed)
 if ! "$PYBIN" -m venv --help >/dev/null 2>&1; then
