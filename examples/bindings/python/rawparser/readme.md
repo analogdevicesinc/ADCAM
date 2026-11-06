@@ -9,9 +9,11 @@ metadata is saved as a text file.
 Usage:
 - put raw recording files in the same directory of the `rawparser.py`
 - run `python rawparser.py [RAW_RECORDING_FILENAME]`
-- optional `-r MIN MAX` / `--range MIN MAX`: depth color range in mm (default `0 5000`)
+- optional `-r MIN MAX` / `--range MIN MAX`: fixed linear depth color range in mm. Without it,
+  each frame is histogram-equalised: depths shared by many pixels (e.g. a face) get more
+  colours, so mm-level detail is visible. The colorbar shows the real depth in mm at each tick.
 
-Depth PNGs use the same jet colormap as the pygame streaming example: `MIN`..`MAX` mm is spread
+Depth PNGs use the same jet colormap as the pygame streaming example: the range is spread
 across the colormap (invalid pixels at the bottom color) and a colorbar with the min/mid/max
 depth in mm is drawn next to the image.
 
