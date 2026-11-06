@@ -24,9 +24,13 @@
 
 import aditofpython as tof
 import numpy as np
-import cv2
 import sys
 import os
+import cv2
+
+# cv2 points Qt at its own (empty) font dir on import; use the system fonts instead.
+if os.path.isdir("/usr/share/fonts/truetype/dejavu"):
+    os.environ["QT_QPA_FONTDIR"] = "/usr/share/fonts/truetype/dejavu"
 
 system = tof.System()
 
