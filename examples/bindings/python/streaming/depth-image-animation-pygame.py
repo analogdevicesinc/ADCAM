@@ -76,11 +76,58 @@ if "--help" in sys.argv or "-h" in sys.argv:
     help()
     exit(-1)
 
+# Jet sampled at full 8-bit precision: 1020 distinct colours (cv2.COLORMAP_JET has 256).
+_JET_T = np.linspace(0.0, 1.0, 4096)[:, None]
+JET_LUT_RGB = (np.clip(1.5 - 4.0 * np.abs(_JET_T - [0.75, 0.5, 0.25]), 0.0, 1.0) * 255 + 0.5).astype(np.uint8)
+
+
 def jet_rgb(norm):
-    """Map values in [0, 1] to RGB uint8 using OpenCV's jet colormap."""
-    u8 = (np.clip(norm, 0.0, 1.0) * 255).astype(np.uint8)
-    bgr = cv2.applyColorMap(u8.reshape(-1, 1), cv2.COLORMAP_JET)
-    return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB).reshape(norm.shape + (3,))
+    """Map values in [0, 1] to RGB uint8 using the 1020-colour jet."""
+    return JET_LUT_RGB.take((np.clip(norm, 0.0, 1.0) * 4095 + 0.5).astype(np.uint16), axis=0)
+
+
+# Weight of the newest frame when smoothing the auto colours (lower = steadier).
+AUTO_RANGE_ALPHA = 0.2
+
+
+EQ_TRIM = 0.005  # ignore this fraction of valid pixels at each end (stray / flying pixels)
+EQ_BLEND = 0.75  # 1 = fully equalised (most detail), 0 = linear (colour tracks distance)
+MM_RANGE = np.arange(65536, dtype=np.float32)
+
+
+def equalize_cdf(depth):
+    """Auto colour scale: clip-limited histogram equalisation of valid depth.
+
+    Returns a 65536-entry table mapping depth (mm) to its colour position in
+    [0, 1], or None if no pixel is valid. Colours go where the pixels are, but no
+    single mm value may take more than 1/256 of them, so a large flat surface
+    (e.g. a wall) can't swallow the colormap. The outer EQ_TRIM of pixels at each
+    end are clamped, and the result is blended with a linear scale (EQ_BLEND).
+    """
+    hist = np.bincount(depth[::2, ::2].astype(np.uint16, copy=False).ravel(),
+                       minlength=65536).astype(np.float32)
+    hist[0] = 0  # invalid depth
+    total = hist.sum()
+    if total == 0:
+        return None
+    cum = np.cumsum(hist)
+    lo = int(np.searchsorted(cum, EQ_TRIM * total))
+    hi = int(np.searchsorted(cum, (1 - EQ_TRIM) * total))
+    hist[:lo] = 0
+    hist[hi + 1:] = 0
+    np.minimum(hist, max(1.0, hist.sum() / 256), out=hist)
+    eq = np.cumsum(hist)
+    eq /= eq[-1]
+    lin = np.clip((MM_RANGE - lo) / max(hi - lo, 1), 0.0, 1.0)
+    cdf = EQ_BLEND * eq + (1 - EQ_BLEND) * lin
+    cdf[0] = 0.0
+    return cdf
+
+
+def cdf_ticks(cdf):
+    """(colour position, mm) colorbar labels for an equalised scale."""
+    return [(f, float(np.searchsorted(cdf, max(f, 1e-6))))
+            for f in (1.0, 0.75, 0.5, 0.25, 0.0)]
 
 system = tof.System()
 
@@ -245,9 +292,10 @@ class TextInput:
 
 def config_window():
     """First window: optionally load a config file, then pick the primary mode,
-    optional mode fusion + second mode (drop-downs), and the initial depth
-    range. The camera is initialized here (once) using the chosen config so a
-    Load Config selection is applied without a second initialize()."""
+    optional mode fusion + second mode (drop-downs), and the depth colours (auto
+    equalised by default, or a manual Min/Max). The camera is initialized here
+    (once) using the chosen config so a Load Config selection is applied
+    without a second initialize()."""
     pygame.init()
     font = pygame.font.SysFont("Arial", 20)
     small = pygame.font.SysFont("Arial", 16)
@@ -280,6 +328,8 @@ def config_window():
     y_range = 340
     min_input = TextInput((160, y_range + 24, 140, 32), 0)
     max_input = TextInput((160, y_range + 64, 140, 32), 5000)
+    auto_btn = pygame.Rect(320, y_range + 24, 200, 32)
+    auto = True
     fusion_btn = pygame.Rect(30, 210, width - 60, 34)
 
     # Depth-param editor: one text field per key, reused as the edited mode
@@ -317,9 +367,10 @@ def config_window():
             if e.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit(0)
-            # Text fields consume focus (mouse) and typing (keys).
-            min_input.handle_event(e)
-            max_input.handle_event(e)
+            # Text fields consume focus (mouse) and typing (keys); committing
+            # a value switches to a manual range.
+            if min_input.handle_event(e) or max_input.handle_event(e):
+                auto = False
             if loaded:
                 for k in PARAM_KEYS:
                     param_inputs[k].handle_event(e)
@@ -385,6 +436,8 @@ def config_window():
                     continue
                 if fusion_btn.collidepoint(p):
                     fusion = not fusion
+                if auto_btn.collidepoint(p):
+                    auto = not auto
                 if fusion and edit_toggle_btn.collidepoint(p):
                     save_inputs_into(edit_mode)
                     edit_mode = (second_dd.selected
@@ -412,7 +465,7 @@ def config_window():
                         vals = param_by_mode.get(m)
                         if vals:
                             camera1.setFrameProcessParams(vals, m)
-                    return sel_mode, dmin, dmax, fusion, second_mode
+                    return sel_mode, dmin, dmax, auto, fusion, second_mode
 
         screen.fill((30, 30, 30))
         screen.blit(font.render("Configuration", True, (255, 255, 255)),
@@ -443,6 +496,12 @@ def config_window():
             screen.blit(small.render("Max", True, (255, 255, 255)),
                         (110, max_input.rect.y + 7))
             max_input.draw(screen, small)
+            draw_button(screen, small, auto_btn,
+                        f"Auto Range: {'ON' if auto else 'OFF'}", active=auto)
+            if auto:
+                screen.blit(small.render("Min/Max ignored while Auto is ON",
+                                         True, (170, 170, 170)),
+                            (320, max_input.rect.y + 7))
 
             # Depth-param editor: keep edit_mode valid, then draw the fields for
             # the currently edited mode.
@@ -486,17 +545,39 @@ def normalize(image_scalar, dmin, dmax):
     return jet_rgb(norm)
 
 
-def animate(dmin, dmax):
+def colorbar_ticks(view):
+    """(colour position, mm) labels for the current colour mapping."""
+    if view["auto"]:
+        return [] if view["cdf"] is None else cdf_ticks(view["cdf"])
+    dmin, dmax = view["rng"]
+    return [(1.0, dmax), (0.5, (dmin + dmax) / 2), (0.0, dmin)]
+
+
+def animate(view):
+    """Grab a frame and colorize it. view = {"auto", "rng", "cdf"}: auto uses
+    equalised colours smoothed across frames ("cdf"), otherwise the manual
+    linear range "rng" = [min, max] mm."""
     frame = tof.Frame()
     camera1.requestFrame(frame)
     frameDataDetails = tof.FrameDataDetails()
     frame.getDataDetails("depth", frameDataDetails)
     depth = np.rot90(np.asarray(frame.getData("depth")))
-    surf = pygame.surfarray.make_surface(normalize(depth, dmin, dmax))
-    return surf, depth
+    if view["auto"]:
+        new = equalize_cdf(depth)
+        if new is not None:
+            old = view["cdf"]
+            view["cdf"] = new if old is None else old + AUTO_RANGE_ALPHA * (new - old)
+    if view["auto"] and view["cdf"] is not None:
+        # One depth(mm) -> colour table per frame, then one lookup per pixel.
+        table = jet_rgb(view["cdf"])
+        table[0] = 0  # invalid depth: black, not the nearest-depth colour
+        rgb = table.take(depth.astype(np.uint16, copy=False), axis=0)
+    else:
+        rgb = normalize(depth, *view["rng"])
+    return pygame.surfarray.make_surface(rgb), depth
 
 
-def dump_frame(depth, surface, title, dmin, dmax, font):
+def dump_frame(depth, surface, title, ticks, font):
     """Save the current frame: raw depth as .bin and the colorized depth (with
     the colorbar) as .png, into the working directory. Returns the base name."""
     ts = time.strftime("%Y%m%d_%H%M%S")
@@ -508,15 +589,15 @@ def dump_frame(depth, surface, title, dmin, dmax, font):
     comp = pygame.Surface((sw + cbar_w, sh))
     comp.fill((0, 0, 0))
     comp.blit(surface, (0, 0))
-    draw_colorbar(comp, font, (sw + 12, 24, 16, max(20, sh - 40)), dmin, dmax)
+    draw_colorbar(comp, font, (sw + 12, 24, 16, max(20, sh - 40)), ticks)
     pygame.image.save(comp, base + "_depth.png")
     print(f"Saved {base}_depth.bin/.png  ({depth.shape[1]}x{depth.shape[0]})")
     return base
 
 
-def draw_colorbar(surface, font, rect, dmin, dmax):
-    """Vertical depth colorbar: top = dmax, bottom = dmin, using the same jet
-    map as the image, with min/mid/max labels in mm."""
+def draw_colorbar(surface, font, rect, ticks):
+    """Vertical depth colorbar using the same jet map as the image, labelled
+    in mm at the given (colour position 0=bottom..1=top, mm) ticks."""
     x, y, w, h = rect
     fr = np.linspace(1.0, 0.0, h, dtype=np.float32)  # top=max, bottom=min
     rgb = jet_rgb(fr)  # (h, 3)
@@ -525,21 +606,22 @@ def draw_colorbar(surface, font, rect, dmin, dmax):
     surface.blit(bar, (x, y))
     pygame.draw.rect(surface, (200, 200, 200), pygame.Rect(x, y, w, h), 1)
     surface.blit(font.render("mm", True, (220, 220, 220)), (x - 2, y - 20))
-    for frac, val in ((0.0, dmax), (0.5, (dmin + dmax) // 2), (1.0, dmin)):
-        ty = int(y + frac * h)
+    for frac, val in ticks:
+        ty = int(y + (1.0 - frac) * (h - 1))
         lbl = font.render(str(int(val)), True, (220, 220, 220))
         surface.blit(lbl, (x + w + 4, ty - lbl.get_height() // 2))
 
 
-def run_window(title, modeDetails, dmin, dmax):
+def run_window(title, modeDetails, dmin, dmax, auto):
     """Running window: live depth stream scaled to fit a resizable window, with
-    an adjustable depth range."""
+    auto (equalised) or manual linear depth colours."""
     res_label = (f"{modeDetails.baseResolutionWidth}"
                  f"x{modeDetails.baseResolutionHeight}")
     panel_h = 104
-    min_w = 520
+    min_w = 640
 
-    first = animate(dmin, dmax)[0]
+    view = {"auto": auto, "rng": [float(dmin), float(dmax)], "cdf": None}
+    first = animate(view)[0]
     win_w = max(first.get_width(), min_w)
     win_h = first.get_height() + panel_h
     screen = pygame.display.set_mode((win_w, win_h), pygame.RESIZABLE)
@@ -548,25 +630,26 @@ def run_window(title, modeDetails, dmin, dmax):
 
     min_input = TextInput((60, 0, 90, 30), dmin)
     max_input = TextInput((280, 0, 90, 30), dmax)
+    auto_btn = pygame.Rect(0, 0, 120, 34)
     save_btn = pygame.Rect(0, 0, 100, 34)
 
     def place_inputs():
-        # Inputs + Save button live in the bottom panel; repositioned on resize.
+        # Inputs + buttons live in the bottom panel; repositioned on resize.
         py = win_h - panel_h
         min_input.rect.topleft = (60, py + 44)
         max_input.rect.topleft = (280, py + 44)
+        auto_btn.topleft = (390, py + 42)
         save_btn.topleft = (win_w - 120, py + 42)
 
     place_inputs()
 
-    rng = [dmin, dmax]
     save_msg = ""
     save_until = 0.0
     clock = pygame.time.Clock()
     done = False
     while not done:
         # Grab this iteration's frame first so a save uses the current frame.
-        surf, depth = animate(rng[0], rng[1])
+        surf, depth = animate(view)
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 done = True
@@ -578,17 +661,32 @@ def run_window(title, modeDetails, dmin, dmax):
                 place_inputs()
             elif (e.type == pygame.MOUSEBUTTONDOWN
                   and save_btn.collidepoint(e.pos)):
-                base = dump_frame(depth, surf, title, rng[0], rng[1], font)
+                base = dump_frame(depth, surf, title, colorbar_ticks(view), font)
                 save_msg = "Saved " + base
                 save_until = time.time() + 2.5
-            # Typed range is applied on Enter.
+            elif (e.type == pygame.MOUSEBUTTONDOWN
+                  and auto_btn.collidepoint(e.pos)):
+                view["auto"] = not view["auto"]
+                view["cdf"] = None  # re-seed from the next frame
+            # Typed range is applied on Enter and switches to manual.
+            rng = view["rng"]
             if min_input.handle_event(e):
-                rng[0] = max(0, min_input.value(rng[0]))
+                view["auto"] = False
+                rng[0] = max(0, min_input.value(int(rng[0])))
                 if rng[1] <= rng[0]:
                     rng[1] = rng[0] + 1
-                    max_input.text = str(rng[1])
+                    max_input.text = str(int(rng[1]))
             if max_input.handle_event(e):
-                rng[1] = max(rng[0] + 1, max_input.value(rng[1]))
+                view["auto"] = False
+                rng[1] = max(rng[0] + 1, max_input.value(int(rng[1])))
+        if view["auto"] and view["cdf"] is not None:
+            # Fields show the live depth extent, so switching to manual starts from it.
+            ticks = cdf_ticks(view["cdf"])
+            view["rng"][:] = [ticks[-1][1], ticks[0][1]]
+            if not min_input.active:
+                min_input.text = str(int(view["rng"][0]))
+            if not max_input.active:
+                max_input.text = str(int(view["rng"][1]))
 
         # Scale the frame to fill the image area, preserving aspect ratio.
         # A strip on the right is reserved for the depth colorbar.
@@ -606,12 +704,12 @@ def run_window(title, modeDetails, dmin, dmax):
         screen.blit(scaled, (ox, oy))
         cb_h = max(20, area_h - 40)
         draw_colorbar(screen, font, (area_w + 12, 24, 16, cb_h),
-                      rng[0], rng[1])
+                      colorbar_ticks(view))
         pygame.draw.rect(screen, (30, 30, 30),
                          pygame.Rect(0, panel_y, win_w, panel_h))
         screen.blit(font.render(
-            f"Mode {title}   Res: {res_label}   "
-            f"Min/Max (mm) = visualization only",
+            f"Mode {title}   Res: {res_label}   Colours: "
+            f"{'Auto (equalised)' if view['auto'] else 'Manual'} - visualization only",
             True, (200, 200, 200)), (20, panel_y + 12))
         screen.blit(font.render("Min", True, (255, 255, 255)),
                     (20, min_input.rect.y + 7))
@@ -619,6 +717,9 @@ def run_window(title, modeDetails, dmin, dmax):
         screen.blit(font.render("Max", True, (255, 255, 255)),
                     (240, max_input.rect.y + 7))
         max_input.draw(screen, font)
+        draw_button(screen, font, auto_btn,
+                    f"Auto: {'ON' if view['auto'] else 'OFF'}",
+                    active=view["auto"])
         draw_button(screen, font, save_btn, "Save", active=True)
         if save_msg and time.time() < save_until:
             screen.blit(font.render(save_msg, True, (150, 220, 150)),
@@ -633,7 +734,7 @@ def run_window(title, modeDetails, dmin, dmax):
 def main():
     # 1) Configuration window: load a config file, choose mode, optional
     #    fusion, depth range. The camera is initialized inside this window.
-    sel_mode, dmin, dmax, fusion, second_mode = config_window()
+    sel_mode, dmin, dmax, auto, fusion, second_mode = config_window()
 
     # Optional per-mode param overrides, applied before any setMode() so each
     # mode's config (and thus its fusion context) reflects them.
@@ -657,7 +758,7 @@ def main():
 
     # 2) Running window: live stream with the depth-range selector.
     title = f"{sel_mode} + {second_mode} (fused)" if fusion else f"{sel_mode}"
-    run_window(title, modeDetails, dmin, dmax)
+    run_window(title, modeDetails, dmin, dmax, auto)
 
 
 main()

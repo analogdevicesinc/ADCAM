@@ -30,8 +30,9 @@ import time
 import os
 from dataclasses import dataclass
 
-minV = 0
-maxV = 7000
+# Weight of the newest frame when smoothing the auto colours (lower = steadier).
+AUTO_RANGE_ALPHA = 0.2
+CBAR_W = 80
 
 
 @dataclass
@@ -244,22 +245,70 @@ def load_tof():
         sys.exit(f"Could not import aditofpython: {exc}")
     return tof
 
-def normalize(min_depth, max_depth, image_scalar):
-    import cv2
-
-    depth_range = max(max_depth - min_depth, 1)
-    image_scalar_norm = np.clip(
-        (image_scalar.astype(np.float32) - min_depth) / depth_range, 0.0, 1.0)
-    index = (image_scalar_norm * 255).astype(np.uint8)
-
-    # Apply the turbo colormap to the scalar image to obtain an RGB image
-    surface = cv2.cvtColor(cv2.applyColorMap(index, cv2.COLORMAP_TURBO),
-                           cv2.COLOR_BGR2RGB)
-    surface[index == 0] = 0  # lowest bin (invalid/near) is drawn black
-    return surface
+# Jet sampled at full 8-bit precision: 1020 distinct colours (cv2.COLORMAP_JET has 256).
+_JET_T = np.linspace(0.0, 1.0, 4096)[:, None]
+JET_LUT_RGB = (np.clip(1.5 - 4.0 * np.abs(_JET_T - [0.75, 0.5, 0.25]), 0.0, 1.0) * 255 + 0.5).astype(np.uint8)
 
 
-def animate(camera, frame, config, pygame, tof_module, min_depth, max_depth):
+EQ_TRIM = 0.005  # ignore this fraction of valid pixels at each end (stray / flying pixels)
+EQ_BLEND = 0.75  # 1 = fully equalised (most detail), 0 = linear (colour tracks distance)
+MM_RANGE = np.arange(65536, dtype=np.float32)
+
+
+def equalize_cdf(depth):
+    """Auto colour scale: clip-limited histogram equalisation of valid depth.
+
+    Returns a 65536-entry table mapping depth (mm) to its colour position in
+    [0, 1], or None if no pixel is valid. Colours go where the pixels are, but no
+    single mm value may take more than 1/256 of them, so a large flat surface
+    (e.g. a wall) can't swallow the colormap. The outer EQ_TRIM of pixels at each
+    end are clamped, and the result is blended with a linear scale (EQ_BLEND).
+    """
+    hist = np.bincount(depth[::2, ::2].astype(np.uint16, copy=False).ravel(),
+                       minlength=65536).astype(np.float32)
+    hist[0] = 0  # invalid depth
+    total = hist.sum()
+    if total == 0:
+        return None
+    cum = np.cumsum(hist)
+    lo = int(np.searchsorted(cum, EQ_TRIM * total))
+    hi = int(np.searchsorted(cum, (1 - EQ_TRIM) * total))
+    hist[:lo] = 0
+    hist[hi + 1:] = 0
+    np.minimum(hist, max(1.0, hist.sum() / 256), out=hist)
+    eq = np.cumsum(hist)
+    eq /= eq[-1]
+    lin = np.clip((MM_RANGE - lo) / max(hi - lo, 1), 0.0, 1.0)
+    cdf = EQ_BLEND * eq + (1 - EQ_BLEND) * lin
+    cdf[0] = 0.0
+    return cdf
+
+
+def colorize(depth, cdf):
+    """Equalised jet colours via one depth(mm) -> colour table; invalid pixels black."""
+    table = JET_LUT_RGB.take((cdf * 4095 + 0.5).astype(np.uint16), axis=0)
+    table[0] = 0
+    return table.take(depth.astype(np.uint16, copy=False), axis=0)
+
+
+def draw_colorbar(screen, pygame, font, x, height, cdf):
+    """Vertical colorbar labelled with the depth in mm at each tick."""
+    if cdf is None:
+        return
+    top, bar_w = 24, 16
+    bar_h = max(20, height - 2 * top)
+    ramp = np.linspace(4095, 0, bar_h).astype(np.uint16)
+    strip = np.repeat(JET_LUT_RGB.take(ramp, axis=0)[:, None, :], bar_w, axis=1)
+    screen.blit(pygame.surfarray.make_surface(np.transpose(strip, (1, 0, 2))), (x + 8, top))
+    pygame.draw.rect(screen, (200, 200, 200), pygame.Rect(x + 8, top, bar_w, bar_h), 1)
+    screen.blit(font.render("mm", True, (220, 220, 220)), (x + 6, top - 18))
+    for frac in (1.0, 0.75, 0.5, 0.25, 0.0):
+        label = font.render(f"{np.searchsorted(cdf, max(frac, 1e-6))}", True, (220, 220, 220))
+        y = top + int((1.0 - frac) * (bar_h - 1))
+        screen.blit(label, (x + 8 + bar_w + 4, y - label.get_height() // 2))
+
+
+def animate(camera, frame, config, pygame, tof_module, state):
     frame_A_loaded = False
     frame_B_loaded = False
     tries = 0
@@ -291,11 +340,19 @@ def animate(camera, frame, config, pygame, tof_module, min_depth, max_depth):
             raise RuntimeError('Could not get consecutive frames for both modes')
 
     final_image = np.concatenate((image1, image2), axis=0)
-    surface = pygame.surfarray.make_surface(normalize(min_depth, max_depth, final_image))
+    new = equalize_cdf(final_image)
+    if new is not None:
+        old = state["cdf"]
+        state["cdf"] = new if old is None else old + AUTO_RANGE_ALPHA * (new - old)
+    if state["cdf"] is None:
+        rgb = np.zeros(final_image.shape + (3,), dtype=np.uint8)
+    else:
+        rgb = colorize(final_image, state["cdf"])
+    surface = pygame.surfarray.make_surface(rgb)
     return surface, laser_temp, sensor_temp
     
 
-def run_viewer(camera, config, tof_module, min_depth, max_depth):
+def run_viewer(camera, config, tof_module):
     import pygame
 
     frame = tof_module.Frame()
@@ -305,10 +362,12 @@ def run_viewer(camera, config, tof_module, min_depth, max_depth):
     rows, cols = np.array(frame.getData("depth"), copy=False).shape
 
     pygame.init()
+    font = pygame.font.Font(None, 20)
 
-    screen = pygame.display.set_mode((rows * 2, cols))
+    screen = pygame.display.set_mode((rows * 2 + CBAR_W, cols))
     pygame.display.set_caption(f"Mode {config.mode_a} | Mode {config.mode_b}")
 
+    state = {"cdf": None}
     done = False
     fc = 0
     start_time = time.time()
@@ -320,15 +379,21 @@ def run_viewer(camera, config, tof_module, min_depth, max_depth):
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     done = True
 
-            pygame_surface, laser_temp, sensor_temp = animate(camera, frame, config, pygame, tof_module, min_depth, max_depth)
+            pygame_surface, laser_temp, sensor_temp = animate(camera, frame, config, pygame, tof_module, state)
+            screen.fill((0, 0, 0))
             screen.blit(pygame_surface, (0, 0))
+            draw_colorbar(screen, pygame, font, rows * 2, cols, state["cdf"])
             fc = fc + 1.0
             elapsed_time = time.time() - start_time
             if elapsed_time > 2:
                 measured_fps = fc / elapsed_time
                 fc = 0
                 start_time = time.time()
-                print(f'Frame Rate: {int(measured_fps)} fps, Laser Temp: {laser_temp} C, Sensor Temp: {sensor_temp} C')
+                cdf = state["cdf"]
+                extent = (f"{np.searchsorted(cdf, 1e-6)}-{np.searchsorted(cdf, 1.0)} mm"
+                          if cdf is not None else "n/a")
+                print(f'Frame Rate: {int(measured_fps)} fps, Laser Temp: {laser_temp} C, Sensor Temp: {sensor_temp} C, '
+                      f'Depth colours (auto, equalised): {extent}')
 
             pygame.display.flip()
     finally:
@@ -349,7 +414,7 @@ def main():
             return
 
         start_camera(camera, tof_module)
-        run_viewer(camera, config, tof_module, minV, maxV)
+        run_viewer(camera, config, tof_module)
     finally:
         stop_camera(camera)
 
