@@ -33,11 +33,13 @@ import struct
 import re
 
 
+# Jet sampled at full 8-bit precision: 1020 distinct colours (cv.COLORMAP_JET has 256).
+_JET_T = np.linspace(0.0, 1.0, 4096)[:, None]
+JET_LUT_RGB = (np.clip(1.5 - 4.0 * np.abs(_JET_T - [0.75, 0.5, 0.25]), 0.0, 1.0) * 255 + 0.5).astype(np.uint8)
+
 def jet_rgb(norm):
-    """Map values in [0, 1] to RGB uint8 using OpenCV's jet colormap (same as the pygame example)."""
-    u8 = (np.clip(norm, 0.0, 1.0) * 255).astype(np.uint8)
-    bgr = cv.applyColorMap(u8.reshape(-1, 1), cv.COLORMAP_JET)
-    return cv.cvtColor(bgr, cv.COLOR_BGR2RGB).reshape(norm.shape + (3,))
+    """Map values in [0, 1] to RGB uint8 using the 1020-colour jet (same as the pygame example)."""
+    return JET_LUT_RGB.take((np.clip(norm, 0.0, 1.0) * 4095 + 0.5).astype(np.uint16), axis=0)
 
 # ---- CONSTANTS ----
 MEGA_PIXEL = 1024
@@ -50,8 +52,6 @@ DEFAULT_CONF_BYTES = 4
 DEFAULT_AB_BYTES = 2
 DEFAULT_XYZ_BYTES = 6
 DEFAULT_DEPTH_BYTES = 2
-DEFAULT_DEPTH_MIN_MM = 0
-DEFAULT_DEPTH_MAX_MM = 5000
 
 def safe_join(*args):
     return os.path.join(*args)
@@ -90,6 +90,42 @@ def generate_metadata(metadata, directory, base_filename, index):
         outfile.writelines(f'sensorTemp: {metadata.sensorTemperature}\n')
         outfile.writelines(f'laserTemp: {metadata.laserTemperature}\n')
 
+EQ_TRIM = 0.005  # ignore this fraction of valid pixels at each end (stray / flying pixels)
+EQ_BLEND = 0.75  # 1 = fully equalised (most detail), 0 = linear (colour tracks distance)
+MM_RANGE = np.arange(65536, dtype=np.float32)
+
+def equalize_cdf(depth):
+    """Auto colour scale: clip-limited histogram equalisation of valid depth.
+
+    Returns a 65536-entry table mapping depth (mm) to its colour position in
+    [0, 1], or None if no pixel is valid. Colours go where the pixels are, but no
+    single mm value may take more than 1/256 of them, so a large flat surface
+    (e.g. a wall) can't swallow the colormap. The outer EQ_TRIM of pixels at each
+    end are clamped, and the result is blended with a linear scale (EQ_BLEND).
+    """
+    hist = np.bincount(depth[::2, ::2].astype(np.uint16, copy=False).ravel(),
+                       minlength=65536).astype(np.float32)
+    hist[0] = 0  # invalid depth
+    total = hist.sum()
+    if total == 0:
+        return None
+    cum = np.cumsum(hist)
+    lo = int(np.searchsorted(cum, EQ_TRIM * total))
+    hi = int(np.searchsorted(cum, (1 - EQ_TRIM) * total))
+    hist[:lo] = 0
+    hist[hi + 1:] = 0
+    np.minimum(hist, max(1.0, hist.sum() / 256), out=hist)
+    eq = np.cumsum(hist)
+    eq /= eq[-1]
+    lin = np.clip((MM_RANGE - lo) / max(hi - lo, 1), 0.0, 1.0)
+    cdf = EQ_BLEND * eq + (1 - EQ_BLEND) * lin
+    cdf[0] = 0.0
+    return cdf
+
+def cdf_ticks(cdf):
+    """(colour position, mm) colorbar labels for an equalised scale."""
+    return [(f, float(np.searchsorted(cdf, max(f, 1e-6)))) for f in (1.0, 0.75, 0.5, 0.25, 0.0)]
+
 def colorize_depth(depth, dmin, dmax):
     """Map [dmin, dmax] mm across the jet colormap; invalid (0) pixels go to the floor."""
     if dmax <= dmin:
@@ -98,8 +134,11 @@ def colorize_depth(depth, dmin, dmax):
     norm[depth == 0] = 0.0
     return jet_rgb(norm)
 
-def depth_colorbar(height, dmin, dmax):
-    """RGB panel with a vertical colorbar (top = dmax, bottom = dmin) and mm labels."""
+def depth_colorbar(height, ticks):
+    """RGB panel with a vertical jet colorbar labelled in mm.
+
+    ticks: (colour position, mm) pairs; position 0 = bottom of the bar, 1 = top.
+    """
     panel_w, bar_x, bar_w, top = 90, 12, 16, 24
     bar_h = max(20, height - 40)
     panel = np.zeros((height, panel_w, 3), dtype=np.uint8)
@@ -109,17 +148,26 @@ def depth_colorbar(height, dmin, dmax):
     cv.rectangle(panel, (bar_x, top), (bar_x + bar_w - 1, top + bar_h - 1), color, 1)
     cv.putText(panel, "mm", (bar_x - 2, top - 8), cv.FONT_HERSHEY_SIMPLEX, 0.4,
                color, 1, cv.LINE_AA)
-    for frac, val in ((0.0, dmax), (0.5, (dmin + dmax) // 2), (1.0, dmin)):
-        ty = int(top + frac * (bar_h - 1))
+    for frac, val in ticks:
+        ty = int(top + (1.0 - frac) * (bar_h - 1))
         cv.putText(panel, str(int(val)), (bar_x + bar_w + 4, ty + 4),
                    cv.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv.LINE_AA)
     return panel
 
-def generate_depth(depth_data, directory, base_filename, index, dmin, dmax):
+def generate_depth(depth_data, directory, base_filename, index, depth_range=None):
+    """depth_range=(MIN, MAX) mm gives a fixed linear scale; None equalises this frame."""
     depth_frame = np.reshape(depth_data, (depth_data.shape[0], depth_data.shape[1]))
-    color_depth = colorize_depth(depth_frame, dmin, dmax)
+    cdf = None if depth_range else equalize_cdf(depth_frame)
+    if cdf is not None:
+        color_depth = jet_rgb(cdf.take(depth_frame.astype(np.uint16, copy=False)))
+        color_depth[depth_frame == 0] = 0  # black, not the nearest-depth colour
+        ticks = cdf_ticks(cdf)
+    else:
+        dmin, dmax = depth_range if depth_range else (0, 1)
+        color_depth = colorize_depth(depth_frame, dmin, dmax)
+        ticks = [(1.0, dmax), (0.5, (dmin + dmax) / 2), (0.0, dmin)]
     image = np.ascontiguousarray(
-        np.hstack([color_depth, depth_colorbar(color_depth.shape[0], dmin, dmax)]))
+        np.hstack([color_depth, depth_colorbar(color_depth.shape[0], ticks)]))
     img = o3d.geometry.Image(image)
     o3d.io.write_image(safe_join(directory, f'depth_{base_filename}_{index}{PNG_EXT}'), img)
 
@@ -177,8 +225,9 @@ def main():
     parser.add_argument("-f", "--frames", type=str, default=None,
                         help="Frame range: N (just N), N- (from N to end), N-M (N to M inclusive)")
     parser.add_argument("-r", "--range", type=int, nargs=2, metavar=("MIN", "MAX"),
-                        default=[DEFAULT_DEPTH_MIN_MM, DEFAULT_DEPTH_MAX_MM],
-                        help="Depth color range in mm (default: %(default)s)")
+                        default=None,
+                        help="Fixed linear depth color range in mm (default: auto, histogram-"
+                             "equalised per frame so fine detail is visible)")
     args = parser.parse_args()
 
     if not os.path.exists(args.filename):
@@ -207,9 +256,12 @@ def main():
         except Exception as e:
             sys.exit(f"Invalid --frames argument: {e}")
 
-    if args.range[0] < 0 or args.range[1] <= args.range[0]:
-        sys.exit(f"Invalid --range {args.range[0]} {args.range[1]}: need 0 <= MIN < MAX")
-    print(f"Depth color range: {args.range[0]}-{args.range[1]} mm")
+    if args.range:
+        if args.range[0] < 0 or args.range[1] <= args.range[0]:
+            sys.exit(f"Invalid --range {args.range[0]} {args.range[1]}: need 0 <= MIN < MAX")
+        print(f"Depth color range: {args.range[0]}-{args.range[1]} mm")
+    else:
+        print("Depth colours: auto (histogram-equalised per frame)")
 
     cameras = []
     status = system.getCameraList(cameras, "offline:")
@@ -272,8 +324,7 @@ def main():
         # Get the depth frame
         if "depth" in available_types:
             image_depth = np.asarray(frame.getData("depth"))
-            generate_depth(image_depth, frame_dir, base_filename, str_frame_idx,
-                           args.range[0], args.range[1])
+            generate_depth(image_depth, frame_dir, base_filename, str_frame_idx, args.range)
 
         # Get the AB frame
         if "ab" in available_types:

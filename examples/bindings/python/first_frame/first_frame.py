@@ -233,31 +233,97 @@ print("Laser temperature from metadata: ", laser_temp)
 print("Frame number from metadata: ", frame_num)
 print("Mode from metadata: ", imager_mode)
 
-def make_panel(image, title, colormap=None, size=400):
-    """Render an image as a BGR panel with a title and a min/max colorbar."""
-    img = np.nan_to_num(np.asarray(image, dtype=np.float32))
-    vmin, vmax = float(img.min()), float(img.max())
-    u8 = ((img - vmin) / max(vmax - vmin, 1e-6) * 255).astype(np.uint8)
-    width = max(1, round(img.shape[1] * size / img.shape[0]))
-    u8 = cv2.resize(u8, (width, size), interpolation=cv2.INTER_NEAREST)
-    ramp = np.repeat(np.linspace(255, 0, size).astype(np.uint8)[:, None], 20, axis=1)
-    if colormap is None:
-        body, bar = cv2.cvtColor(u8, cv2.COLOR_GRAY2BGR), cv2.cvtColor(ramp, cv2.COLOR_GRAY2BGR)
+EQ_TRIM = 0.005  # ignore this fraction of valid pixels at each end (stray / flying pixels)
+EQ_BLEND = 0.75  # 1 = fully equalised (most detail), 0 = linear (colour tracks distance)
+MM_RANGE = np.arange(65536, dtype=np.float32)
+
+def equalize_cdf(depth):
+    """Auto colour scale: clip-limited histogram equalisation of valid depth.
+
+    Returns a 65536-entry table mapping depth (mm) to its colour position in
+    [0, 1], or None if no pixel is valid. Colours go where the pixels are, but no
+    single mm value may take more than 1/256 of them, so a large flat surface
+    (e.g. a wall) can't swallow the colormap. The outer EQ_TRIM of pixels at each
+    end are clamped, and the result is blended with a linear scale (EQ_BLEND).
+    """
+    hist = np.bincount(depth[::2, ::2].astype(np.uint16, copy=False).ravel(),
+                       minlength=65536).astype(np.float32)
+    hist[0] = 0  # invalid depth
+    total = hist.sum()
+    if total == 0:
+        return None
+    cum = np.cumsum(hist)
+    lo = int(np.searchsorted(cum, EQ_TRIM * total))
+    hi = int(np.searchsorted(cum, (1 - EQ_TRIM) * total))
+    hist[:lo] = 0
+    hist[hi + 1:] = 0
+    np.minimum(hist, max(1.0, hist.sum() / 256), out=hist)
+    eq = np.cumsum(hist)
+    eq /= eq[-1]
+    lin = np.clip((MM_RANGE - lo) / max(hi - lo, 1), 0.0, 1.0)
+    cdf = EQ_BLEND * eq + (1 - EQ_BLEND) * lin
+    cdf[0] = 0.0
+    return cdf
+
+def cdf_ticks(cdf):
+    """(colour position, mm) colorbar labels for an equalised scale."""
+    return [(f, float(np.searchsorted(cdf, max(f, 1e-6)))) for f in (1.0, 0.75, 0.5, 0.25, 0.0)]
+
+# Jet sampled at full 8-bit precision: 1020 distinct colours (cv2.COLORMAP_JET has 256).
+_JET_T = np.linspace(0.0, 1.0, 4096)[:, None]
+JET_LUT_BGR = (np.clip(1.5 - 4.0 * np.abs(_JET_T - [0.25, 0.5, 0.75]), 0.0, 1.0) * 255 + 0.5).astype(np.uint8)
+
+def jet_bgr(norm):
+    """Map values in [0, 1] to BGR uint8 using the 1020-colour jet."""
+    return JET_LUT_BGR.take((np.clip(norm, 0.0, 1.0) * 4095 + 0.5).astype(np.uint16), axis=0)
+
+def make_panel(image, title, jet=False, size=400, cdf=None, unit=""):
+    """Render an image as a BGR panel with a title and a colorbar.
+
+    cdf (from equalize_cdf) colours depth by histogram equalisation; otherwise
+    the image min/max is used.
+    """
+    if cdf is not None:
+        norm = cdf.take(np.asarray(image, dtype=np.uint16)).astype(np.float32)
+        ticks = cdf_ticks(cdf)
     else:
-        body, bar = cv2.applyColorMap(u8, colormap), cv2.applyColorMap(ramp, colormap)
+        img = np.nan_to_num(np.asarray(image, dtype=np.float32))
+        vmin, vmax = float(img.min()), float(img.max())
+        norm = np.clip((img - vmin) / max(vmax - vmin, 1e-6), 0.0, 1.0)
+        ticks = [(1.0, vmax), (0.0, vmin)]
+    width = max(1, round(norm.shape[1] * size / norm.shape[0]))
+    norm = cv2.resize(norm, (width, size), interpolation=cv2.INTER_NEAREST)
+    ramp = np.repeat(np.linspace(1.0, 0.0, size, dtype=np.float32)[:, None], 20, axis=1)
+    if jet:
+        body, bar = jet_bgr(norm), jet_bgr(ramp)
+        if cdf is not None:
+            invalid = cv2.resize((np.asarray(image) == 0).astype(np.uint8), (width, size),
+                                 interpolation=cv2.INTER_NEAREST) > 0
+            body[invalid] = 0  # black, not the nearest-depth colour
+    else:
+        body = cv2.cvtColor((norm * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
+        bar = cv2.cvtColor((ramp * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
     panel = np.full((size + 40, width + 100, 3), 255, dtype=np.uint8)
     panel[30:30 + size, :width] = body
     panel[30:30 + size, width + 10:width + 30] = bar
     text = dict(fontFace=cv2.FONT_HERSHEY_SIMPLEX, color=(0, 0, 0), lineType=cv2.LINE_AA)
     cv2.putText(panel, title, (5, 20), fontScale=0.6, thickness=1, **text)
-    cv2.putText(panel, f"{vmax:.0f}", (width + 34, 42), fontScale=0.45, thickness=1, **text)
-    cv2.putText(panel, f"{vmin:.0f}", (width + 34, size + 30), fontScale=0.45, thickness=1, **text)
+    if unit:
+        cv2.putText(panel, unit, (width + 34, 20), fontScale=0.45, thickness=1, **text)
+    for frac, val in ticks:
+        y = 30 + round((1.0 - frac) * (size - 1))
+        cv2.putText(panel, f"{val:.0f}", (width + 34, y + 5), fontScale=0.45, thickness=1, **text)
     return panel
 
 if output_type == 'show':
     panels = []
     if image_depth is not None:
-        panels.append(make_panel(image_depth, "Depth Image", cv2.COLORMAP_JET))
+        depth_cdf = equalize_cdf(image_depth)
+        if depth_cdf is not None:
+            print("Depth colours (auto, equalised): mm at colorbar ticks:",
+                  [round(v) for _, v in cdf_ticks(depth_cdf)])
+        panels.append(make_panel(image_depth, "Depth Image (auto)", jet=True,
+                                 cdf=depth_cdf, unit="mm"))
     if image_ab is not None:
         panels.append(make_panel(image_ab, "AB Image"))
     if image_conf is not None:
