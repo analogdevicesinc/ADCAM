@@ -141,6 +141,10 @@ def visualize_frames(depth_array, ab_array, conf_array, frame_idx=0):
         print("\nOr use --save option to export images without GUI:")
         print("  ./visualize.py --save")
         return
+
+    # cv2 points Qt at its own (empty) font dir on import; use the system fonts instead.
+    if os.path.isdir("/usr/share/fonts/truetype/dejavu"):
+        os.environ["QT_QPA_FONTDIR"] = "/usr/share/fonts/truetype/dejavu"
     
     if frame_idx >= len(depth_array):
         print(f"Error: frame_idx {frame_idx} out of range (max: {len(depth_array)-1})")
