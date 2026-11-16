@@ -117,8 +117,39 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("Mode");
             ImGui::TableSetColumnIndex(1);
-            std::string s =
-                m_cameraModesLookup[static_cast<uint16_t>(camera_mode)];
+            std::string s;
+            // Fusion label must be independent of which mode is LR. The
+            // authoritative signal is the user's Mode Fusion selection
+            // (primary = camera_mode, second = m_dms_second_mode_selection);
+            // a delivered frame whose embedded mode differs from the primary
+            // is also treated as fused as a fallback.
+            uint8_t delivered_mode = camera_mode;
+            aditof::Metadata md;
+            if (!m_off_line &&
+                frame->getMetadataStruct(md) == aditof::Status::OK) {
+                delivered_mode = md.imagerMode;
+            }
+            bool recordedFusion = false;
+            uint8_t recordedSr = 0xFF;
+            uint8_t recordedLr = 0xFF;
+            if (m_off_line && GetActiveCamera()) {
+                GetActiveCamera()->getModeFusion(recordedFusion, recordedSr,
+                                                 recordedLr);
+            }
+            bool fused = m_off_line ? recordedFusion
+                                    : (m_dms_enabled ||
+                                       delivered_mode != camera_mode);
+            if (fused) {
+                uint8_t modeB = m_dms_active_second_mode;
+                if (m_off_line) {
+                    modeB = (camera_mode == recordedSr) ? recordedLr
+                                                        : recordedSr;
+                }
+                s = std::to_string(static_cast<int>(camera_mode)) + " + " +
+                    std::to_string(static_cast<int>(modeB)) + " (fused)";
+            } else {
+                s = m_cameraModesLookup[static_cast<uint16_t>(camera_mode)];
+            }
             ImGui::TextUnformatted(s.c_str());
 
             if (m_fps_expected) {
@@ -126,7 +157,10 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("Expected fps");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%i", m_fps_expected);
+                // Mode fusion emits one output frame per two sensor frames;
+                // recordings already store the fused rate.
+                ImGui::Text("%i", (fused && !m_off_line) ? (m_fps_expected / 2)
+                                                         : m_fps_expected);
             }
 
             static uint32_t fps;
@@ -141,6 +175,14 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
                 ImGui::Text("%i", fps);
                 ;
             }
+
+            // Depth colormap range (min..max, mm) applied to the depth window.
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("Depth Range");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d - %d mm", m_view_instance->minRange,
+                        m_view_instance->maxRange);
 
             ImGui::TableNextRow();
             /*ImGui::TableSetColumnIndex(0);

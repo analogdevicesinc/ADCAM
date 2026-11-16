@@ -29,7 +29,9 @@
 #include "aditof/system.h"
 #include "aditof/version.h"
 #include <aditof/log.h>
+#include <chrono>
 #include <iostream>
+#include <thread>
 
 #if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include "psapi.h"
@@ -108,6 +110,14 @@ void ADIMainWindow::InitCamera(std::string filePath) {
         camera->getAvailableModes(_cameraModes);
         sort(_cameraModes.begin(), _cameraModes.end());
 
+        aditof::ImagerType imagerType = aditof::ImagerType::UNSET;
+        camera->getImagerType(imagerType);
+        const bool isAdtf3066 = (imagerType == aditof::ImagerType::ADTF3066);
+        m_fusion_supported = isAdtf3066;
+        if (!m_fusion_supported) {
+            m_dms_enabled = false;
+        }
+
         for (uint32_t i = 0; i < (uint32_t)_cameraModes.size(); ++i) {
             aditof::DepthSensorModeDetails modeDetails;
 
@@ -118,9 +128,19 @@ void ADIMainWindow::InitCamera(std::string filePath) {
             s = s + ":" + std::to_string(modeDetails.baseResolutionWidth) +
                 "x" + std::to_string(modeDetails.baseResolutionHeight) + ",";
             if (!modeDetails.isPCM) {
-                std::string append = (modeDetails.numberOfFrequencies == 2)
-                                         ? "Short Range"
-                                         : "Long Range";
+                std::string append;
+                if (isAdtf3066) {
+                    // Frequency count can't classify ADTF3066 modes (SR mode
+                    // 1 and LR mode 7 are both 3-frequency).
+                    append = aditof::isAdtf3066LongRangeMode(
+                                 modeDetails.modeNumber)
+                                 ? "Long Range"
+                                 : "Short Range";
+                } else {
+                    append = (modeDetails.numberOfFrequencies == 2)
+                                 ? "Short Range"
+                                 : "Long Range";
+                }
                 s = s + append;
             } else {
                 s = s + "PCM";
@@ -132,6 +152,7 @@ void ADIMainWindow::InitCamera(std::string filePath) {
         for (uint32_t i = 0; i < (uint32_t)_cameraModes.size(); i++) {
             m_cameraModes.emplace_back(i, _cameraModes.at(i));
         }
+        UpdateFusionFromConfig();
     } else {
         // PRB25
         //camera->setPlaybackFile(filePath);
@@ -174,24 +195,68 @@ void ADIMainWindow::UpdateOfflineFrameTypeAvailability() {
     }
 }
 
+void ADIMainWindow::UpdateFusionFromConfig() {
+    auto camera = GetActiveCamera();
+    if (m_off_line || !m_fusion_supported || !camera) {
+        return;
+    }
+    std::map<std::string, std::string> params;
+    if (camera->getDepthParamtersMap(static_cast<uint16_t>(m_mode_selection),
+                                     params) != aditof::Status::OK) {
+        return;
+    }
+    auto it = params.find("modeFusionEnabled");
+    if (it != params.end() && it->second == "1") {
+        m_dms_enabled = true;
+    }
+}
+
+bool ADIMainWindow::IsValidFusionPair() const {
+    const uint8_t first = static_cast<uint8_t>(m_mode_selection);
+    const uint8_t second = static_cast<uint8_t>(m_dms_second_mode_selection);
+    return (aditof::isAdtf3066LongRangeMode(first) &&
+            aditof::isAdtf3066ShortRangeMode(second)) ||
+           (aditof::isAdtf3066ShortRangeMode(first) &&
+            aditof::isAdtf3066LongRangeMode(second));
+}
+
 bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     aditof::Status status = aditof::Status::OK;
     std::vector<aditof::FrameDetails> frameTypes;
 
-    status = GetActiveCamera()->setMode(mode);
-    if (status != aditof::Status::OK) {
-        LOG(ERROR) << "Could not set camera mode!";
+    const bool fusion = !m_off_line && m_dms_enabled;
+    if (fusion && !IsValidFusionPair()) {
+        LOG(ERROR) << "Mode Fusion needs one Short Range mode (0, 1, 3, 6) "
+                      "and one Long Range mode (7, 8)";
         return false;
     }
-#if 0 //Andre
-    if (!m_off_line) {
-        status = GetActiveCamera()->adsd3500SetFrameRate(m_user_frame_rate);
+
+    // Write any params staged by the control window's Modify button into each
+    // mode's config before the mode is set, so the edited INI is applied.
+    if (!m_pending_modified_by_mode.empty()) {
+        for (auto &entry : m_pending_modified_by_mode) {
+            GetActiveCamera()->setFrameProcessParams(
+                entry.second, static_cast<int32_t>(entry.first));
+        }
+        m_pending_modified_by_mode.clear();
+    }
+
+    if (fusion) {
+        const uint8_t second =
+            static_cast<uint8_t>(m_dms_second_mode_selection);
+        status = GetActiveCamera()->setModeFusion(mode, second);
         if (status != aditof::Status::OK) {
-            LOG(ERROR) << "Could not set user frame rate!";
-            return;
+            LOG(ERROR) << "Could not start mode fusion!";
+            return false;
+        }
+        m_dms_active_second_mode = second;
+    } else {
+        status = GetActiveCamera()->setMode(mode);
+        if (status != aditof::Status::OK) {
+            LOG(ERROR) << "Could not set camera mode!";
+            return false;
         }
     }
-#endif
     if (mode == m_last_mode) {
         if (!m_modified_ini_params.empty()) {
             if (m_use_modified_ini_params) {
@@ -209,6 +274,7 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     } else {
         m_use_modified_ini_params = false;
         m_ini_params.clear();
+        m_ini_by_mode.clear();
         m_modified_ini_params.clear();
         m_last_mode = mode;
     }
@@ -313,6 +379,7 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
 #endif
 
             if (!m_off_line) {
+                m_view_instance->m_ctrl->setModeFusionEnabled(m_dms_enabled);
                 m_view_instance->m_ctrl->StartCapture(m_fps_expected);
                 m_view_instance->m_ctrl->requestFrame();
             } else { // Offline: Always get the first frame

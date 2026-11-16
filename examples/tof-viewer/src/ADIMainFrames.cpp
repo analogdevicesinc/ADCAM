@@ -100,13 +100,24 @@ void ADIMainWindow::RenderFrameHoverInfo(ImVec2 hoveredImagePixel,
 }
 
 void ADIMainWindow::GetHoveredImagePix(ImVec2 &hoveredImagePixel,
-                                       ImVec2 imageStartPos, ImVec2 mousePos,
+                                       ImVec2 imageStartPos, ImVec2 windowSize,
+                                       ImVec2 mousePos,
                                        ImVec2 display_depth_dimensions,
                                        ImVec2 source_depth_image_dimensions) {
 
+    // The image is centered in the window (see ImageRotated), so non-square
+    // frames are offset from the window origin.
+    ImVec2 imageOrigin;
+    imageOrigin.x =
+        imageStartPos.x +
+        (windowSize.x * m_dpi_scale_factor - display_depth_dimensions.x) * 0.5f;
+    imageOrigin.y =
+        imageStartPos.y +
+        (windowSize.y * m_dpi_scale_factor - display_depth_dimensions.y) * 0.5f;
+
     ImVec2 hoveredUIPixel;
-    hoveredUIPixel.x = mousePos.x - imageStartPos.x;
-    hoveredUIPixel.y = mousePos.y - imageStartPos.y;
+    hoveredUIPixel.x = mousePos.x - imageOrigin.x;
+    hoveredUIPixel.y = mousePos.y - imageOrigin.y;
 
     ImVec2 _displayDepthDimensions = display_depth_dimensions;
     ImVec2 _sourceDepthImageDimensions = source_depth_image_dimensions;
@@ -132,27 +143,29 @@ void ADIMainWindow::GetHoveredImagePix(ImVec2 &hoveredImagePixel,
     // Scale the hovered pixel to the image pixel co-ordinate system
     const float uiCoordinateToImageCoordinateRatio =
         _sourceDepthImageDimensions.x / _displayDepthDimensions.x;
-    hoveredImagePixel.x =
-        std::round(hoveredUIPixel.x * uiCoordinateToImageCoordinateRatio);
-    hoveredImagePixel.y =
-        std::round(hoveredUIPixel.y * uiCoordinateToImageCoordinateRatio);
+    hoveredImagePixel.x = std::min(
+        std::floor(hoveredUIPixel.x * uiCoordinateToImageCoordinateRatio),
+        _sourceDepthImageDimensions.x - 1.0f);
+    hoveredImagePixel.y = std::min(
+        std::floor(hoveredUIPixel.y * uiCoordinateToImageCoordinateRatio),
+        _sourceDepthImageDimensions.y - 1.0f);
 
     if (rotationangledegrees == 90) {
 
         std::swap(hoveredImagePixel.x, hoveredImagePixel.y);
         hoveredImagePixel.y =
-            m_source_depth_image_dimensions.y - hoveredImagePixel.y;
+            m_source_depth_image_dimensions.y - 1.0f - hoveredImagePixel.y;
     } else if (rotationangledegrees == 270) {
 
         std::swap(hoveredImagePixel.x, hoveredImagePixel.y);
         hoveredImagePixel.x =
-            m_source_depth_image_dimensions.x - hoveredImagePixel.x;
+            m_source_depth_image_dimensions.x - 1.0f - hoveredImagePixel.x;
     } else if (rotationangledegrees == 180) {
 
         hoveredImagePixel.x =
-            _sourceDepthImageDimensions.x - hoveredImagePixel.x;
+            _sourceDepthImageDimensions.x - 1.0f - hoveredImagePixel.x;
         hoveredImagePixel.y =
-            _sourceDepthImageDimensions.y - hoveredImagePixel.y;
+            _sourceDepthImageDimensions.y - 1.0f - hoveredImagePixel.y;
     }
 }
 
@@ -463,6 +476,7 @@ void ADIMainWindow::DisplayActiveBrightnessWindow(
 
         ImVec2 hoveredImagePixel = m_invalid_hovered_pixel;
         GetHoveredImagePix(hoveredImagePixel, ImGui::GetCursorScreenPos(),
+                           ImVec2(m_ab_position->width, m_ab_position->height),
                            ImGui::GetIO().MousePos, m_display_ab_dimensions,
                            m_source_depth_image_dimensions);
 #ifdef WITH_RGB_SUPPORT
@@ -608,12 +622,14 @@ void ADIMainWindow::DisplayDepthWindow(ImGuiWindowFlags overlayFlags) {
             ImVec2 _start = m_invalid_hovered_pixel;
             ImVec2 _end = m_invalid_hovered_pixel;
 
-            GetHoveredImagePix(_start, ImGui::GetCursorScreenPos(), start,
-                               m_display_depth_dimensions,
+            const ImVec2 depthWinSize(m_depth_position->width,
+                                      m_depth_position->height);
+            GetHoveredImagePix(_start, ImGui::GetCursorScreenPos(),
+                               depthWinSize, start, m_display_depth_dimensions,
                                m_source_depth_image_dimensions);
 
-            GetHoveredImagePix(_end, ImGui::GetCursorScreenPos(), end,
-                               m_display_depth_dimensions,
+            GetHoveredImagePix(_end, ImGui::GetCursorScreenPos(), depthWinSize,
+                               end, m_display_depth_dimensions,
                                m_source_depth_image_dimensions);
 
             depth_line_points =
@@ -633,9 +649,11 @@ void ADIMainWindow::DisplayDepthWindow(ImGuiWindowFlags overlayFlags) {
         }
 
         ImVec2 hoveredImagePixel = m_invalid_hovered_pixel;
-        GetHoveredImagePix(hoveredImagePixel, ImGui::GetCursorScreenPos(),
-                           ImGui::GetIO().MousePos, m_display_depth_dimensions,
-                           m_source_depth_image_dimensions);
+        GetHoveredImagePix(
+            hoveredImagePixel, ImGui::GetCursorScreenPos(),
+            ImVec2(m_depth_position->width, m_depth_position->height),
+            ImGui::GetIO().MousePos, m_display_depth_dimensions,
+            m_source_depth_image_dimensions);
         RenderFrameHoverInfo(
             hoveredImagePixel, m_view_instance->depth_video_data,
             m_view_instance->frameWidth, ImGui::IsWindowHovered(),

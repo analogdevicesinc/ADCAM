@@ -1,13 +1,8 @@
 absl-py
 attrs
 cffi
-contourpy
-cycler
 flatbuffers
-fonttools
 jax
-kiwisolver
-matplotlib
 mediapipe
 ml-dtypes
 numpy
@@ -15,7 +10,6 @@ opencv-contrib-python
 opencv-python
 opt-einsum
 packaging
-pillow
 protobuf
 pycparser
 pygame

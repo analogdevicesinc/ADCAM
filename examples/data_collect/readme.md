@@ -8,7 +8,7 @@
 ```
 Usage:
       data_collect CONFIG
-      data_collect [--f <folder>] [--n <ncapture>] [--m <mode>] [--wt <warmup>] [--ccb FILE] [--ip <ip>] [--fw <firmware>] [-s | --split] [-t | --netlinktest] CONFIG
+      data_collect [--f <folder>] [--n <ncapture>] [--m <mode>] [--wt <warmup>] [--ccb FILE] [--ip <ip>] [-s | --split] [-t | --netlinktest] CONFIG
       data_collect (-h | --help)
 
     Arguments:
@@ -22,7 +22,6 @@ Usage:
       --wt <warmup>      Warmup Time (sec) [default: 0]
       --ccb <FILE>       The path to store CCB content
       --ip <ip>          Camera IP
-      --fw <firmware>    Adsd3500 fw file
       --split            Save each frame into a separate file (Debug)
       --netlinktest      Puts server on target in test mode (Debug)
       --singlethread     Store the frame to file using same tread
@@ -50,10 +49,17 @@ To run the example, run data_collect.exe with config_adsd3500_adsd3100.json file
 ./data_collect.exe --f "../data_output" --m 10 --n 4 "config_adsd3500_adsd3100.json"
 ```
 
+## Mode fusion (ADTF3066 only)
+`--fuse <firstMode>,<secondMode>` fuses a short-range mode (0, 1, 3, 6) with a long-range mode (7, 8). The first mode leads the sequence, so the SR frame comes first when the first mode is short-range. No JSON config is required. It overrides `--m` and is not supported with `--ip`. `--fps` is the sensor rate, so fused frames arrive at fps/2; the recording header stores the fusion pair so tof-viewer playback shows it.
+
+```
+./data_collect --fuse 0,7 --fps 20 --n 100 --f ../data_output
+```
+
 ## Known Issues
 None
 
 ## Troubleshooting
 * If you see the error "Could not initialize camera!" it could because the USB device could not be opened. Check the USB device connection. If the USB connection is proper then, it is because of the config file path passed is incorrect. Check the config file passed in camera->initialize() function.
-* If you see the error "Could not start camera!" it is because of depth compute initialization failed or downloading the firmware to camera is failed or may be due to setting calibration parameters, check the camera calibration file and sensor firmware file passed are correct.
+* If you see the error "Could not start camera!" it is because of depth compute initialization failed or may be due to setting calibration parameters, check the camera calibration file passed is correct.
 * If you see the error "config Json file is not provided.." pass the --c option with valid json file.

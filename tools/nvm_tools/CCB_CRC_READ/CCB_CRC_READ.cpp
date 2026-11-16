@@ -172,7 +172,7 @@ memset(data, 0x00, CTRL_SIZE);
 	{
 		packetsNeeded = packetsNeeded+1;
 	}
-        copy_buffer = (uint8_t*)malloc(packetsNeeded * chunkSize);
+        copy_buffer = (uint8_t*)malloc(static_cast<size_t>(packetsNeeded) * chunkSize);
 	std::cout<<"Size of Binary :: "<<sizeOfBinary<<std::endl;
 	std::cout<<"ChunkSize :: "<<chunkSize<<std::endl;
 	std::cout<<"Packets Needed: "<<packetsNeeded<<std::endl;

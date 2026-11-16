@@ -24,22 +24,19 @@
 import numpy as np
 import sys
 import argparse
+import json
+import tempfile
 import time
 import os
 from dataclasses import dataclass
 
-minV = 0
-maxV = 7000
-
-VALID_MODES_BY_IMAGER = {
-    "mp": [0, 2, 5],
-    "vga": [0, 2, 5, 8],
-}
+# Weight of the newest frame when smoothing the auto colours (lower = steadier).
+AUTO_RANGE_ALPHA = 0.2
+CBAR_W = 80
 
 
 @dataclass
 class AppConfig:
-    imager: str
     mode_a: int
     mode_b: int
     fps: int
@@ -58,53 +55,43 @@ def positive_int(value):
 def build_parser():
     parser = argparse.ArgumentParser(
         description="Dynamic mode switch viewer",
-        usage="%(prog)s <imager>,<mode> [--ip <ip>] [--config <config.json>] [--fps <fps>] [--dry-run]"
+        usage="%(prog)s <modeA>,<modeB> [--ip <ip>] [--config <config.json>] [--fps <fps>] [--dry-run]"
     )
     parser.add_argument(
-        "imager_mode",
-        help="Imager and mode in format: imager,mode\n"
-             "  Valid MP: mp,0 mp,2 mp,5\n"
-             "  Valid VGA: vga,0 vga,2 vga,5 vga,8\n"
+        "modes",
+        help="Two modes of the same resolution to alternate, e.g. 0,1 or 3,6\n"
     )
     parser.add_argument("--ip", "--ipconfig", dest="ip", default="",
                         help="Optional camera IP address (e.g., 192.168.1.10)")
     parser.add_argument("--config", dest="config", default="",
                         help="Optional config JSON file path")
-    parser.add_argument("--fps", type=positive_int, default=20,
-                        help="Frame rate in fps (default: 20, must be a positive integer)")
+    parser.add_argument("--fps", type=positive_int, default=None,
+                        help="Frame rate in fps for both modes (default: mode setting)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Validate arguments and camera setup without opening the pygame window")
     return parser
 
 
-def parse_imager_mode(parser, imager_mode_value):
-    imager_mode_parts = imager_mode_value.split(',')
-    if len(imager_mode_parts) != 2:
-        parser.error("imager_mode must be in format: imager,mode (e.g., mp,2)")
-
-    imager = imager_mode_parts[0]
-    if imager not in VALID_MODES_BY_IMAGER:
-        parser.error(f"Invalid imager '{imager}'. Must be one of: {', '.join(VALID_MODES_BY_IMAGER)}")
+def parse_modes(parser, modes_value):
+    mode_parts = modes_value.split(',')
+    if len(mode_parts) != 2:
+        parser.error("modes must be in format: modeA,modeB (e.g., 0,1)")
 
     try:
-        mode_a = int(imager_mode_parts[1])
+        mode_a, mode_b = (int(m) for m in mode_parts)
     except ValueError:
-        parser.error(f"Invalid mode '{imager_mode_parts[1]}'. Mode must be an integer")
+        parser.error(f"Invalid modes '{modes_value}'. Modes must be integers")
 
-    valid_modes = VALID_MODES_BY_IMAGER[imager]
-    if mode_a not in valid_modes:
-        parser.error(
-            f"Invalid mode {mode_a} for imager '{imager}'. "
-            f"Valid modes: {', '.join(map(str, valid_modes))}"
-        )
+    if mode_a == mode_b:
+        parser.error("modeA and modeB must be different")
 
-    return imager, mode_a
+    return mode_a, mode_b
 
 
 def parse_args():
     parser = build_parser()
     args = parser.parse_args()
-    imager, mode_a = parse_imager_mode(parser, args.imager_mode)
+    mode_a, mode_b = parse_modes(parser, args.modes)
 
     config_path = ""
     if args.config:
@@ -115,9 +102,8 @@ def parse_args():
         print(f"Using config file: {config_path}")
 
     return AppConfig(
-        imager=imager,
         mode_a=mode_a,
-        mode_b=mode_a + 1,
+        mode_b=mode_b,
         fps=args.fps,
         ip=args.ip,
         config_path=config_path,
@@ -125,35 +111,37 @@ def parse_args():
     )
 
 
-def get_mode_mapping(config):
-    imager = config.imager
-    if imager == 'vga':
-        modemapping = {
-            3: {"height": 256, "width": 320},
-            5: {"height": 256, "width": 320},
-            6: {"height": 256, "width": 320},
-            8: {"height": 256, "width": 320},
-            9: {"height": 256, "width": 320},
-            0: {"height": 512, "width": 640},
-            1: {"height": 512, "width": 640},
-            7: {"height": 512, "width": 640},
-        }
+def write_configs(camera, config, tof_module):
+    """Writes temporary config JSONs: depth params only, and params + DMS sequence.
+
+    Without --config, the camera's own depth parameters are used as the base.
+    """
+    params_path = tempfile.mkstemp(suffix=".json")[1]
+    dms_path = tempfile.mkstemp(suffix=".json")[1]
+    if config.config_path:
+        with open(config.config_path) as f:
+            params = json.load(f)
     else:
-        modemapping = {
-            2: {"height": 512, "width": 512},
-            3: {"height": 512, "width": 512},
-            5: {"height": 512, "width": 512},
-            6: {"height": 512, "width": 512},
-            0: {"width": 1024, "height": 1024},
-            1: {"width": 1024, "height": 1024},
-        }
+        if camera.saveDepthParamsToJsonFile(params_path) != tof_module.Status.Ok:
+            sys.exit("Could not read the camera depth parameters!")
+        with open(params_path) as f:
+            params = json.load(f)
 
-    if config.mode_a not in modemapping:
-        print(f"Error: Mode {config.mode_a} is not available for imager '{config.imager}'")
-        print(f"Available modes: {', '.join(sorted(map(str, modemapping.keys())))}")
-        sys.exit(1)
+    params.pop("dynamicModeSwitching", None)
+    if config.fps:
+        for mode in (config.mode_a, config.mode_b):
+            params.setdefault(str(mode), {}).setdefault(
+                "configuration-parameters", {})["fps"] = config.fps
+    with open(params_path, "w") as f:
+        json.dump(params, f, indent=4)
 
-    return modemapping
+    params["dynamicModeSwitching"] = [
+        {"mode": config.mode_a, "repeat": 1},
+        {"mode": config.mode_b, "repeat": 1},
+    ]
+    with open(dms_path, "w") as f:
+        json.dump(params, f, indent=4)
+    return params_path, dms_path
 
 
 def get_camera_list(system, ip, tof_module):
@@ -190,60 +178,50 @@ def configure_camera(camera, config, tof_module):
     print("folder serial number: ", serial_number)
 
     available_modes = []
-    if config.config_path:
-        print("Loading configuration from JSON file: ", config.config_path)
-        status = camera.loadDepthParamsFromJsonFile(config.config_path, int(config.mode_a))
-        if status != tof_module.Status.Ok:
-            sys.exit("Could not load depth parameters from JSON file!")
-    else:
-        status = camera.adsd3500SetABinvalidationThreshold(5)
-        if status != tof_module.Status.Ok:
-            sys.exit("Could not set AB invalidation threshold!")
-        status = camera.adsd3500SetConfidenceThreshold(25)
-        if status != tof_module.Status.Ok:
-            sys.exit("Could not set confidence threshold!")
-        status = camera.adsd3500SetRadialThresholdMin(50)
-        if status != tof_module.Status.Ok:
-            sys.exit("Could not set radial threshold min!")
-        status = camera.adsd3500SetRadialThresholdMax(7000)
-        if status != tof_module.Status.Ok:
-            sys.exit("Could not set radial threshold max!")
-
     status = camera.getAvailableModes(available_modes)
     if status != tof_module.Status.Ok or len(available_modes) == 0:
         sys.exit('Could not acquire available modes')
 
-    status = camera.setMode(config.mode_a)
-    if status != tof_module.Status.Ok:
-        sys.exit("Could not set camera mode!")
+    sensor = camera.getSensor()
+    resolutions = []
+    for mode in (config.mode_a, config.mode_b):
+        if mode not in available_modes:
+            sys.exit(f"Mode {mode} is not available. Available modes: {available_modes}")
+        details = tof_module.DepthSensorModeDetails()
+        sensor.getModeDetails(mode, details)
+        resolutions.append((details.baseResolutionWidth, details.baseResolutionHeight))
+    if resolutions[0] != resolutions[1]:
+        sys.exit(f"Modes {config.mode_a} and {config.mode_b} must have the same resolution")
 
-    # Enable embedded header in AB frame
+    # Embedded metadata identifies which mode produced each frame
     status = camera.adsd3500SetEnableMetadatainAB(1)
     if status != tof_module.Status.Ok:
         sys.exit("Could not set embedded header in AB frame!")
 
-    # Set desired frame rate
-    status = camera.adsd3500SetFrameRate(config.fps)
-    if status != tof_module.Status.Ok:
-        sys.exit("Could not set FPS!")
+    # setMode() writes only its own mode's params to the ADSD3500, so set mode B
+    # before the sequence is loaded; setMode(mode A) then enables DMS.
+    params_path, dms_path = write_configs(camera, config, tof_module)
+    try:
+        status = camera.loadDepthParamsFromJsonFile(params_path, -1)
+        if status != tof_module.Status.Ok:
+            sys.exit("Could not load depth parameters!")
+        status = camera.setMode(config.mode_b)
+        if status != tof_module.Status.Ok:
+            sys.exit(f"Could not set mode {config.mode_b}!")
+        status = camera.loadDepthParamsFromJsonFile(dms_path, -1)
+        if status != tof_module.Status.Ok:
+            sys.exit("Could not load the dynamic mode switching sequence!")
+    finally:
+        os.remove(params_path)
+        os.remove(dms_path)
 
-    # Enable dynamic mode switching
-    status = camera.adsd3500setEnableDynamicModeSwitching(True)
+    status = camera.setMode(config.mode_a)
     if status != tof_module.Status.Ok:
         sys.exit("Error setting dynamic mode switching!")
+    print(f"Dynamic mode switching: mode {config.mode_a} <-> mode {config.mode_b}")
 
-    sequence = [
-        (config.mode_a, 0x01), # Mode A repeat 1 time
-        (config.mode_b, 0x01), # Mode B repeat 1 time
-    ]
-    status = camera.adsds3500setDynamicModeSwitchingSequence(sequence)
-    if status != tof_module.Status.Ok:
-        sys.exit("Error setting dynamic mode switching!")
-
-    status, dynamic_mode_switch_status = camera.adsd3500GetGenericTemplate(0x0085)
-    if status != tof_module.Status.Ok:
-        sys.exit("Error setting dynamic mode switching!")
-    print('Dynamic Mode Status: ', dynamic_mode_switch_status)
+    # The ADSD3500 needs a moment to apply the sequence before streaming
+    time.sleep(0.3)
 
 
 def start_camera(camera, tof_module):
@@ -267,31 +245,70 @@ def load_tof():
         sys.exit(f"Could not import aditofpython: {exc}")
     return tof
 
-def normalize(min_depth, max_depth, image_scalar):
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import ListedColormap
-
-    original_cmap = plt.cm.turbo
-    colors = original_cmap(np.linspace(0, 1, 256))
-    colors[0] = [0, 0, 0, 0]  # RGBA for red
-    modified_cmap = ListedColormap(colors)
-
-    visualization_depth_range_max = max_depth
-    min_value = min_depth
-
-    image_scalar = (image_scalar - min_value)
-    visualization_depth_range_max = visualization_depth_range_max - min_value
-
-    image_scalar_norm = image_scalar / visualization_depth_range_max
-
-    # Apply the colormap to the scalar image to obtain an RGB image
-    image_rgb = modified_cmap(image_scalar_norm)
-        
-    surface = (image_rgb[:, :, :3] * 255).astype(np.uint8)
-    return surface
+# Jet sampled at full 8-bit precision: 1020 distinct colours (cv2.COLORMAP_JET has 256).
+_JET_T = np.linspace(0.0, 1.0, 4096)[:, None]
+JET_LUT_RGB = (np.clip(1.5 - 4.0 * np.abs(_JET_T - [0.75, 0.5, 0.25]), 0.0, 1.0) * 255 + 0.5).astype(np.uint8)
 
 
-def animate(camera, frame, config, modemapping, pygame, tof_module, min_depth, max_depth):
+EQ_TRIM = 0.005  # ignore this fraction of valid pixels at each end (stray / flying pixels)
+EQ_BLEND = 0.75  # 1 = fully equalised (most detail), 0 = linear (colour tracks distance)
+MM_RANGE = np.arange(65536, dtype=np.float32)
+
+
+def equalize_cdf(depth):
+    """Auto colour scale: clip-limited histogram equalisation of valid depth.
+
+    Returns a 65536-entry table mapping depth (mm) to its colour position in
+    [0, 1], or None if no pixel is valid. Colours go where the pixels are, but no
+    single mm value may take more than 1/256 of them, so a large flat surface
+    (e.g. a wall) can't swallow the colormap. The outer EQ_TRIM of pixels at each
+    end are clamped, and the result is blended with a linear scale (EQ_BLEND).
+    """
+    hist = np.bincount(depth[::2, ::2].astype(np.uint16, copy=False).ravel(),
+                       minlength=65536).astype(np.float32)
+    hist[0] = 0  # invalid depth
+    total = hist.sum()
+    if total == 0:
+        return None
+    cum = np.cumsum(hist)
+    lo = int(np.searchsorted(cum, EQ_TRIM * total))
+    hi = int(np.searchsorted(cum, (1 - EQ_TRIM) * total))
+    hist[:lo] = 0
+    hist[hi + 1:] = 0
+    np.minimum(hist, max(1.0, hist.sum() / 256), out=hist)
+    eq = np.cumsum(hist)
+    eq /= eq[-1]
+    lin = np.clip((MM_RANGE - lo) / max(hi - lo, 1), 0.0, 1.0)
+    cdf = EQ_BLEND * eq + (1 - EQ_BLEND) * lin
+    cdf[0] = 0.0
+    return cdf
+
+
+def colorize(depth, cdf):
+    """Equalised jet colours via one depth(mm) -> colour table; invalid pixels black."""
+    table = JET_LUT_RGB.take((cdf * 4095 + 0.5).astype(np.uint16), axis=0)
+    table[0] = 0
+    return table.take(depth.astype(np.uint16, copy=False), axis=0)
+
+
+def draw_colorbar(screen, pygame, font, x, height, cdf):
+    """Vertical colorbar labelled with the depth in mm at each tick."""
+    if cdf is None:
+        return
+    top, bar_w = 24, 16
+    bar_h = max(20, height - 2 * top)
+    ramp = np.linspace(4095, 0, bar_h).astype(np.uint16)
+    strip = np.repeat(JET_LUT_RGB.take(ramp, axis=0)[:, None, :], bar_w, axis=1)
+    screen.blit(pygame.surfarray.make_surface(np.transpose(strip, (1, 0, 2))), (x + 8, top))
+    pygame.draw.rect(screen, (200, 200, 200), pygame.Rect(x + 8, top, bar_w, bar_h), 1)
+    screen.blit(font.render("mm", True, (220, 220, 220)), (x + 6, top - 18))
+    for frac in (1.0, 0.75, 0.5, 0.25, 0.0):
+        label = font.render(f"{np.searchsorted(cdf, max(frac, 1e-6))}", True, (220, 220, 220))
+        y = top + int((1.0 - frac) * (bar_h - 1))
+        screen.blit(label, (x + 8 + bar_w + 4, y - label.get_height() // 2))
+
+
+def animate(camera, frame, config, pygame, tof_module, state):
     frame_A_loaded = False
     frame_B_loaded = False
     tries = 0
@@ -322,23 +339,35 @@ def animate(camera, frame, config, modemapping, pygame, tof_module, min_depth, m
             print('10 Tries to get consecutive frames')
             raise RuntimeError('Could not get consecutive frames for both modes')
 
-    final_image = np.ones((modemapping[config.mode_a]["width"] * 2, modemapping[config.mode_a]["height"]))
-    final_image[0:modemapping[config.mode_a]["width"], :] = image1
-    final_image[modemapping[config.mode_a]["width"]:modemapping[config.mode_a]["width"] * 2, :] = image2
-    surface = pygame.surfarray.make_surface(normalize(min_depth, max_depth, final_image))
+    final_image = np.concatenate((image1, image2), axis=0)
+    new = equalize_cdf(final_image)
+    if new is not None:
+        old = state["cdf"]
+        state["cdf"] = new if old is None else old + AUTO_RANGE_ALPHA * (new - old)
+    if state["cdf"] is None:
+        rgb = np.zeros(final_image.shape + (3,), dtype=np.uint8)
+    else:
+        rgb = colorize(final_image, state["cdf"])
+    surface = pygame.surfarray.make_surface(rgb)
     return surface, laser_temp, sensor_temp
     
 
-def run_viewer(camera, config, modemapping, tof_module, min_depth, max_depth):
+def run_viewer(camera, config, tof_module):
     import pygame
 
-    pygame.init()
-
-    window_size = (modemapping[config.mode_a]["width"] * 2, modemapping[config.mode_a]["height"])
-
-    screen = pygame.display.set_mode(window_size)
     frame = tof_module.Frame()
+    status = camera.requestFrame(frame)
+    if status != tof_module.Status.Ok:
+        sys.exit("Could not request frame!")
+    rows, cols = np.array(frame.getData("depth"), copy=False).shape
 
+    pygame.init()
+    font = pygame.font.Font(None, 20)
+
+    screen = pygame.display.set_mode((rows * 2 + CBAR_W, cols))
+    pygame.display.set_caption(f"Mode {config.mode_a} | Mode {config.mode_b}")
+
+    state = {"cdf": None}
     done = False
     fc = 0
     start_time = time.time()
@@ -350,15 +379,21 @@ def run_viewer(camera, config, modemapping, tof_module, min_depth, max_depth):
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     done = True
 
-            pygame_surface, laser_temp, sensor_temp = animate(camera, frame, config, modemapping, pygame, tof_module, min_depth, max_depth)
+            pygame_surface, laser_temp, sensor_temp = animate(camera, frame, config, pygame, tof_module, state)
+            screen.fill((0, 0, 0))
             screen.blit(pygame_surface, (0, 0))
+            draw_colorbar(screen, pygame, font, rows * 2, cols, state["cdf"])
             fc = fc + 1.0
             elapsed_time = time.time() - start_time
             if elapsed_time > 2:
                 measured_fps = fc / elapsed_time
                 fc = 0
                 start_time = time.time()
-                print(f'Frame Rate: {int(measured_fps)} fps, Laser Temp: {laser_temp} C, Sensor Temp: {sensor_temp} C')
+                cdf = state["cdf"]
+                extent = (f"{np.searchsorted(cdf, 1e-6)}-{np.searchsorted(cdf, 1.0)} mm"
+                          if cdf is not None else "n/a")
+                print(f'Frame Rate: {int(measured_fps)} fps, Laser Temp: {laser_temp} C, Sensor Temp: {sensor_temp} C, '
+                      f'Depth colours (auto, equalised): {extent}')
 
             pygame.display.flip()
     finally:
@@ -367,7 +402,6 @@ def run_viewer(camera, config, modemapping, tof_module, min_depth, max_depth):
 
 def main():
     config = parse_args()
-    modemapping = get_mode_mapping(config)
     tof_module = load_tof()
     system = tof_module.System()
     cameras = get_camera_list(system, config.ip, tof_module)
@@ -380,7 +414,7 @@ def main():
             return
 
         start_camera(camera, tof_module)
-        run_viewer(camera, config, modemapping, tof_module, minV, maxV)
+        run_viewer(camera, config, tof_module)
     finally:
         stop_camera(camera)
 

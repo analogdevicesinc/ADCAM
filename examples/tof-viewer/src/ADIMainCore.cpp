@@ -250,6 +250,14 @@ void ADIMainWindow::InitializeTooltips() {
     ADIRegisterTooltip(
         "WizardOnlineSelectMode",
         "Select camera operating mode (resolution and frame format)");
+    ADIRegisterTooltip(
+        "WizardOnlineDynamicModeSwitching",
+        "When enabled, the camera automatically alternates between two "
+        "modes every frame");
+    ADIRegisterTooltip(
+        "WizardOnlineDynamicModeSwitchingSecondMode",
+        "Second mode to alternate into; the mode selected above is used "
+        "as the first mode");
     ADIRegisterTooltip("WizardOnlineLoadConfig",
                        "Load depth processing configuration from JSON file");
     ADIRegisterTooltip(
@@ -861,6 +869,7 @@ void ADIMainWindow::Render() {
                     m_view_selection_changed = m_view_selection;
                     m_is_playing = true;
                     m_ini_params.clear();
+                    m_ini_by_mode.clear();
                 } else {
                     LOG(ERROR) << "Camera not initialized!";
                 }
@@ -870,19 +879,13 @@ void ADIMainWindow::Render() {
                     m_view_instance->cleanUp();
                 }
 
-                auto camera = GetActiveCamera();
-                if (camera && false) {
-                    LOG(INFO) << "*** adsd3500setEnableDynamicModeSwitching "
-                                 "disabled ***";
-                    camera->adsd3500setEnableDynamicModeSwitching(false);
-                }
-
                 m_frame_window_position_state = 0;
                 m_view_selection_changed = m_view_selection;
                 m_last_mode = m_mode_selection;
                 m_use_modified_ini_params = true;
                 m_is_playing = true;
                 m_ini_params.clear();
+                m_ini_by_mode.clear();
             }
 
             m_start_streaming_pending = false;
@@ -1060,6 +1063,8 @@ void ADIMainWindow::ShowLoadAdsdParamsMenu() {
                       << loadconfigurationFileValue;
 
             m_ini_params.clear();
+            m_ini_by_mode.clear();
+            UpdateFusionFromConfig();
         }
     }
 
@@ -1247,6 +1252,11 @@ void ADIMainWindow::ShowStartWizard() {
                     m_selected_device_index = 0;
                     fileName = fs;
                     m_off_line_frame_index = 0;
+                    // Join any still-joinable worker from a previous file load,
+                    // otherwise this assignment calls std::terminate().
+                    if (initCameraWorker.joinable()) {
+                        initCameraWorker.join();
+                    }
                     initCameraWorker =
                         std::thread([this, fs]() { InitCamera(fs); });
                 } else {
@@ -1269,6 +1279,9 @@ void ADIMainWindow::ShowStartWizard() {
             if (ImGuiExtensions::ADIButton("Close", m_is_open_device)) {
                 setWorkingLabel("Closing file...");
                 setIsWorking(true);
+                if (initCameraWorker.joinable()) {
+                    initCameraWorker.join();
+                }
                 m_view_instance->cleanUp();
                 m_view_instance.reset();
 
@@ -1353,8 +1366,35 @@ void ADIMainWindow::ShowStartWizard() {
                                                  m_cameraModesDropDown,
                                                  &m_mode_selection, true)) {
                     m_ini_params.clear();
+                    m_ini_by_mode.clear();
+                    UpdateFusionFromConfig();
                 }
                 ImGuiExtensions::ADIShowTooltipFor("WizardOnlineSelectMode");
+
+                if (m_fusion_supported) {
+                    NewLine(5.0f);
+
+                    ImGuiExtensions::ADICheckbox("Mode Fusion",
+                                                 &m_dms_enabled);
+                    ImGuiExtensions::ADIShowTooltipFor(
+                        "WizardOnlineDynamicModeSwitching");
+
+                    if (m_dms_enabled) {
+                        NewLine(5.0f);
+                        ImGuiExtensions::ADIComboBox(
+                            "Second Mode", "Selected Second Mode",
+                            ImGuiSelectableFlags_None, m_cameraModesDropDown,
+                            &m_dms_second_mode_selection, true);
+                        ImGuiExtensions::ADIShowTooltipFor(
+                            "WizardOnlineDynamicModeSwitchingSecondMode");
+                        if (!IsValidFusionPair()) {
+                            ImGui::TextColored(
+                                ImVec4(1.0f, 0.4f, 0.4f, 1.0f),
+                                "Select one Short Range and one Long Range "
+                                "mode");
+                        }
+                    }
+                }
 
                 NewLine(5.0f);
 
@@ -1376,6 +1416,7 @@ void ADIMainWindow::ShowStartWizard() {
                     if (camera) {
                         camera->resetDepthProcessParams();
                         m_ini_params.clear();
+                        m_ini_by_mode.clear();
                     }
                 }
                 ImGuiExtensions::ADIShowTooltipFor(
@@ -1400,8 +1441,10 @@ void ADIMainWindow::ShowStartWizard() {
                         "WizardOnlinePreviewOff");
                 }
 
-                if (ImGuiExtensions::ADIButton("Start Streaming",
-                                               !m_is_playing)) {
+                if (ImGuiExtensions::ADIButton(
+                        "Start Streaming",
+                        !m_is_playing &&
+                            (!m_dms_enabled || IsValidFusionPair()))) {
                     setWorkingLabel("Starting streaming...");
                     setIsWorking(true);
                     m_start_streaming_offline = false;

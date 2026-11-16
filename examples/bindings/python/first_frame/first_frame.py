@@ -24,10 +24,14 @@
 
 import aditofpython as tof
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import sys
 import os
+import cv2
+
+# cv2 points Qt at its own (empty) font dir on import; use the system fonts instead.
+if os.path.isdir("/usr/share/fonts/truetype/dejavu"):
+    os.environ["QT_QPA_FONTDIR"] = "/usr/share/fonts/truetype/dejavu"
+
 import struct
 import argparse
 
@@ -44,10 +48,17 @@ Examples:
 
   # Target with mode 5, dump binary files
   python %(prog)s -m 5 -o bin
+
+  # ADTF3066: fuse short-range mode 0 with long-range mode 7
+  python %(prog)s --fuse 0,7 -o show
 """
 )
-parser.add_argument('-m', '--mode', type=int, required=True,
-                    help='Frame mode number (0-6)')
+parser.add_argument('-m', '--mode', type=int, default=None,
+                    help='Frame mode number ; required unless --fuse is given')
+parser.add_argument('-f', '--fuse', type=str, default='',
+                    help='ADTF3066 only: fuse an SR mode (0, 1, 3, 6) with an LR mode (7, 8), '
+                         'given as FIRST,SECOND e.g. --fuse 0,7 (the first mode leads). '
+                         'Overrides -m. Not supported with --ip')
 parser.add_argument('-i', '--ip', type=str, default='',
                     help='IP address for network connection (omit for target)')
 parser.add_argument('-o', '--output', type=str, choices=['bin', 'snap', 'show'], default='show',
@@ -58,6 +69,22 @@ args = parser.parse_args()
 mode = args.mode
 ip = args.ip
 output_type = args.output
+
+
+fuse_pair = None
+if args.fuse:
+    try:
+        fuse_pair = tuple(int(v) for v in args.fuse.split(','))
+    except ValueError:
+        fuse_pair = ()
+    if len(fuse_pair) != 2:
+        print(f"Error: invalid --fuse '{args.fuse}': expected FIRST,SECOND e.g. --fuse 0,7")
+        exit(-1)
+    if ip:
+        print("Error: mode fusion is not supported with --ip")
+        exit(-1)
+elif mode is None:
+    parser.error("-m/--mode is required unless --fuse is given")
 
 system = tof.System()
 
@@ -90,7 +117,7 @@ status = camera1.getAvailableModes(modes)
 print("camera1.getAvailableModes()", status)
 print(modes)
 
-if int(mode) not in modes:
+if fuse_pair is None and int(mode) not in modes:
     print(f"Error: Unknown mode - {mode}")
     exit(-3)
 
@@ -99,18 +126,21 @@ status = camera1.getDetails(camDetails)
 print("camera1.getDetails()", status)
 print("camera1 details:", "id:", camDetails.cameraId, "connection:", camDetails.connection)
 
-status = camera1.setMode(int(mode))
-print("camera1.setMode(",mode,")", status)
+if fuse_pair is not None:
+    first_mode, second_mode = fuse_pair
+    status = camera1.setModeFusion(first_mode, second_mode)
+    print("camera1.setModeFusion(", first_mode, ",", second_mode, ")", status)
+    if status != tof.Status.Ok:
+        exit(-3)
+    mode = f"{first_mode}_{second_mode}"
+else:
+    status = camera1.setMode(int(mode))
+    print("camera1.setMode(",mode,")", status)
 
 # Example of getting/modifying/setting the current ADSD3500 parameters
 # status, currentFrameProcessParams = camera1.getFrameProcessParams()
 # currentFrameProcessParams["ab_thresh_min"] = "4"
 # camera1.setFrameProcessParams(currentFrameProcessParams)
-
-# Example of configuring the Dynamic Mode Switching
-# The expected sequence of frame is: mode2, mode2, mode2, mode3, mode2, ...
-# camera1.adsd3500setEnableDynamicModeSwitching(True)
-# camera1.adsds3500setDynamicModeSwitchingSequence([(2, 3), (3, 1)])
 
 status = camera1.start()
 print("camera1.start()", status)
@@ -203,54 +233,122 @@ print("Laser temperature from metadata: ", laser_temp)
 print("Frame number from metadata: ", frame_num)
 print("Mode from metadata: ", imager_mode)
 
+EQ_TRIM = 0.005  # ignore this fraction of valid pixels at each end (stray / flying pixels)
+EQ_BLEND = 0.75  # 1 = fully equalised (most detail), 0 = linear (colour tracks distance)
+MM_RANGE = np.arange(65536, dtype=np.float32)
+
+def equalize_cdf(depth):
+    """Auto colour scale: clip-limited histogram equalisation of valid depth.
+
+    Returns a 65536-entry table mapping depth (mm) to its colour position in
+    [0, 1], or None if no pixel is valid. Colours go where the pixels are, but no
+    single mm value may take more than 1/256 of them, so a large flat surface
+    (e.g. a wall) can't swallow the colormap. The outer EQ_TRIM of pixels at each
+    end are clamped, and the result is blended with a linear scale (EQ_BLEND).
+    """
+    hist = np.bincount(depth[::2, ::2].astype(np.uint16, copy=False).ravel(),
+                       minlength=65536).astype(np.float32)
+    hist[0] = 0  # invalid depth
+    total = hist.sum()
+    if total == 0:
+        return None
+    cum = np.cumsum(hist)
+    lo = int(np.searchsorted(cum, EQ_TRIM * total))
+    hi = int(np.searchsorted(cum, (1 - EQ_TRIM) * total))
+    hist[:lo] = 0
+    hist[hi + 1:] = 0
+    np.minimum(hist, max(1.0, hist.sum() / 256), out=hist)
+    eq = np.cumsum(hist)
+    eq /= eq[-1]
+    lin = np.clip((MM_RANGE - lo) / max(hi - lo, 1), 0.0, 1.0)
+    cdf = EQ_BLEND * eq + (1 - EQ_BLEND) * lin
+    cdf[0] = 0.0
+    return cdf
+
+def cdf_ticks(cdf):
+    """(colour position, mm) colorbar labels for an equalised scale."""
+    return [(f, float(np.searchsorted(cdf, max(f, 1e-6)))) for f in (1.0, 0.75, 0.5, 0.25, 0.0)]
+
+# Jet sampled at full 8-bit precision: 1020 distinct colours (cv2.COLORMAP_JET has 256).
+_JET_T = np.linspace(0.0, 1.0, 4096)[:, None]
+JET_LUT_BGR = (np.clip(1.5 - 4.0 * np.abs(_JET_T - [0.25, 0.5, 0.75]), 0.0, 1.0) * 255 + 0.5).astype(np.uint8)
+
+def jet_bgr(norm):
+    """Map values in [0, 1] to BGR uint8 using the 1020-colour jet."""
+    return JET_LUT_BGR.take((np.clip(norm, 0.0, 1.0) * 4095 + 0.5).astype(np.uint16), axis=0)
+
+def make_panel(image, title, jet=False, size=400, cdf=None, unit=""):
+    """Render an image as a BGR panel with a title and a colorbar.
+
+    cdf (from equalize_cdf) colours depth by histogram equalisation; otherwise
+    the image min/max is used.
+    """
+    if cdf is not None:
+        norm = cdf.take(np.asarray(image, dtype=np.uint16)).astype(np.float32)
+        ticks = cdf_ticks(cdf)
+    else:
+        img = np.nan_to_num(np.asarray(image, dtype=np.float32))
+        vmin, vmax = float(img.min()), float(img.max())
+        norm = np.clip((img - vmin) / max(vmax - vmin, 1e-6), 0.0, 1.0)
+        ticks = [(1.0, vmax), (0.0, vmin)]
+    width = max(1, round(norm.shape[1] * size / norm.shape[0]))
+    norm = cv2.resize(norm, (width, size), interpolation=cv2.INTER_NEAREST)
+    ramp = np.repeat(np.linspace(1.0, 0.0, size, dtype=np.float32)[:, None], 20, axis=1)
+    if jet:
+        body, bar = jet_bgr(norm), jet_bgr(ramp)
+        if cdf is not None:
+            invalid = cv2.resize((np.asarray(image) == 0).astype(np.uint8), (width, size),
+                                 interpolation=cv2.INTER_NEAREST) > 0
+            body[invalid] = 0  # black, not the nearest-depth colour
+    else:
+        body = cv2.cvtColor((norm * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
+        bar = cv2.cvtColor((ramp * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR)
+    panel = np.full((size + 40, width + 100, 3), 255, dtype=np.uint8)
+    panel[30:30 + size, :width] = body
+    panel[30:30 + size, width + 10:width + 30] = bar
+    text = dict(fontFace=cv2.FONT_HERSHEY_SIMPLEX, color=(0, 0, 0), lineType=cv2.LINE_AA)
+    cv2.putText(panel, title, (5, 20), fontScale=0.6, thickness=1, **text)
+    if unit:
+        cv2.putText(panel, unit, (width + 34, 20), fontScale=0.45, thickness=1, **text)
+    for frac, val in ticks:
+        y = 30 + round((1.0 - frac) * (size - 1))
+        cv2.putText(panel, f"{val:.0f}", (width + 34, y + 5), fontScale=0.45, thickness=1, **text)
+    return panel
+
 if output_type == 'show':
-    # Count available frames and create dynamic layout
-    subplot_idx = 1
-    
-    # Create a figure with dynamic subplots
-    fig = plt.figure(figsize=(20, 8))
-    
-    # Plot the depth image if available
+    panels = []
     if image_depth is not None:
-        ax1 = fig.add_subplot(2, 3, subplot_idx)
-        im1 = ax1.imshow(image_depth, cmap='jet')
-        ax1.set_title("Depth Image")
-        ax1.axis("off")
-        fig.colorbar(im1, ax=ax1)
-        subplot_idx += 1
-
-    # Plot the AB image if available
+        depth_cdf = equalize_cdf(image_depth)
+        if depth_cdf is not None:
+            print("Depth colours (auto, equalised): mm at colorbar ticks:",
+                  [round(v) for _, v in cdf_ticks(depth_cdf)])
+        panels.append(make_panel(image_depth, "Depth Image (auto)", jet=True,
+                                 cdf=depth_cdf, unit="mm"))
     if image_ab is not None:
-        ax2 = fig.add_subplot(2, 3, subplot_idx)
-        im2 = ax2.imshow(image_ab, cmap='gray')
-        ax2.set_title("AB Image")
-        ax2.axis("off")
-        fig.colorbar(im2, ax=ax2)
-        subplot_idx += 1
-
-    # Plot the Confidence image if available
+        panels.append(make_panel(image_ab, "AB Image"))
     if image_conf is not None:
-        ax3 = fig.add_subplot(2, 3, subplot_idx)
-        im3 = ax3.imshow(image_conf, cmap='gray')
-        ax3.set_title("Confidence Image")
-        ax3.axis("off")
-        fig.colorbar(im3, ax=ax3)
-        subplot_idx += 1
+        panels.append(make_panel(image_conf, "Confidence Image"))
 
     # Metadata as text
-    ax4 = fig.add_subplot(2, 3, subplot_idx)
-    ax4.axis("off")  # Hide axes
-    metadata_text = (
-        f"Sensor Temp: {sensor_temp}°C\n"
-        f"Laser Temp: {laser_temp}°C\n"
-        f"Frame #: {frame_num}\n"
-        f"Mode: {imager_mode}\n"
-    )
-    ax4.text(0.1, 0.5, metadata_text, fontsize=12, verticalalignment='center')
-    subplot_idx += 1
+    info = np.full_like(panels[0], 255) if panels else np.full((440, 500, 3), 255, dtype=np.uint8)
+    metadata_lines = [
+        f"Sensor Temp: {sensor_temp} C",
+        f"Laser Temp: {laser_temp} C",
+        f"Frame #: {frame_num}",
+        f"Mode: {imager_mode}",
+    ]
+    for i, line in enumerate(metadata_lines):
+        cv2.putText(info, line, (20, 180 + i * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                    (0, 0, 0), 1, cv2.LINE_AA)
+    panels.append(info)
 
-    plt.tight_layout()
-    plt.show()
+    # 2-column grid
+    if len(panels) % 2:
+        panels.append(np.full_like(panels[0], 255))
+    grid = np.vstack([np.hstack(panels[i:i + 2]) for i in range(0, len(panels), 2)])
+    cv2.imshow("ADCAM First Frame", grid)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 elif output_type == 'snap':
     handler = tof.FrameHandler()
     base_name = "snapshot_mode_" + str(mode)
