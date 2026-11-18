@@ -248,7 +248,7 @@ void ADIController::captureFrames() {
         }
         m_last_frame_time = currentTime;
 
-        aditof::Metadata *metadata;
+        aditof::Metadata *metadata = nullptr;
         status = frame->getData("metadata", (uint16_t **)&metadata);
         if (status == aditof::Status::OK && metadata != nullptr) {
             if (m_prev_frame_number == static_cast<uint32_t>(-1)) {
@@ -384,7 +384,7 @@ aditof::Status ADIController::requestFrameOffline(uint32_t index) {
 
     m_frame_counter++;
 
-    aditof::Metadata *metadata;
+    aditof::Metadata *metadata = nullptr;
     status = frame->getData("metadata", (uint16_t **)&metadata);
     if (status == aditof::Status::OK && metadata != nullptr) {
         calculateFrameLoss(metadata->frameNumber, m_prev_frame_number,
