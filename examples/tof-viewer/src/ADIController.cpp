@@ -88,15 +88,18 @@ void ADIController::StopCapture() {
     if (m_cameraInUse == -1) {
         return;
     }
-    std::unique_lock<std::mutex> lock(m_requestMutex);
-    m_stopFlag = true;
-    m_cameras[m_cameraInUse]->stop();
-    lock.unlock();
+    {
+        std::lock_guard<std::mutex> lock(m_requestMutex);
+        m_stopFlag = true;
+    }
     m_requestCv.notify_one();
+    // Join before camera->stop() so the worker never requests a frame from a
+    // stopped camera.
     if (m_workerThread.joinable()) {
         m_workerThread.join();
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
+    m_cameras[m_cameraInUse]->stop();
     m_queue.erase();
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
