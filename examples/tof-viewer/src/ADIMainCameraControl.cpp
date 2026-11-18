@@ -170,7 +170,7 @@ void ADIMainWindow::UpdateOfflineFrameTypeAvailability() {
 
     aditof::Frame frame;
     if (GetActiveCamera()->requestFrame(&frame) == aditof::Status::OK) {
-        aditof::Metadata *metadata;
+        aditof::Metadata *metadata = nullptr;
         if (frame.getData("metadata", (uint16_t **)&metadata) ==
                 aditof::Status::OK &&
             metadata != nullptr) {
@@ -407,7 +407,7 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
         if (frame != nullptr) {
 
             bool diverging = false;
-            aditof::Metadata *metadata;
+            aditof::Metadata *metadata = nullptr;
             aditof::Status status =
                 frame->getData("metadata", (uint16_t **)&metadata);
             if (status == aditof::Status::OK && metadata != nullptr) {
