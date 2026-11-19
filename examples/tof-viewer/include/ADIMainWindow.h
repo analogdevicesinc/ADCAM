@@ -373,11 +373,27 @@ class ADIMainWindow {
         int32_t jblfMaxEdge = 0;
         int32_t jblfABThreshold = 0;
         int32_t fps = 0;
+        // "Mode Fusion" group, shown while Mode Fusion is enabled.
+        int32_t lrInvalType = 1;
+        int32_t lrInvalThreshold = 0;
+        int32_t lrInvalRadialMin = 0;
+        int32_t lrInvalRadialMax = 0;
+        bool edgeConfidenceEnabled = false;
+        int32_t twoLRFramesThreshold = 0;
+        bool frameAOutputEnabled = false;
+        bool ABFusionEnabled = false;
         std::map<std::string, std::string> modified;
     };
 
+    // Loads one mode's depth params into st (once).
+    void LoadIniParamsForMode(uint16_t mode, IniParamState &st);
+
     // Renders one mode's editable depth params into st and st.modified.
     void ShowIniParamsForMode(uint16_t mode, IniParamState &st);
+
+    // Stages Mode Fusion params edited before streaming starts, so they are
+    // written to each mode's config ahead of setModeFusion().
+    void StageFusionParamEdits();
 
     /**
 		* @brief Will poll the USB interface to look
@@ -401,14 +417,20 @@ class ADIMainWindow {
     void CameraPlay(int modeSelect, int viewSelect);
 
     /**
-		* @brief Ticks Mode Fusion if the selected mode's config has modeFusionEnabled=1
+		* @brief Ticks Mode Fusion (and picks the method) if the selected mode's
+		*        config has modeFusionEnabled=1
 		*/
     void UpdateFusionFromConfig();
 
     /**
-		* @brief True if the selected modes form one ADTF3066 SR + one LR mode
+		* @brief True if the selected modes are valid for the chosen fusion method
 		*/
     bool IsValidFusionPair() const;
+
+    /**
+		* @brief True if the chosen fusion method uses a second mode (not LR invalidation)
+		*/
+    bool FusionUsesSecondMode() const;
 
     /**
 		* @brief Initializes OpenGL and AB + Depth settings
@@ -723,6 +745,8 @@ class ADIMainWindow {
     bool m_dms_enabled = false;
     bool m_fusion_supported = false; // ADTF3066 only
     int32_t m_dms_second_mode_selection = 0;
+    // aditof::ModeFusionMethod value chosen for Mode Fusion (1 = SR/LR).
+    int32_t m_fusion_method_selection = 1;
     // Resolved fusion pair actually programmed (primary = active camera mode);
     // the secondary may differ from m_dms_second_mode_selection once the pair
     // is reordered by IsSRFrameFirst.

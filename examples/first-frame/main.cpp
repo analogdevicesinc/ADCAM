@@ -44,7 +44,7 @@ static const char Help_Menu[] =
     first-frame
     first-frame (-h | --help)
     first-frame [-ip | --ip <ip>] [-m | --m <mode>] [-config | --config <config_file.json>]
-    first-frame [-fuse | --fuse <firstMode>,<secondMode>] [-config | --config <config_file.json>]
+    first-frame [-fuse | --fuse <firstMode>[,<secondMode>]] [-fusion-method | --fusion-method <srlr|lrinval|twolr>] [-lrinval-type | --lrinval-type <1-4>] [-config | --config <config_file.json>]
 
     Arguments:
       config_file.json   Input config_default.json file (which has *.ccb and *.cfg)
@@ -52,10 +52,19 @@ static const char Help_Menu[] =
     Options:
       -h --help          Show this screen.
       -m --m <mode>      Mode to capture data in. [default: 0]
-      -fuse --fuse <firstMode>,<secondMode>
-                         ADTF3066 only: fuse a short-range mode (0, 1, 3, 6)
-                         with a long-range mode (7, 8), e.g. -fuse 0,7.
-                         Overrides -m. Not supported with -ip.
+      -fuse --fuse <firstMode>[,<secondMode>]
+                         ADTF3066 only: start mode fusion. Overrides -m.
+                         Not supported with -ip.
+      -fusion-method --fusion-method <srlr|lrinval|twolr>
+                         srlr: one SR (0, 1, 3, 6) + one LR (7, 8) mode,
+                               e.g. -fuse 0,7
+                         lrinval: one SR or LR mode, e.g. -fuse 7
+                         twolr: two LR modes (7, 8) of equal
+                                resolution, e.g. -fuse 7,7
+                         [default: srlr]
+      -lrinval-type --lrinval-type <1-4>
+                         lrinval criterion: 1 AB, 2 edge conf, 3 conf,
+                         4 radial. [default: 1]
 
     NOTE: -m | --m argument supports both index and string (0/sr-native)
 
@@ -112,27 +121,56 @@ Status save_frame(aditof::Frame &frame, std::string frameType,
 }
 
 /**
- * @brief Parse a "<firstMode>,<secondMode>" fusion pair
+ * @brief Parse a "<firstMode>[,<secondMode>]" fusion value
  * @param[in] value The argument value
+ * @param[in] needPair True if two modes are required, false for a single mode
  * @param[out] firstMode The mode leading the fusion sequence
- * @param[out] secondMode The other mode of the pair
- * @return true if the value holds two mode numbers
+ * @param[out] secondMode The other mode of the pair (unchanged if single)
+ * @return true if the value holds the expected number of mode numbers
  */
-static bool parseFusePair(const std::string &value, uint8_t &firstMode,
-                          uint8_t &secondMode) {
+static bool parseFuseModes(const std::string &value, bool needPair,
+                           uint8_t &firstMode, uint8_t &secondMode) {
     std::istringstream iss(value);
     int first = -1;
     int second = -1;
-    char comma = 0;
-    if (!(iss >> first >> comma >> second) || comma != ',') {
+    if (!(iss >> first)) {
         return false;
     }
+    if (needPair) {
+        char comma = 0;
+        if (!(iss >> comma >> second) || comma != ',') {
+            return false;
+        }
+    }
     iss >> std::ws;
-    if (!iss.eof() || first < 0 || first > 255 || second < 0 || second > 255) {
+    if (!iss.eof() || first < 0 || first > 255 ||
+        (needPair && (second < 0 || second > 255))) {
         return false;
     }
     firstMode = static_cast<uint8_t>(first);
-    secondMode = static_cast<uint8_t>(second);
+    if (needPair) {
+        secondMode = static_cast<uint8_t>(second);
+    }
+    return true;
+}
+
+/**
+ * @brief Parse a fusion method name (srlr, lrinval, twolr)
+ * @param[in] value The argument value
+ * @param[out] method The parsed method
+ * @return true if the name is known
+ */
+static bool parseFusionMethod(const std::string &value,
+                              ModeFusionMethod &method) {
+    if (value == "srlr") {
+        method = ModeFusionMethod::SrLr;
+    } else if (value == "lrinval") {
+        method = ModeFusionMethod::LrInvalidation;
+    } else if (value == "twolr") {
+        method = ModeFusionMethod::TwoLrFrames;
+    } else {
+        return false;
+    }
     return true;
 }
 
@@ -142,6 +180,8 @@ int main(int argc, char *argv[]) {
         {"-ip", {"--ip", false, "", "", true}},
         {"-m", {"--m", false, "", "0", true}},
         {"-fuse", {"--fuse", false, "", "", true}},
+        {"-fusion-method", {"--fusion-method", false, "", "srlr", true}},
+        {"-lrinval-type", {"--lrinval-type", false, "", "1", true}},
         {"-config", {"--config", false, "last", "", false}}};
 
     CommandParser command;
@@ -207,13 +247,23 @@ int main(int argc, char *argv[]) {
     }
 
     const bool fuse = !command_map["-fuse"].value.empty();
-    uint8_t firstMode = 0;
-    uint8_t secondMode = 0;
+    ModeFusionConfig fusion;
     if (fuse) {
-        if (!parseFusePair(command_map["-fuse"].value, firstMode, secondMode)) {
+        if (!parseFusionMethod(command_map["-fusion-method"].value,
+                               fusion.method)) {
+            LOG(ERROR) << "Invalid -fusion-method value '"
+                       << command_map["-fusion-method"].value
+                       << "': expected srlr, lrinval or twolr";
+            return -1;
+        }
+        const bool needPair =
+            (fusion.method != ModeFusionMethod::LrInvalidation);
+        if (!parseFuseModes(command_map["-fuse"].value, needPair,
+                            fusion.firstMode, fusion.secondMode)) {
             LOG(ERROR) << "Invalid -fuse value '" << command_map["-fuse"].value
-                       << "': expected <firstMode>,<secondMode>, e.g. -fuse "
-                          "0,7";
+                       << "': expected "
+                       << (needPair ? "<firstMode>,<secondMode>, e.g. -fuse 0,7"
+                                    : "<mode>, e.g. -fuse 7");
             return -1;
         }
         if (!ip.empty()) {
@@ -282,12 +332,20 @@ int main(int argc, char *argv[]) {
 
     std::string modeTag = std::to_string(mode);
     if (fuse) {
-        status = camera->setModeFusion(firstMode, secondMode);
+        if (fusion.method == ModeFusionMethod::LrInvalidation) {
+            std::map<std::string, std::string> params = {
+                {"lrInvalType", command_map["-lrinval-type"].value}};
+            camera->setFrameProcessParams(params, fusion.firstMode);
+        }
+        status = camera->setModeFusion(fusion);
         if (status != Status::OK) {
             LOG(ERROR) << "Could not start mode fusion!";
             return 0;
         }
-        modeTag = std::to_string(firstMode) + "_" + std::to_string(secondMode);
+        modeTag = std::to_string(fusion.firstMode);
+        if (fusion.method != ModeFusionMethod::LrInvalidation) {
+            modeTag += "_" + std::to_string(fusion.secondMode);
+        }
     } else {
         status = camera->setMode(mode);
         if (status != Status::OK) {
