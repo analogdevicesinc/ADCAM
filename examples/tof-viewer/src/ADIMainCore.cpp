@@ -252,8 +252,18 @@ void ADIMainWindow::InitializeTooltips() {
         "Select camera operating mode (resolution and frame format)");
     ADIRegisterTooltip(
         "WizardOnlineDynamicModeSwitching",
-        "When enabled, the camera automatically alternates between two "
-        "modes every frame");
+        "When enabled, frames are fused by the depth-compute library using "
+        "the selected Fusion Method");
+    ADIRegisterTooltip(
+        "WizardOnlineFusionMethod",
+        "SR/LR: one Short Range + one Long Range mode (HDR depth).\n"
+        "LR Invalidation: one Short or Long Range mode, multipath "
+        "invalidation.\n"
+        "Two LR Frames: two Long Range modes, flying-pixel rejection");
+    ADIRegisterTooltip(
+        "WizardOnlineLrInvalType",
+        "Criterion used to invalidate pixels before hole filling; same "
+        "value as lrInvalType in the Mode Fusion parameters");
     ADIRegisterTooltip(
         "WizardOnlineDynamicModeSwitchingSecondMode",
         "Second mode to alternate into; the mode selected above is used "
@@ -852,6 +862,7 @@ void ADIMainWindow::Render() {
                 m_last_mode = m_mode_selection;
                 m_use_modified_ini_params = true;
                 m_is_playing = true;
+                StageFusionParamEdits();
                 m_ini_params.clear();
                 m_ini_by_mode.clear();
             }
@@ -1347,18 +1358,55 @@ void ADIMainWindow::ShowStartWizard() {
                         "WizardOnlineDynamicModeSwitching");
 
                     if (m_dms_enabled) {
+                        static const std::vector<std::pair<int, std::string>>
+                            fusionMethods = {{1, "SR/LR"},
+                                             {2, "LR Invalidation"},
+                                             {3, "Two LR Frames"}};
+                        static const std::vector<std::pair<int, std::string>>
+                            lrInvalTypes = {{1, "1: AB threshold"},
+                                            {2, "2: Edge confidence"},
+                                            {3, "3: Confidence"},
+                                            {4, "4: Radial depth"}};
                         NewLine(5.0f);
                         ImGuiExtensions::ADIComboBox(
-                            "Second Mode", "Selected Second Mode",
-                            ImGuiSelectableFlags_None, m_cameraModesDropDown,
-                            &m_dms_second_mode_selection, true);
+                            "Fusion Method", "Selected Fusion Method",
+                            ImGuiSelectableFlags_None, fusionMethods,
+                            &m_fusion_method_selection, true);
                         ImGuiExtensions::ADIShowTooltipFor(
-                            "WizardOnlineDynamicModeSwitchingSecondMode");
+                            "WizardOnlineFusionMethod");
+                        NewLine(5.0f);
+                        if (FusionUsesSecondMode()) {
+                            ImGuiExtensions::ADIComboBox(
+                                "Second Mode", "Selected Second Mode",
+                                ImGuiSelectableFlags_None,
+                                m_cameraModesDropDown,
+                                &m_dms_second_mode_selection, true);
+                            ImGuiExtensions::ADIShowTooltipFor(
+                                "WizardOnlineDynamicModeSwitchingSecondMode");
+                        } else if (m_fusion_method_selection == 2) {
+                            // Edits the mode's lrInvalType (Mode Fusion params).
+                            const uint16_t primary =
+                                static_cast<uint16_t>(m_mode_selection);
+                            IniParamState &st = m_ini_by_mode[primary];
+                            LoadIniParamsForMode(primary, st);
+                            ImGuiExtensions::ADIComboBox(
+                                "LR Invalidation Type", "Selected Type",
+                                ImGuiSelectableFlags_None, lrInvalTypes,
+                                &st.lrInvalType, true);
+                            ImGuiExtensions::ADIShowTooltipFor(
+                                "WizardOnlineLrInvalType");
+                        }
                         if (!IsValidFusionPair()) {
-                            ImGui::TextColored(
-                                ImVec4(1.0f, 0.4f, 0.4f, 1.0f),
-                                "Select one Short Range and one Long Range "
-                                "mode");
+                            const char *hint =
+                                m_fusion_method_selection == 2
+                                    ? "Select a Short Range or Long Range "
+                                      "mode"
+                                : m_fusion_method_selection == 3
+                                    ? "Select two Long Range modes (7, 8)"
+                                    : "Select one Short Range and one Long "
+                                      "Range mode";
+                            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f),
+                                               "%s", hint);
                         }
                     }
                 }

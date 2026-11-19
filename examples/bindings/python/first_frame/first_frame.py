@@ -51,14 +51,24 @@ Examples:
 
   # ADTF3066: fuse short-range mode 0 with long-range mode 7
   python %(prog)s --fuse 0,7 -o show
+
+  # ADTF3066: LR invalidation fusion on mode 7 (AB criterion)
+  python %(prog)s --fuse 7 --fusion-method lrinval --lrinval-type 1
+
+  # ADTF3066: two-LR-frames fusion of LR modes 7 and 7
+  python %(prog)s --fuse 7,7 --fusion-method twolr
 """
 )
 parser.add_argument('-m', '--mode', type=int, default=None,
                     help='Frame mode number ; required unless --fuse is given')
 parser.add_argument('-f', '--fuse', type=str, default='',
-                    help='ADTF3066 only: fuse an SR mode (0, 1, 3, 6) with an LR mode (7, 8), '
-                         'given as FIRST,SECOND e.g. --fuse 0,7 (the first mode leads). '
-                         'Overrides -m. Not supported with --ip')
+                    help='ADTF3066 only: mode fusion modes, FIRST[,SECOND] (the first mode leads). '
+                         'srlr: SR (0, 1, 3, 6) + LR (7, 8) e.g. 0,7; lrinval: one SR or LR mode e.g. 7; '
+                         'twolr: two LR modes of equal resolution e.g. 7,7. Overrides -m. Not supported with --ip')
+parser.add_argument('--fusion-method', type=str, choices=['srlr', 'lrinval', 'twolr'], default='srlr',
+                    help='Mode fusion method (default: srlr)')
+parser.add_argument('--lrinval-type', type=int, choices=[1, 2, 3, 4], default=1,
+                    help='lrinval criterion: 1 AB, 2 edge conf, 3 conf, 4 radial (default: 1)')
 parser.add_argument('-i', '--ip', type=str, default='',
                     help='IP address for network connection (omit for target)')
 parser.add_argument('-o', '--output', type=str, choices=['bin', 'snap', 'show'], default='show',
@@ -71,14 +81,16 @@ ip = args.ip
 output_type = args.output
 
 
-fuse_pair = None
+fuse_modes = None
 if args.fuse:
     try:
-        fuse_pair = tuple(int(v) for v in args.fuse.split(','))
+        fuse_modes = tuple(int(v) for v in args.fuse.split(','))
     except ValueError:
-        fuse_pair = ()
-    if len(fuse_pair) != 2:
-        print(f"Error: invalid --fuse '{args.fuse}': expected FIRST,SECOND e.g. --fuse 0,7")
+        fuse_modes = ()
+    expected = 1 if args.fusion_method == 'lrinval' else 2
+    if len(fuse_modes) != expected:
+        example = '7' if expected == 1 else '0,7'
+        print(f"Error: invalid --fuse '{args.fuse}' for {args.fusion_method}: e.g. --fuse {example}")
         exit(-1)
     if ip:
         print("Error: mode fusion is not supported with --ip")
@@ -119,7 +131,7 @@ status = camera1.getAvailableModes(modes)
 print("camera1.getAvailableModes()", status)
 print(modes)
 
-if fuse_pair is None and int(mode) not in modes:
+if fuse_modes is None and int(mode) not in modes:
     print(f"Error: Unknown mode - {mode}")
     exit(-3)
 
@@ -128,13 +140,21 @@ status = camera1.getDetails(camDetails)
 print("camera1.getDetails()", status)
 print("camera1 details:", "id:", camDetails.cameraId, "connection:", camDetails.connection)
 
-if fuse_pair is not None:
-    first_mode, second_mode = fuse_pair
-    status = camera1.setModeFusion(first_mode, second_mode)
-    print("camera1.setModeFusion(", first_mode, ",", second_mode, ")", status)
+if fuse_modes is not None:
+    fusion = tof.ModeFusionConfig()
+    fusion.method = {'srlr': tof.ModeFusionMethod.SrLr,
+                     'lrinval': tof.ModeFusionMethod.LrInvalidation,
+                     'twolr': tof.ModeFusionMethod.TwoLrFrames}[args.fusion_method]
+    fusion.firstMode = fuse_modes[0]
+    if len(fuse_modes) > 1:
+        fusion.secondMode = fuse_modes[1]
+    if args.fusion_method == 'lrinval':
+        camera1.setFrameProcessParams({'lrInvalType': str(args.lrinval_type)}, fusion.firstMode)
+    status = camera1.setModeFusion(fusion)
+    print("camera1.setModeFusion(", args.fusion_method, fuse_modes, ")", status)
     if status != tof.Status.Ok:
         sys.exit(-1)
-    mode = f"{first_mode}_{second_mode}"
+    mode = "_".join(str(m) for m in fuse_modes)
 else:
     status = camera1.setMode(int(mode))
     print("camera1.setMode(",mode,")", status)

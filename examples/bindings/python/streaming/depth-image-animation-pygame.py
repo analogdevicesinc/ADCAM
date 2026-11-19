@@ -198,6 +198,16 @@ def range_label(m):
 # Key depth params exposed for live tuning in the config window.
 PARAM_KEYS = ["confThresh", "abThreshMin", "radialThreshMin", "radialThreshMax"]
 
+# Mode fusion methods the Mode Fusion button cycles through after OFF.
+FUSION_METHODS = {
+    "srlr": ("SR/LR", tof.ModeFusionMethod.SrLr),
+    "lrinval": ("LR Invalidation", tof.ModeFusionMethod.LrInvalidation),
+    "twolr": ("Two LR Frames", tof.ModeFusionMethod.TwoLrFrames),
+}
+FUSION_CYCLE = [None] + list(FUSION_METHODS)
+LRINVAL_TYPES = {1: "AB threshold", 2: "Edge confidence", 3: "Confidence",
+                 4: "Radial depth"}
+
 
 def draw_button(surface, font, rect, text, active=False):
     pygame.draw.rect(surface, (70, 130, 180) if active else (60, 60, 60), rect)
@@ -324,7 +334,9 @@ def config_window():
     primary_dd = None
     second_dd = None
 
-    fusion = False  # fusion is off by default
+    fusion_method = None  # fusion is off by default; else a FUSION_METHODS key
+    lrinval_dd = Dropdown((30, 280, width - 60, 34), list(LRINVAL_TYPES),
+                          lambda t: f"Type {t}: {LRINVAL_TYPES[t]}")
     y_range = 340
     min_input = TextInput((160, y_range + 24, 140, 32), 0)
     max_input = TextInput((160, y_range + 64, 140, 32), 5000)
@@ -363,6 +375,10 @@ def config_window():
 
     clock = pygame.time.Clock()
     while True:
+        fusion = fusion_method is not None
+        # LR invalidation fuses a single mode, so it has no second mode.
+        uses_second = fusion and fusion_method != "lrinval"
+        uses_lrinval = fusion_method == "lrinval"
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit()
@@ -383,8 +399,11 @@ def config_window():
                 if loaded and primary_dd.open:
                     primary_dd.handle(p)
                     continue
-                if loaded and fusion and second_dd.open:
+                if loaded and uses_second and second_dd.open:
                     second_dd.handle(p)
+                    continue
+                if loaded and uses_lrinval and lrinval_dd.open:
+                    lrinval_dd.handle(p)
                     continue
                 if config_dd.rect.collidepoint(p):
                     config_dd.handle(p)
@@ -434,14 +453,20 @@ def config_window():
                 if primary_dd.rect.collidepoint(p):
                     primary_dd.handle(p)
                     continue
-                if fusion and second_dd.rect.collidepoint(p):
+                if uses_second and second_dd.rect.collidepoint(p):
                     second_dd.handle(p)
                     continue
+                if uses_lrinval and lrinval_dd.rect.collidepoint(p):
+                    lrinval_dd.handle(p)
+                    continue
                 if fusion_btn.collidepoint(p):
-                    fusion = not fusion
+                    fusion_method = FUSION_CYCLE[
+                        (FUSION_CYCLE.index(fusion_method) + 1)
+                        % len(FUSION_CYCLE)]
+                    continue
                 if auto_btn.collidepoint(p):
                     auto = not auto
-                if fusion and edit_toggle_btn.collidepoint(p):
+                if uses_second and edit_toggle_btn.collidepoint(p):
                     save_inputs_into(edit_mode)
                     edit_mode = (second_dd.selected
                                  if edit_mode == primary_dd.selected
@@ -455,20 +480,22 @@ def config_window():
                         dmax = dmin + 1
                     sel_mode = primary_dd.selected
                     second_mode = second_dd.selected
-                    if second_mode == sel_mode:
+                    # Two LR Frames may use the same mode twice.
+                    if second_mode == sel_mode and fusion_method != "twolr":
                         alt = [m for m in available_modes if m != sel_mode]
                         second_mode = alt[0] if alt else sel_mode
                     # Commit edited params into each involved mode's config so
                     # main()'s setMode()/fusion flow applies them.
                     save_inputs_into(edit_mode)
                     involved = {sel_mode}
-                    if fusion:
+                    if uses_second:
                         involved.add(second_mode)
                     for m in involved:
                         vals = param_by_mode.get(m)
                         if vals:
                             camera1.setFrameProcessParams(vals, m)
-                    return sel_mode, dmin, dmax, auto, fusion, second_mode
+                    return (sel_mode, dmin, dmax, auto, fusion_method,
+                            second_mode, lrinval_dd.selected)
 
         screen.fill((30, 30, 30))
         screen.blit(font.render("Configuration", True, (255, 255, 255)),
@@ -484,13 +511,20 @@ def config_window():
             screen.blit(small.render("Primary Mode", True, (200, 200, 200)),
                         (30, 140))
             primary_dd.draw_header(screen, small)
+            fusion_text = (FUSION_METHODS[fusion_method][0] if fusion
+                           else "OFF")
             draw_button(screen, small, fusion_btn,
-                        f"Mode Fusion: {'ON' if fusion else 'OFF'}",
+                        f"Mode Fusion: {fusion_text}  (click to change)",
                         active=fusion)
-            if fusion:
+            if uses_second:
                 screen.blit(small.render("Second Mode", True, (200, 200, 200)),
                             (30, second_dd.rect.y - 18))
                 second_dd.draw_header(screen, small)
+            if uses_lrinval:
+                screen.blit(small.render("LR Invalidation Type", True,
+                                         (200, 200, 200)),
+                            (30, lrinval_dd.rect.y - 18))
+                lrinval_dd.draw_header(screen, small)
             screen.blit(small.render("Depth Range (mm) - visualization only",
                                      True, (255, 255, 255)), (30, y_range))
             screen.blit(small.render("Min", True, (255, 255, 255)),
@@ -509,14 +543,14 @@ def config_window():
             # Depth-param editor: keep edit_mode valid, then draw the fields for
             # the currently edited mode.
             valid_modes = [primary_dd.selected]
-            if fusion and second_dd.selected != primary_dd.selected:
+            if uses_second and second_dd.selected != primary_dd.selected:
                 valid_modes.append(second_dd.selected)
             if edit_mode not in valid_modes:
                 edit_mode = valid_modes[0]
                 load_params_into_inputs(edit_mode)
             screen.blit(small.render("Depth Params", True, (255, 255, 255)),
                         (30, y_params))
-            if fusion:
+            if uses_second:
                 draw_button(
                     screen, small, edit_toggle_btn,
                     f"Editing Mode {edit_mode} ({range_label(edit_mode)})"
@@ -531,8 +565,10 @@ def config_window():
         # Draw open drop-down lists last so they overlay the widgets below.
         if loaded:
             primary_dd.draw_list(screen, small)
-            if fusion:
+            if uses_second:
                 second_dd.draw_list(screen, small)
+            if uses_lrinval:
+                lrinval_dd.draw_list(screen, small)
         config_dd.draw_list(screen, small)
         pygame.display.flip()
         clock.tick(30)
@@ -748,17 +784,26 @@ def run_window(title, modeDetails, dmin, dmax, auto):
 def main():
     # 1) Configuration window: load a config file, choose mode, optional
     #    fusion, depth range. The camera is initialized inside this window.
-    sel_mode, dmin, dmax, auto, fusion, second_mode = config_window()
+    (sel_mode, dmin, dmax, auto, fusion_method, second_mode,
+     lrinval_type) = config_window()
 
     # Optional per-mode param overrides, applied before any setMode() so each
     # mode's config (and thus its fusion context) reflects them.
     apply_param_overrides(camera1)
 
-    if fusion:
-        # The camera configures Dynamic Mode Switching for the pair; the first
-        # selected mode leads (IsSRFrameFirst=1 when it is short-range).
-        status = camera1.setModeFusion(sel_mode, second_mode)
-        print("camera1.setModeFusion()", status)
+    if fusion_method:
+        # The camera configures the frame capture for the chosen method; the
+        # primary mode leads.
+        fusion_config = tof.ModeFusionConfig()
+        fusion_config.method = FUSION_METHODS[fusion_method][1]
+        fusion_config.firstMode = sel_mode
+        fusion_config.secondMode = second_mode
+        if fusion_method == "lrinval":
+            camera1.setFrameProcessParams({"lrInvalType": str(lrinval_type)}, sel_mode)
+        status = camera1.setModeFusion(fusion_config)
+        print("camera1.setModeFusion(%s)" % fusion_method, status)
+        if status != tof.Status.Ok:
+            sys.exit(-1)
     else:
         status = camera1.setMode(sel_mode)
         print("camera1.setMode()", status)
@@ -775,7 +820,13 @@ def main():
     sensor.getModeDetails(sel_mode, modeDetails)
 
     # 2) Running window: live stream with the depth-range selector.
-    title = f"{sel_mode} + {second_mode} (fused)" if fusion else f"{sel_mode}"
+    if fusion_method == "lrinval":
+        title = f"{sel_mode} (LR invalidation, type {lrinval_type})"
+    elif fusion_method:
+        title = (f"{sel_mode} + {second_mode} "
+                 f"({FUSION_METHODS[fusion_method][0]} fused)")
+    else:
+        title = f"{sel_mode}"
     run_window(title, modeDetails, dmin, dmax, auto)
 
 

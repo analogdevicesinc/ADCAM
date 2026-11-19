@@ -129,21 +129,30 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
                 frame->getMetadataStruct(md) == aditof::Status::OK) {
                 delivered_mode = md.imagerMode;
             }
-            bool recordedFusion = false;
-            uint8_t recordedSr = 0xFF;
-            uint8_t recordedLr = 0xFF;
+            aditof::ModeFusionConfig recorded;
+            recorded.method = aditof::ModeFusionMethod::None;
             if (m_off_line && GetActiveCamera()) {
-                GetActiveCamera()->getModeFusion(recordedFusion, recordedSr,
-                                                 recordedLr);
+                GetActiveCamera()->getModeFusion(recorded);
             }
-            bool fused = m_off_line ? recordedFusion
-                                    : (m_dms_enabled ||
-                                       delivered_mode != camera_mode);
-            if (fused) {
+            const bool recordedFusion =
+                (recorded.method != aditof::ModeFusionMethod::None);
+            bool fused = m_off_line
+                             ? recordedFusion
+                             : (m_dms_enabled || delivered_mode != camera_mode);
+            // LR invalidation fuses single frames: no second mode, full rate.
+            const bool lrInval =
+                m_off_line ? (recorded.method ==
+                              aditof::ModeFusionMethod::LrInvalidation)
+                           : (m_dms_enabled && !FusionUsesSecondMode());
+            if (fused && lrInval) {
+                s = std::to_string(static_cast<int>(camera_mode)) +
+                    " (LR invalidation)";
+            } else if (fused) {
                 uint8_t modeB = m_dms_active_second_mode;
                 if (m_off_line) {
-                    modeB = (camera_mode == recordedSr) ? recordedLr
-                                                        : recordedSr;
+                    modeB = (camera_mode == recorded.firstMode)
+                                ? recorded.secondMode
+                                : recorded.firstMode;
                 }
                 s = std::to_string(static_cast<int>(camera_mode)) + " + " +
                     std::to_string(static_cast<int>(modeB)) + " (fused)";
@@ -159,8 +168,9 @@ void ADIMainWindow::DisplayInfoWindow(ImGuiWindowFlags overlayFlags,
                 ImGui::TableSetColumnIndex(1);
                 // Mode fusion emits one output frame per two sensor frames;
                 // recordings already store the fused rate.
-                ImGui::Text("%i", (fused && !m_off_line) ? (m_fps_expected / 2)
-                                                         : m_fps_expected);
+                ImGui::Text("%i", (fused && !lrInval && !m_off_line)
+                                      ? (m_fps_expected / 2)
+                                      : m_fps_expected);
             }
 
             static uint32_t fps;
