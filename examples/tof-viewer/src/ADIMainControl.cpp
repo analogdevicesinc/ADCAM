@@ -779,6 +779,10 @@ void ADIMainWindow::ShowIniParamsForMode(uint16_t mode, IniParamState &st) {
     st.modified["jblfMaxEdge"] = std::to_string(st.jblfMaxEdge);
     st.modified["jblfABThreshold"] = std::to_string(st.jblfABThreshold);
     st.modified["fps"] = std::to_string(st.fps);
+
+    if (st.loaded && st.original.empty()) {
+        st.original = st.modified;
+    }
 }
 
 void ADIMainWindow::ShowIniWindow(bool showModify) {

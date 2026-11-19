@@ -377,6 +377,7 @@ class ADIMainWindow {
         int32_t jblfABThreshold = 0;
         int32_t fps = 0;
         std::map<std::string, std::string> modified;
+        std::map<std::string, std::string> original; // modified as loaded
     };
 
     // Renders one mode's editable depth params into st and st.modified.
