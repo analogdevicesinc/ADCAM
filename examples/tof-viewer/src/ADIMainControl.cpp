@@ -695,37 +695,50 @@ bool ADIMainWindow::EntryInt32_t(const char *label, int32_t &input,
     return previous != input;
 }
 
-void ADIMainWindow::ShowIniParamsForMode(uint16_t mode, IniParamState &st) {
-    if (!st.loaded) {
-        std::map<std::string, std::string> params;
-        if (GetActiveCamera()->getDepthParamtersMap(mode, params) ==
-            aditof::Status::OK) {
-            auto getf = [&](const char *k) -> int32_t {
-                auto it = params.find(k);
-                if (it == params.end() || it->second.empty())
-                    return 0;
-                try {
-                    return static_cast<int32_t>(std::round(std::stof(it->second)));
-                } catch (const std::exception &) {
-                    return 0;
-                }
-            };
-            st.abThreshMin = getf("abThreshMin");
-            st.confThresh = getf("confThresh");
-            st.radialThreshMin = getf("radialThreshMin");
-            st.radialThreshMax = getf("radialThreshMax");
-            st.jblfApplyFlag = (getf("jblfApplyFlag") == 1);
-            st.jblfWindowSize = getf("jblfWindowSize");
-            st.jblfGaussianSigma = getf("jblfGaussianSigma");
-            st.jblfExponentialTerm = getf("jblfExponentialTerm");
-            st.jblfMaxEdge = getf("jblfMaxEdge");
-            st.jblfABThreshold = getf("jblfABThreshold");
-            st.fps = getf("fps");
-            st.loaded = true;
-        } else {
-            LOG(ERROR) << "Could not get ini params for mode " << (int)mode;
-        }
+void ADIMainWindow::LoadIniParamsForMode(uint16_t mode, IniParamState &st) {
+    if (st.loaded) {
+        return;
     }
+    std::map<std::string, std::string> params;
+    if (GetActiveCamera()->getDepthParamtersMap(mode, params) !=
+        aditof::Status::OK) {
+        LOG(ERROR) << "Could not get ini params for mode " << (int)mode;
+        return;
+    }
+    auto getf = [&](const char *k) -> int32_t {
+        auto it = params.find(k);
+        if (it == params.end() || it->second.empty())
+            return 0;
+        try {
+            return static_cast<int32_t>(std::round(std::stof(it->second)));
+        } catch (const std::exception &) {
+            return 0;
+        }
+    };
+    st.abThreshMin = getf("abThreshMin");
+    st.confThresh = getf("confThresh");
+    st.radialThreshMin = getf("radialThreshMin");
+    st.radialThreshMax = getf("radialThreshMax");
+    st.jblfApplyFlag = (getf("jblfApplyFlag") == 1);
+    st.jblfWindowSize = getf("jblfWindowSize");
+    st.jblfGaussianSigma = getf("jblfGaussianSigma");
+    st.jblfExponentialTerm = getf("jblfExponentialTerm");
+    st.jblfMaxEdge = getf("jblfMaxEdge");
+    st.jblfABThreshold = getf("jblfABThreshold");
+    st.fps = getf("fps");
+    st.lrInvalType = getf("lrInvalType");
+    st.lrInvalThreshold = getf("lrInvalThreshold");
+    st.lrInvalRadialMin = getf("lrInvalRadialMin");
+    st.lrInvalRadialMax = getf("lrInvalRadialMax");
+    st.edgeConfidenceEnabled = (getf("edgeConfidenceEnabled") == 1);
+    st.twoLRFramesThreshold = getf("twoLRFramesThreshold");
+    st.frameAOutputEnabled = (getf("frameAOutputEnabled") == 1);
+    st.ABFusionEnabled = (getf("ABFusionEnabled") == 1);
+    st.loaded = true;
+}
+
+void ADIMainWindow::ShowIniParamsForMode(uint16_t mode, IniParamState &st) {
+    LoadIniParamsForMode(mode, st);
 
     ImGui::PushItemWidth(140 * m_dpi_scale_factor);
 
@@ -754,6 +767,35 @@ void ADIMainWindow::ShowIniParamsForMode(uint16_t mode, IniParamState &st) {
     EntryInt32_t("fps", st.fps, 0, 60);
     ImGuiExtensions::ADIShowTooltipFor("ControlIniFps");
 
+    const bool showFusion = !m_off_line && m_dms_enabled;
+    const auto method =
+        static_cast<aditof::ModeFusionMethod>(m_fusion_method_selection);
+    if (showFusion) {
+        NewLine(5.0f);
+        DrawBarLabel("Mode Fusion");
+        ImGuiExtensions::ADIShowTooltipFor("ControlIniModeFusion");
+        NewLine(5.0f);
+        switch (method) {
+        case aditof::ModeFusionMethod::SrLr:
+            ImGui::Checkbox("ABFusionEnabled", &st.ABFusionEnabled);
+            break;
+        case aditof::ModeFusionMethod::LrInvalidation:
+            EntryInt32_t("lrInvalType", st.lrInvalType, 1, 4);
+            EntryInt32_t("lrInvalThreshold", st.lrInvalThreshold, 0, 65535);
+            EntryInt32_t("lrInvalRadialMin", st.lrInvalRadialMin, 0, 65535);
+            EntryInt32_t("lrInvalRadialMax", st.lrInvalRadialMax, 0, 65535);
+            ImGui::Checkbox("edgeConfidenceEnabled", &st.edgeConfidenceEnabled);
+            break;
+        case aditof::ModeFusionMethod::TwoLrFrames:
+            EntryInt32_t("twoLRFramesThreshold", st.twoLRFramesThreshold, 0,
+                         65535);
+            ImGui::Checkbox("frameAOutputEnabled", &st.frameAOutputEnabled);
+            break;
+        default:
+            break;
+        }
+    }
+
     ImGui::PopItemWidth();
 
     st.modified["abSumThresh"] =
@@ -769,6 +811,67 @@ void ADIMainWindow::ShowIniParamsForMode(uint16_t mode, IniParamState &st) {
     st.modified["jblfMaxEdge"] = std::to_string(st.jblfMaxEdge);
     st.modified["jblfABThreshold"] = std::to_string(st.jblfABThreshold);
     st.modified["fps"] = std::to_string(st.fps);
+
+    if (showFusion) {
+        switch (method) {
+        case aditof::ModeFusionMethod::SrLr:
+            st.modified["ABFusionEnabled"] = st.ABFusionEnabled ? "1" : "0";
+            break;
+        case aditof::ModeFusionMethod::LrInvalidation:
+            st.modified["lrInvalType"] = std::to_string(st.lrInvalType);
+            st.modified["lrInvalThreshold"] =
+                std::to_string(st.lrInvalThreshold);
+            st.modified["lrInvalRadialMin"] =
+                std::to_string(st.lrInvalRadialMin);
+            st.modified["lrInvalRadialMax"] =
+                std::to_string(st.lrInvalRadialMax);
+            st.modified["edgeConfidenceEnabled"] =
+                st.edgeConfidenceEnabled ? "1" : "0";
+            break;
+        case aditof::ModeFusionMethod::TwoLrFrames:
+            st.modified["twoLRFramesThreshold"] =
+                std::to_string(st.twoLRFramesThreshold);
+            st.modified["frameAOutputEnabled"] =
+                st.frameAOutputEnabled ? "1" : "0";
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void ADIMainWindow::StageFusionParamEdits() {
+    if (m_off_line || !m_dms_enabled || !GetActiveCamera()) {
+        return;
+    }
+    static const char *fusionKeys[] = {
+        "ABFusionEnabled",      "lrInvalType",        "lrInvalThreshold",
+        "lrInvalRadialMin",     "lrInvalRadialMax",   "edgeConfidenceEnabled",
+        "twoLRFramesThreshold", "frameAOutputEnabled"};
+    for (const auto &entry : m_ini_by_mode) {
+        if (!entry.second.loaded) {
+            continue;
+        }
+        std::map<std::string, std::string> config;
+        if (GetActiveCamera()->getDepthParamtersMap(entry.first, config) !=
+            aditof::Status::OK) {
+            continue;
+        }
+        // Only values the user changed, so untouched params keep the config.
+        for (const char *key : fusionKeys) {
+            auto edited = entry.second.modified.find(key);
+            if (edited == entry.second.modified.end()) {
+                continue;
+            }
+            auto current = config.find(key);
+            if (current != config.end() &&
+                std::atof(current->second.c_str()) ==
+                    std::atof(edited->second.c_str())) {
+                continue;
+            }
+            m_pending_modified_by_mode[entry.first][key] = edited->second;
+        }
+    }
 }
 
 void ADIMainWindow::ShowIniWindow(bool showModify) {
@@ -779,7 +882,10 @@ void ADIMainWindow::ShowIniWindow(bool showModify) {
     std::vector<uint16_t> modes;
     if (!m_off_line && m_dms_enabled) {
         uint16_t primaryMode = static_cast<uint16_t>(m_mode_selection);
-        uint16_t secondMode = static_cast<uint16_t>(m_dms_second_mode_selection);
+        uint16_t secondMode =
+            FusionUsesSecondMode()
+                ? static_cast<uint16_t>(m_dms_second_mode_selection)
+                : primaryMode;
         if (m_is_playing) {
             aditof::CameraDetails d;
             if (GetActiveCamera()->getDetails(d) == aditof::Status::OK &&

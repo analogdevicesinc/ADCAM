@@ -204,16 +204,45 @@ void ADIMainWindow::UpdateFusionFromConfig() {
     auto it = params.find("modeFusionEnabled");
     if (it != params.end() && it->second == "1") {
         m_dms_enabled = true;
+        auto flagSet = [&params](const char *key) {
+            auto f = params.find(key);
+            return f != params.end() && f->second == "1";
+        };
+        // Same priority as the depth-compute library's dispatch.
+        if (flagSet("lrInvalEnabled")) {
+            m_fusion_method_selection =
+                static_cast<int32_t>(aditof::ModeFusionMethod::LrInvalidation);
+        } else if (flagSet("twoLRFramesFusionEnabled")) {
+            m_fusion_method_selection =
+                static_cast<int32_t>(aditof::ModeFusionMethod::TwoLrFrames);
+        } else {
+            m_fusion_method_selection =
+                static_cast<int32_t>(aditof::ModeFusionMethod::SrLr);
+        }
     }
 }
 
 bool ADIMainWindow::IsValidFusionPair() const {
     const uint8_t first = static_cast<uint8_t>(m_mode_selection);
     const uint8_t second = static_cast<uint8_t>(m_dms_second_mode_selection);
-    return (aditof::isAdtf3066LongRangeMode(first) &&
-            aditof::isAdtf3066ShortRangeMode(second)) ||
-           (aditof::isAdtf3066ShortRangeMode(first) &&
-            aditof::isAdtf3066LongRangeMode(second));
+    switch (static_cast<aditof::ModeFusionMethod>(m_fusion_method_selection)) {
+    case aditof::ModeFusionMethod::LrInvalidation:
+        return aditof::isAdtf3066LongRangeMode(first) ||
+               aditof::isAdtf3066ShortRangeMode(first);
+    case aditof::ModeFusionMethod::TwoLrFrames:
+        return aditof::isAdtf3066LongRangeMode(first) &&
+               aditof::isAdtf3066LongRangeMode(second);
+    default:
+        return (aditof::isAdtf3066LongRangeMode(first) &&
+                aditof::isAdtf3066ShortRangeMode(second)) ||
+               (aditof::isAdtf3066ShortRangeMode(first) &&
+                aditof::isAdtf3066LongRangeMode(second));
+    }
+}
+
+bool ADIMainWindow::FusionUsesSecondMode() const {
+    return m_fusion_method_selection !=
+           static_cast<int32_t>(aditof::ModeFusionMethod::LrInvalidation);
 }
 
 bool ADIMainWindow::PrepareCamera(uint8_t mode) {
@@ -222,8 +251,8 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
 
     const bool fusion = !m_off_line && m_dms_enabled;
     if (fusion && !IsValidFusionPair()) {
-        LOG(ERROR) << "Mode Fusion needs one Short Range mode (0, 1, 3, 6) "
-                      "and one Long Range mode (7, 8)";
+        LOG(ERROR) << "Mode Fusion: the selected modes are not valid for the "
+                      "chosen fusion method";
         return false;
     }
 
@@ -238,9 +267,17 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     }
 
     if (fusion) {
+        // LR invalidation fuses a single mode, so it has no second mode.
         const uint8_t second =
-            static_cast<uint8_t>(m_dms_second_mode_selection);
-        status = GetActiveCamera()->setModeFusion(mode, second);
+            FusionUsesSecondMode()
+                ? static_cast<uint8_t>(m_dms_second_mode_selection)
+                : mode;
+        aditof::ModeFusionConfig fusionConfig;
+        fusionConfig.method =
+            static_cast<aditof::ModeFusionMethod>(m_fusion_method_selection);
+        fusionConfig.firstMode = mode;
+        fusionConfig.secondMode = second;
+        status = GetActiveCamera()->setModeFusion(fusionConfig);
         if (status != aditof::Status::OK) {
             LOG(ERROR) << "Could not start mode fusion!";
             return false;
@@ -347,7 +384,9 @@ void ADIMainWindow::CameraPlay(int modeSelect, int viewSelect) {
             InitOpenGLPointCloudTexture();
 
             if (!m_off_line) {
-                m_view_instance->m_ctrl->setModeFusionEnabled(m_dms_enabled);
+                // Only two-frame fusion advances frameNumber by 2 per output.
+                m_view_instance->m_ctrl->setModeFusionEnabled(
+                    m_dms_enabled && FusionUsesSecondMode());
                 m_view_instance->m_ctrl->StartCapture(m_fps_expected);
                 m_view_instance->m_ctrl->requestFrame();
             } else { // Offline: Always get the first frame
