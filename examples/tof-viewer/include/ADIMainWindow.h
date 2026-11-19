@@ -254,6 +254,9 @@ class ADIMainWindow {
     void Render();
 
   private:
+    // Picks the slowest vsync rate >= max(fps, 30) Hz; render thread only.
+    void SetRenderRate(uint16_t fps);
+
     /**
 		* @brief Modify Screen DPI
 		*/

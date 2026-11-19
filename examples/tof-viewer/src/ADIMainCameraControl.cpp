@@ -311,6 +311,7 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     // For offline mode, recreate viewer with all frame types enabled
     // The threads will check metadata per-frame to decide if processing is needed
     status = GetActiveCamera()->adsd3500GetFrameRate(m_fps_expected);
+    SetRenderRate(m_fps_expected);
 
     if (m_enable_preview) {
         m_view_instance->m_ctrl->setPreviewRate(

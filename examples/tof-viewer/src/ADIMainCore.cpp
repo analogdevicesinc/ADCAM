@@ -29,6 +29,7 @@
 #include "aditof/status_definitions.h"
 #include "aditof/version-kit.h"
 #include "aditof/version.h"
+#include <algorithm>
 #include <cmath>
 #include <fcntl.h>
 #include <fstream>
@@ -455,9 +456,7 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
 
     glfwMakeContextCurrent(window);
 
-    // Every other vsync (30 Hz on 60 Hz panels): the camera tops out at 30 fps
-    // and host depth compute shares the GPU with rendering.
-    glfwSwapInterval(2);
+    SetRenderRate(0);
 
     // Initialize OpenGL loader
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
@@ -652,6 +651,15 @@ std::shared_ptr<aditof::Camera> ADIMainWindow::GetActiveCamera() {
         return nullptr;
     }
     return m_view_instance->m_ctrl->m_cameras[m_selected_device_index];
+}
+
+void ADIMainWindow::SetRenderRate(uint16_t fps) {
+    // Redrawing faster than the camera only costs GPU time, which host depth
+    // compute shares; below 30 Hz the UI gets sluggish.
+    const GLFWvidmode *vidMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    const int refreshHz = vidMode ? vidMode->refreshRate : 60;
+    const int targetHz = std::max<int>(fps, 30);
+    glfwSwapInterval(std::max(1, refreshHz / targetHz));
 }
 
 void ADIMainWindow::Render() {
