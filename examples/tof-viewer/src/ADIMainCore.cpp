@@ -455,7 +455,9 @@ bool ADIMainWindow::StartImGUI(const ADIViewerArgs &args) {
 
     glfwMakeContextCurrent(window);
 
-    glfwSwapInterval(1); // Enable vsync
+    // Every other vsync (30 Hz on 60 Hz panels): the camera tops out at 30 fps
+    // and host depth compute shares the GPU with rendering.
+    glfwSwapInterval(2);
 
     // Initialize OpenGL loader
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
