@@ -1498,6 +1498,23 @@ void ADIMainWindow::ShowStartWizard() {
                             (!m_dms_enabled || IsValidFusionPair()) &&
                             (!m_lens_scatter_enabled ||
                              IsValidLensScatterMode()))) {
+
+                    for (const auto &entry : m_ini_by_mode) {
+                        if (!entry.second.loaded) {
+                            continue;
+                        }
+                        std::map<std::string, std::string> changed;
+                        for (const auto &kv : entry.second.modified) {
+                            auto it = entry.second.original.find(kv.first);
+                            if (it == entry.second.original.end() ||
+                                it->second != kv.second) {
+                                changed[kv.first] = kv.second;
+                            }
+                        }
+                        if (!changed.empty()) {
+                            m_pending_modified_by_mode[entry.first] = changed;
+                        }
+                    }
                     setWorkingLabel("Starting streaming...");
                     setIsWorking(true);
                     m_start_streaming_offline = false;

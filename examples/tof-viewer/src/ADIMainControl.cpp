@@ -855,6 +855,10 @@ void ADIMainWindow::ShowIniParamsForMode(uint16_t mode, IniParamState &st) {
             break;
         }
     }
+
+    if (st.loaded && st.original.empty()) {
+        st.original = st.modified;
+    }
 }
 
 void ADIMainWindow::StageFusionParamEdits() {
