@@ -387,6 +387,7 @@ class ADIMainWindow {
         bool frameAOutputEnabled = false;
         bool ABFusionEnabled = false;
         std::map<std::string, std::string> modified;
+        std::map<std::string, std::string> original; // modified as loaded
     };
 
     // Loads one mode's depth params into st (once).
