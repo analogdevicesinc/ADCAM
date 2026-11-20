@@ -44,6 +44,7 @@ static const char Help_Menu[] =
     first-frame
     first-frame (-h | --help)
     first-frame [-ip | --ip <ip>] [-m | --m <mode>] [-config | --config <config_file.json>]
+    first-frame [-m | --m <mode>] [-lens-scatter | --lens-scatter] [-config | --config <config_file.json>]
     first-frame [-fuse | --fuse <firstMode>[,<secondMode>]] [-fusion-method | --fusion-method <srlr|lrinval|twolr>] [-lrinval-type | --lrinval-type <1-4>] [-config | --config <config_file.json>]
 
     Arguments:
@@ -52,8 +53,11 @@ static const char Help_Menu[] =
     Options:
       -h --help          Show this screen.
       -m --m <mode>      Mode to capture data in. [default: 0]
+      -lens-scatter --lens-scatter
+                         Lens scatter compensation (non-PCM mode).
+                         Not with -fuse or -ip.
       -fuse --fuse <firstMode>[,<secondMode>]
-                         ADTF3066 only: start mode fusion. Overrides -m.
+                         Start mode fusion. Overrides -m.
                          Not supported with -ip.
       -fusion-method --fusion-method <srlr|lrinval|twolr>
                          srlr: one SR (0, 1, 3, 6) + one LR (7, 8) mode,
@@ -182,6 +186,7 @@ int main(int argc, char *argv[]) {
         {"-fuse", {"--fuse", false, "", "", true}},
         {"-fusion-method", {"--fusion-method", false, "", "srlr", true}},
         {"-lrinval-type", {"--lrinval-type", false, "", "1", true}},
+        {"-lens-scatter", {"--lens-scatter", false, "", "", false}},
         {"-config", {"--config", false, "last", "", false}}};
 
     CommandParser command;
@@ -272,6 +277,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    const bool lensScatter = !command_map["-lens-scatter"].value.empty();
+    if (lensScatter && (fuse || !ip.empty())) {
+        LOG(ERROR) << "-lens-scatter is not supported with -fuse or -ip";
+        return -1;
+    }
+
     System system;
 
     std::vector<std::shared_ptr<Camera>> cameras;
@@ -347,6 +358,11 @@ int main(int argc, char *argv[]) {
             modeTag += "_" + std::to_string(fusion.secondMode);
         }
     } else {
+        if (lensScatter &&
+            camera->setLensScatterCompensation(true) != Status::OK) {
+            LOG(ERROR) << "Could not enable lens scatter compensation!";
+            return 0;
+        }
         status = camera->setMode(mode);
         if (status != Status::OK) {
             LOG(ERROR) << "Could not set camera mode!";

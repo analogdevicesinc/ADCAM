@@ -715,6 +715,13 @@ void ADIMainWindow::LoadIniParamsForMode(uint16_t mode, IniParamState &st) {
         LOG(ERROR) << "Could not get ini params for mode " << (int)mode;
         return;
     }
+    // Mode fusion params are kept apart from the standard ones.
+    std::map<std::string, std::string> fusionParams;
+    if (GetActiveCamera()->getDepthAlgorithmParams(
+            aditof::DepthAlgorithm::ModeFusion, mode, fusionParams) ==
+        aditof::Status::OK) {
+        params.insert(fusionParams.begin(), fusionParams.end());
+    }
     auto getf = [&](const char *k) -> int32_t {
         auto it = params.find(k);
         if (it == params.end() || it->second.empty())
@@ -863,7 +870,8 @@ void ADIMainWindow::StageFusionParamEdits() {
             continue;
         }
         std::map<std::string, std::string> config;
-        if (GetActiveCamera()->getDepthParamtersMap(entry.first, config) !=
+        if (GetActiveCamera()->getDepthAlgorithmParams(
+                aditof::DepthAlgorithm::ModeFusion, entry.first, config) !=
             aditof::Status::OK) {
             continue;
         }
@@ -885,7 +893,9 @@ void ADIMainWindow::StageFusionParamEdits() {
 }
 
 void ADIMainWindow::ShowIniWindow(bool showModify) {
-    auto isLR = [](uint16_t m) { return m == 7 || m == 8; };
+    auto isLR = [this](uint16_t m) {
+        return m_long_range_modes.count(static_cast<uint8_t>(m)) > 0;
+    };
 
     // Build the selectable mode list: both halves during fusion, else the
     // single active/selected mode. Each mode keeps its own edited values.
