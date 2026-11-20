@@ -60,6 +60,36 @@ def write_png(path, image):
 EQ_TRIM = 0.005  # ignore this fraction of valid pixels at each end (stray / flying pixels)
 EQ_BLEND = 0.75  # 1 = fully equalised (most detail), 0 = linear (colour tracks distance)
 MM_RANGE = np.arange(65536, dtype=np.float32)
+EQ_NEIGHBOURS = 6  # of 8 neighbours that must be within 5 % depth for a pixel to count
+EQ_GAP_MM = 1000  # far depths beyond an empty gap this wide ...
+EQ_ISLAND = 0.10  # ... holding under this share of pixels are ignored (stray-light ghosts)
+
+def consistent_depth(depth):
+    """Valid depths (every 2nd pixel) that agree with most of their neighbours,
+    so scattered ghost / flying pixels (common in long-range modes) don't set the range."""
+    d = depth[::2, ::2].astype(np.float32)
+    h, w = d.shape
+    p = np.pad(d, 1)
+    tol = 0.05 * d
+    agree = np.zeros(d.shape, np.uint8)
+    for dy in range(3):
+        for dx in range(3):
+            if dy != 1 or dx != 1:
+                agree += np.abs(p[dy:dy + h, dx:dx + w] - d) <= tol
+    keep = (d > 0) & (agree >= EQ_NEIGHBOURS)
+    if not keep.any():
+        keep = d > 0
+    return d[keep].astype(np.uint16)
+
+def far_island_start(hist, total):
+    """First depth (mm) of a small far cluster cut off from the scene by an empty gap, else 65536."""
+    coarse = np.add.reduceat(hist, np.arange(0, 65536, 100))  # 100 mm bins
+    n = EQ_GAP_MM // 100
+    gap = np.convolve(coarse < 1e-4 * total, np.ones(n), "valid") == n
+    beyond = total - np.cumsum(coarse)
+    start = int(np.searchsorted(np.cumsum(hist), 0.5 * total)) // 100
+    cand = np.flatnonzero((gap & (beyond[n - 1:] < EQ_ISLAND * total))[start:])
+    return (start + cand[0]) * 100 if cand.size else 65536
 
 def equalize_cdf(depth):
     """Auto colour scale: clip-limited histogram equalisation of valid depth.
@@ -70,12 +100,13 @@ def equalize_cdf(depth):
     (e.g. a wall) can't swallow the colormap. The outer EQ_TRIM of pixels at each
     end are clamped, and the result is blended with a linear scale (EQ_BLEND).
     """
-    hist = np.bincount(depth[::2, ::2].astype(np.uint16, copy=False).ravel(),
-                       minlength=65536).astype(np.float32)
+    hist = np.bincount(consistent_depth(depth), minlength=65536).astype(np.float32)
     hist[0] = 0  # invalid depth
     total = hist.sum()
     if total == 0:
         return None
+    hist[far_island_start(hist, total):] = 0
+    total = hist.sum()
     cum = np.cumsum(hist)
     lo = int(np.searchsorted(cum, EQ_TRIM * total))
     hi = int(np.searchsorted(cum, (1 - EQ_TRIM) * total))
