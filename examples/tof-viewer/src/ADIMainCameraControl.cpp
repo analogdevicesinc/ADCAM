@@ -116,6 +116,7 @@ void ADIMainWindow::InitCamera(std::string filePath) {
         m_fusion_supported = isAdtf3066;
         if (!m_fusion_supported) {
             m_dms_enabled = false;
+            m_lens_scatter_enabled = false;
         }
 
         for (uint32_t i = 0; i < (uint32_t)_cameraModes.size(); ++i) {
@@ -206,8 +207,13 @@ void ADIMainWindow::UpdateFusionFromConfig() {
         return;
     }
     auto it = params.find("modeFusionEnabled");
-    if (it != params.end() && it->second == "1") {
+    auto lensScatterIt = params.find("lensScatterCompensationEnabled");
+    if (lensScatterIt != params.end() && lensScatterIt->second == "1") {
+        m_lens_scatter_enabled = true;
+        m_dms_enabled = false;
+    } else if (it != params.end() && it->second == "1") {
         m_dms_enabled = true;
+        m_lens_scatter_enabled = false;
         auto flagSet = [&params](const char *key) {
             auto f = params.find(key);
             return f != params.end() && f->second == "1";
@@ -249,6 +255,20 @@ bool ADIMainWindow::FusionUsesSecondMode() const {
            static_cast<int32_t>(aditof::ModeFusionMethod::LrInvalidation);
 }
 
+bool ADIMainWindow::IsValidLensScatterMode() {
+    auto camera = GetActiveCamera();
+    if (!camera) {
+        return false;
+    }
+    aditof::DepthSensorModeDetails details;
+    if (camera->getSensor()->getModeDetails(
+            static_cast<uint8_t>(m_mode_selection), details) !=
+        aditof::Status::OK) {
+        return false;
+    }
+    return !details.isPCM;
+}
+
 bool ADIMainWindow::PrepareCamera(uint8_t mode) {
     aditof::Status status = aditof::Status::OK;
     std::vector<aditof::FrameDetails> frameTypes;
@@ -268,6 +288,17 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
                 entry.second, static_cast<int32_t>(entry.first));
         }
         m_pending_modified_by_mode.clear();
+    }
+
+    // Mode Fusion and Lens Scatter are mutually exclusive; the SDK rejects
+    // setModeFusion() while lens scatter compensation is enabled.
+    if (!m_off_line && m_fusion_supported) {
+        status = GetActiveCamera()->setLensScatterCompensation(
+            m_lens_scatter_enabled && !fusion);
+        if (status != aditof::Status::OK) {
+            LOG(ERROR) << "Could not set lens scatter compensation!";
+            return false;
+        }
     }
 
     if (fusion) {

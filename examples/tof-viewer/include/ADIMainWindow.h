@@ -433,6 +433,11 @@ class ADIMainWindow {
     bool FusionUsesSecondMode() const;
 
     /**
+		* @brief True if the selected mode supports lens scatter compensation (not PCM)
+		*/
+    bool IsValidLensScatterMode();
+
+    /**
 		* @brief Initializes OpenGL and AB + Depth settings
 		*/
     void InitCaptureABDepthVideo();
@@ -743,7 +748,9 @@ class ADIMainWindow {
     int32_t m_mode_selection = 0;
     int32_t m_mode_select_changed = 0; //flag when changed
     bool m_dms_enabled = false;
-    bool m_fusion_supported = false; // ADTF3066 only
+    // Mutually exclusive with m_dms_enabled (Mode Fusion).
+    bool m_lens_scatter_enabled = false;
+    bool m_fusion_supported = false; // ADTF3066 only, also gates Lens Scatter
     int32_t m_dms_second_mode_selection = 0;
     // aditof::ModeFusionMethod value chosen for Mode Fusion (1 = SR/LR).
     int32_t m_fusion_method_selection = 1;
