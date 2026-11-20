@@ -580,7 +580,7 @@ def config_window():
             screen.blit(small.render("Primary Mode", True, (200, 200, 200)),
                         (30, 140))
             primary_dd.draw_header(screen, small)
-            if fusion:
+            if fusion_method in FUSION_METHODS:
                 fusion_text = FUSION_METHODS[fusion_method][0] + " fusion"
             elif fusion_method == LENS_SCATTER:
                 fusion_text = "Lens Scatter"
