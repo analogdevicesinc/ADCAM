@@ -251,9 +251,13 @@ void ADIMainWindow::InitializeTooltips() {
         "WizardOnlineSelectMode",
         "Select camera operating mode (resolution and frame format)");
     ADIRegisterTooltip(
-        "WizardOnlineDynamicModeSwitching",
-        "When enabled, frames are fused by the depth-compute library using "
-        "the selected Fusion Method");
+        "WizardOnlineDepthFeature",
+        "None: normal streaming.\n"
+        "Mode Fusion: frames are fused by the depth-compute library using "
+        "the selected Fusion Method.\n"
+        "Lens Scatter: raw frames with lens scatter compensation computed "
+        "on the host.\n"
+        "Mode Fusion and Lens Scatter cannot be used together");
     ADIRegisterTooltip(
         "WizardOnlineFusionMethod",
         "SR/LR: one Short Range + one Long Range mode (HDR depth).\n"
@@ -1352,10 +1356,28 @@ void ADIMainWindow::ShowStartWizard() {
                 if (m_fusion_supported) {
                     NewLine(5.0f);
 
-                    ImGuiExtensions::ADICheckbox("Mode Fusion",
-                                                 &m_dms_enabled);
+                    static const std::vector<std::pair<int, std::string>>
+                        depthFeatures = {{0, "None"},
+                                         {1, "Mode Fusion"},
+                                         {2, "Lens Scatter"}};
+                    int32_t feature = m_dms_enabled            ? 1
+                                      : m_lens_scatter_enabled ? 2
+                                                               : 0;
+                    if (ImGuiExtensions::ADIComboBox(
+                            "Depth Feature", "Selected Depth Feature",
+                            ImGuiSelectableFlags_None, depthFeatures, &feature,
+                            true)) {
+                        m_dms_enabled = (feature == 1);
+                        m_lens_scatter_enabled = (feature == 2);
+                    }
                     ImGuiExtensions::ADIShowTooltipFor(
-                        "WizardOnlineDynamicModeSwitching");
+                        "WizardOnlineDepthFeature");
+
+                    if (m_lens_scatter_enabled && !IsValidLensScatterMode()) {
+                        ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f),
+                                           "Lens Scatter needs a non-PCM "
+                                           "mode");
+                    }
 
                     if (m_dms_enabled) {
                         static const std::vector<std::pair<int, std::string>>
@@ -1459,7 +1481,9 @@ void ADIMainWindow::ShowStartWizard() {
                 if (ImGuiExtensions::ADIButton(
                         "Start Streaming",
                         !m_is_playing &&
-                            (!m_dms_enabled || IsValidFusionPair()))) {
+                            (!m_dms_enabled || IsValidFusionPair()) &&
+                            (!m_lens_scatter_enabled ||
+                             IsValidLensScatterMode()))) {
                     setWorkingLabel("Starting streaming...");
                     setIsWorking(true);
                     m_start_streaming_offline = false;
