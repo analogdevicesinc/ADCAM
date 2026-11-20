@@ -112,12 +112,26 @@ void ADIMainWindow::InitCamera(std::string filePath) {
 
         aditof::ImagerType imagerType = aditof::ImagerType::UNSET;
         camera->getImagerType(imagerType);
-        const bool isAdtf3066 = (imagerType == aditof::ImagerType::ADTF3066);
-        m_fusion_supported = isAdtf3066;
+        std::vector<aditof::DepthAlgorithm> algorithms;
+        camera->getSupportedDepthAlgorithms(algorithms);
+        auto supports = [&algorithms](aditof::DepthAlgorithm a) {
+            return std::find(algorithms.begin(), algorithms.end(), a) !=
+                   algorithms.end();
+        };
+        m_standard_supported = supports(aditof::DepthAlgorithm::None);
+        m_fusion_supported = supports(aditof::DepthAlgorithm::ModeFusion);
+        m_lens_scatter_supported =
+            supports(aditof::DepthAlgorithm::LensScatter);
         if (!m_fusion_supported) {
             m_dms_enabled = false;
-            m_lens_scatter_enabled = false;
         }
+        // TEMPORARY (two depth compute libraries): the lens scatter build
+        // alone has no None. Remove once one library has every algorithm.
+        m_lens_scatter_enabled =
+            m_lens_scatter_supported &&
+            (m_lens_scatter_enabled || !m_standard_supported);
+        m_short_range_modes.clear();
+        m_long_range_modes.clear();
 
         for (uint32_t i = 0; i < (uint32_t)_cameraModes.size(); ++i) {
             aditof::DepthSensorModeDetails modeDetails;
@@ -129,20 +143,17 @@ void ADIMainWindow::InitCamera(std::string filePath) {
             s = s + ":" + std::to_string(modeDetails.baseResolutionWidth) +
                 "x" + std::to_string(modeDetails.baseResolutionHeight) + ",";
             if (!modeDetails.isPCM) {
-                std::string append;
-                if (isAdtf3066) {
-                    // Frequency count can't classify ADTF3066 modes (SR mode
-                    // 1 and LR mode 7 are both 3-frequency).
-                    append = aditof::isAdtf3066LongRangeMode(
-                                 modeDetails.modeNumber)
-                                 ? "Long Range"
-                                 : "Short Range";
-                } else {
-                    append = (modeDetails.numberOfFrequencies == 2)
-                                 ? "Short Range"
-                                 : "Long Range";
+                const uint8_t mode = modeDetails.modeNumber;
+                const bool longRange = aditof::isLongRangeMode(
+                    imagerType, mode, modeDetails.numberOfFrequencies);
+                if (longRange) {
+                    m_long_range_modes.insert(mode);
+                } else if (aditof::isShortRangeMode(
+                               imagerType, mode,
+                               modeDetails.numberOfFrequencies)) {
+                    m_short_range_modes.insert(mode);
                 }
-                s = s + append;
+                s = s + (longRange ? "Long Range" : "Short Range");
             } else {
                 s = s + "PCM";
             }
@@ -153,7 +164,6 @@ void ADIMainWindow::InitCamera(std::string filePath) {
         for (uint32_t i = 0; i < (uint32_t)_cameraModes.size(); i++) {
             m_cameraModes.emplace_back(i, _cameraModes.at(i));
         }
-        UpdateFusionFromConfig();
     } else {
         // PRB25
         //camera->setPlaybackFile(filePath);
@@ -196,57 +206,18 @@ void ADIMainWindow::UpdateOfflineFrameTypeAvailability() {
     }
 }
 
-void ADIMainWindow::UpdateFusionFromConfig() {
-    auto camera = GetActiveCamera();
-    if (m_off_line || !m_fusion_supported || !camera) {
-        return;
-    }
-    std::map<std::string, std::string> params;
-    if (camera->getDepthParamtersMap(static_cast<uint16_t>(m_mode_selection),
-                                     params) != aditof::Status::OK) {
-        return;
-    }
-    auto it = params.find("modeFusionEnabled");
-    auto lensScatterIt = params.find("lensScatterCompensationEnabled");
-    if (lensScatterIt != params.end() && lensScatterIt->second == "1") {
-        m_lens_scatter_enabled = true;
-        m_dms_enabled = false;
-    } else if (it != params.end() && it->second == "1") {
-        m_dms_enabled = true;
-        m_lens_scatter_enabled = false;
-        auto flagSet = [&params](const char *key) {
-            auto f = params.find(key);
-            return f != params.end() && f->second == "1";
-        };
-        // Same priority as the depth-compute library's dispatch.
-        if (flagSet("lrInvalEnabled")) {
-            m_fusion_method_selection =
-                static_cast<int32_t>(aditof::ModeFusionMethod::LrInvalidation);
-        } else if (flagSet("twoLRFramesFusionEnabled")) {
-            m_fusion_method_selection =
-                static_cast<int32_t>(aditof::ModeFusionMethod::TwoLrFrames);
-        } else {
-            m_fusion_method_selection =
-                static_cast<int32_t>(aditof::ModeFusionMethod::SrLr);
-        }
-    }
-}
-
 bool ADIMainWindow::IsValidFusionPair() const {
     const uint8_t first = static_cast<uint8_t>(m_mode_selection);
     const uint8_t second = static_cast<uint8_t>(m_dms_second_mode_selection);
+    auto isSR = [this](uint8_t m) { return m_short_range_modes.count(m) > 0; };
+    auto isLR = [this](uint8_t m) { return m_long_range_modes.count(m) > 0; };
     switch (static_cast<aditof::ModeFusionMethod>(m_fusion_method_selection)) {
     case aditof::ModeFusionMethod::LrInvalidation:
-        return aditof::isAdtf3066LongRangeMode(first) ||
-               aditof::isAdtf3066ShortRangeMode(first);
+        return isLR(first) || isSR(first);
     case aditof::ModeFusionMethod::TwoLrFrames:
-        return aditof::isAdtf3066LongRangeMode(first) &&
-               aditof::isAdtf3066LongRangeMode(second);
+        return isLR(first) && isLR(second);
     default:
-        return (aditof::isAdtf3066LongRangeMode(first) &&
-                aditof::isAdtf3066ShortRangeMode(second)) ||
-               (aditof::isAdtf3066ShortRangeMode(first) &&
-                aditof::isAdtf3066LongRangeMode(second));
+        return (isLR(first) && isSR(second)) || (isSR(first) && isLR(second));
     }
 }
 
@@ -290,9 +261,9 @@ bool ADIMainWindow::PrepareCamera(uint8_t mode) {
         m_pending_modified_by_mode.clear();
     }
 
-    // Mode Fusion and Lens Scatter are mutually exclusive; the SDK rejects
-    // setModeFusion() while lens scatter compensation is enabled.
-    if (!m_off_line && m_fusion_supported) {
+    // Mode Fusion and Lens Scatter are mutually exclusive; their params are
+    // kept apart and only the selected one is applied.
+    if (!m_off_line && m_lens_scatter_supported) {
         status = GetActiveCamera()->setLensScatterCompensation(
             m_lens_scatter_enabled && !fusion);
         if (status != aditof::Status::OK) {

@@ -85,6 +85,7 @@ static const char kUsagePublic[] =
     Usage:
       data_collect 
       data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--m <mode>] [--ccb FILE] [--ip <ip>] [-scf <save-configuration-file>] [-lcf <load-configuration-file>]
+      data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--m <mode>] [--lens-scatter] [-lcf <load-configuration-file>]
       data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--fuse <firstMode>[,<secondMode>]] [--fusion-method <srlr|lrinval|twolr>] [--lrinval-type <1-4>] [-lcf <load-configuration-file>]
       data_collect (-h | --help)
 
@@ -94,8 +95,10 @@ static const char kUsagePublic[] =
       --fps <frame rate>   Frame rate in frames per second [default: 10]
       --n <ncapture>     Capture frame num. [default: 1]
       --m <mode>         Mode to capture data in. [default: 0]
+      --lens-scatter     Lens scatter compensation (non-PCM mode).
+                         Not with --fuse or --ip.
       --fuse <firstMode>[,<secondMode>]
-                         ADTF3066 only: start mode fusion. Overrides --m.
+                         Start mode fusion. Overrides --m.
                          Not supported with --ip.
       --fusion-method <srlr|lrinval|twolr>
                          srlr: one SR (0, 1, 3, 6) + one LR (7, 8) mode,
@@ -189,6 +192,7 @@ int main(int argc, char *argv[]) {
         {"-fuse", {"--fuse", false, "", "", true}},
         {"-fusion-method", {"--fusion-method", false, "", "srlr", true}},
         {"-lrinval-type", {"--lrinval-type", false, "", "1", true}},
+        {"-lens-scatter", {"--lens-scatter", false, "", "", false}},
         {"-ip", {"--ip", false, "", "", true}},
         {"-ccb", {"--ccb", false, "", "", true}},
         {"-scf", {"--scf", false, "", "", true}},
@@ -314,6 +318,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    const bool lensScatter = !command_map["-lens-scatter"].value.empty();
+    if (lensScatter && (fuse || !ip.empty())) {
+        LOG(ERROR) << "--lens-scatter is not supported with --fuse or --ip";
+        return -1;
+    }
+
     //Parsing CCB path
     std::string ccbFilePath;
     if (!command_map["-ccb"].value.empty()) {
@@ -335,7 +345,8 @@ int main(int argc, char *argv[]) {
         LOG(INFO) << "Mode fusion (" << command_map["-fusion-method"].value
                   << "): " << command_map["-fuse"].value;
     } else {
-        LOG(INFO) << "Mode: " << command_map["-m"].value;
+        LOG(INFO) << "Mode: " << command_map["-m"].value
+                  << (lensScatter ? " (lens scatter)" : "");
     }
     LOG(INFO) << "Number of frames: " << n_frames;
     LOG(INFO) << "Json file: " << json_file_path;
@@ -409,6 +420,11 @@ int main(int argc, char *argv[]) {
             return -1;
         }
     } else {
+        if (lensScatter &&
+            camera->setLensScatterCompensation(true) != Status::OK) {
+            LOG(ERROR) << "Could not enable lens scatter compensation!";
+            return -1;
+        }
         status = camera->setMode(mode);
         if (status != Status::OK) {
             LOG(ERROR) << "Could not set camera mode!";

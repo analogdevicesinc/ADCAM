@@ -44,6 +44,7 @@
 #include <array>
 #include <chrono>
 #include <math.h>
+#include <set>
 
 /**
 * @brief Manage monitor resolution
@@ -417,12 +418,6 @@ class ADIMainWindow {
     void CameraPlay(int modeSelect, int viewSelect);
 
     /**
-		* @brief Ticks Mode Fusion (and picks the method) if the selected mode's
-		*        config has modeFusionEnabled=1
-		*/
-    void UpdateFusionFromConfig();
-
-    /**
 		* @brief True if the selected modes are valid for the chosen fusion method
 		*/
     bool IsValidFusionPair() const;
@@ -750,7 +745,13 @@ class ADIMainWindow {
     bool m_dms_enabled = false;
     // Mutually exclusive with m_dms_enabled (Mode Fusion).
     bool m_lens_scatter_enabled = false;
-    bool m_fusion_supported = false; // ADTF3066 only, also gates Lens Scatter
+    // Depth features of the linked depth compute library.
+    bool m_standard_supported = true;
+    bool m_fusion_supported = false;
+    bool m_lens_scatter_supported = false;
+    // Short/Long Range modes of the open camera, for Mode Fusion pairs.
+    std::set<uint8_t> m_short_range_modes;
+    std::set<uint8_t> m_long_range_modes;
     int32_t m_dms_second_mode_selection = 0;
     // aditof::ModeFusionMethod value chosen for Mode Fusion (1 = SR/LR).
     int32_t m_fusion_method_selection = 1;

@@ -1046,7 +1046,6 @@ void ADIMainWindow::ShowLoadAdsdParamsMenu() {
 
             m_ini_params.clear();
             m_ini_by_mode.clear();
-            UpdateFusionFromConfig();
         }
     }
 
@@ -1349,17 +1348,22 @@ void ADIMainWindow::ShowStartWizard() {
                                                  &m_mode_selection, true)) {
                     m_ini_params.clear();
                     m_ini_by_mode.clear();
-                    UpdateFusionFromConfig();
                 }
                 ImGuiExtensions::ADIShowTooltipFor("WizardOnlineSelectMode");
 
-                if (m_fusion_supported) {
+                if (!m_off_line) {
                     NewLine(5.0f);
 
-                    static const std::vector<std::pair<int, std::string>>
-                        depthFeatures = {{0, "None"},
-                                         {1, "Mode Fusion"},
-                                         {2, "Lens Scatter"}};
+                    std::vector<std::pair<int, std::string>> depthFeatures;
+                    if (m_standard_supported) {
+                        depthFeatures.emplace_back(0, "None");
+                    }
+                    if (m_fusion_supported) {
+                        depthFeatures.emplace_back(1, "Mode Fusion");
+                    }
+                    if (m_lens_scatter_supported) {
+                        depthFeatures.emplace_back(2, "Lens Scatter");
+                    }
                     int32_t feature = m_dms_enabled            ? 1
                                       : m_lens_scatter_enabled ? 2
                                                                : 0;
@@ -1424,7 +1428,7 @@ void ADIMainWindow::ShowStartWizard() {
                                     ? "Select a Short Range or Long Range "
                                       "mode"
                                 : m_fusion_method_selection == 3
-                                    ? "Select two Long Range modes (7, 8)"
+                                    ? "Select two Long Range modes"
                                     : "Select one Short Range and one Long "
                                       "Range mode";
                             ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f),

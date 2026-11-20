@@ -57,18 +57,23 @@ Examples:
 
   # ADTF3066: two-LR-frames fusion of LR modes 7 and 7
   python %(prog)s --fuse 7,7 --fusion-method twolr
+
+  # Lens scatter compensation on mode 0
+  python %(prog)s -m 0 --lens-scatter
 """
 )
 parser.add_argument('-m', '--mode', type=int, default=None,
                     help='Frame mode number ; required unless --fuse is given')
 parser.add_argument('-f', '--fuse', type=str, default='',
-                    help='ADTF3066 only: mode fusion modes, FIRST[,SECOND] (the first mode leads). '
-                         'srlr: SR (0, 1, 3, 6) + LR (7, 8) e.g. 0,7; lrinval: one SR or LR mode e.g. 7; '
+                    help='Mode fusion modes, FIRST[,SECOND] (the first mode leads). '
+                         'srlr: SR + LR (ADTF3066: SR 0, 1, 3, 6, LR 7, 8) e.g. 0,7; lrinval: one SR or LR mode e.g. 7; '
                          'twolr: two LR modes of equal resolution e.g. 7,7. Overrides -m. Not supported with --ip')
 parser.add_argument('--fusion-method', type=str, choices=['srlr', 'lrinval', 'twolr'], default='srlr',
                     help='Mode fusion method (default: srlr)')
 parser.add_argument('--lrinval-type', type=int, choices=[1, 2, 3, 4], default=1,
                     help='lrinval criterion: 1 AB, 2 edge conf, 3 conf, 4 radial (default: 1)')
+parser.add_argument('--lens-scatter', action='store_true',
+                    help='Lens scatter compensation (non-PCM mode). Not with --fuse or --ip')
 parser.add_argument('-i', '--ip', type=str, default='',
                     help='IP address for network connection (omit for target)')
 parser.add_argument('-o', '--output', type=str, choices=['bin', 'snap', 'show'], default='show',
@@ -97,6 +102,8 @@ if args.fuse:
         exit(-1)
 elif mode is None:
     parser.error("-m/--mode is required unless --fuse is given")
+if args.lens_scatter and (args.fuse or ip):
+    parser.error("--lens-scatter is not supported with --fuse or --ip")
 
 system = tof.System()
 
@@ -156,6 +163,11 @@ if fuse_modes is not None:
         sys.exit(-1)
     mode = "_".join(str(m) for m in fuse_modes)
 else:
+    if args.lens_scatter:
+        status = camera1.setLensScatterCompensation(True)
+        print("camera1.setLensScatterCompensation(True)", status)
+        if status != tof.Status.Ok:
+            sys.exit(-1)
     status = camera1.setMode(int(mode))
     print("camera1.setMode(",mode,")", status)
     if status != tof.Status.Ok:

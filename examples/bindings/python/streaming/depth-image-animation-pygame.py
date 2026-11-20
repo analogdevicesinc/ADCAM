@@ -236,9 +236,11 @@ def find_configs():
     return found
 
 
+LONG_RANGE_MODES = set()  # filled from the camera's modes
+
+
 def range_label(m):
-    # ADTF3066 (hardcoded): Long Range = modes 7, 8; others are Short Range.
-    return "Long Range" if m in (7, 8) else "Short Range"
+    return "Long Range" if m in LONG_RANGE_MODES else "Short Range"
 
 
 # Key depth params exposed for live tuning in the config window.
@@ -251,6 +253,9 @@ FUSION_METHODS = {
     "twolr": ("Two LR Frames", tof.ModeFusionMethod.TwoLrFrames),
 }
 FUSION_CYCLE = [None] + list(FUSION_METHODS)
+# Depth features the button cycles through; only the supported ones are kept.
+LENS_SCATTER = "lensscatter"
+FEATURE_CYCLE = FUSION_CYCLE + [LENS_SCATTER]
 LRINVAL_TYPES = {1: "AB threshold", 2: "Edge confidence", 3: "Confidence",
                  4: "Radial depth"}
 
@@ -380,7 +385,9 @@ def config_window():
     primary_dd = None
     second_dd = None
 
-    fusion_method = None  # fusion is off by default; else a FUSION_METHODS key
+    # None (off), a FUSION_METHODS key or LENS_SCATTER.
+    fusion_method = None
+    feature_cycle = FEATURE_CYCLE
     lrinval_dd = Dropdown((30, 280, width - 60, 34), list(LRINVAL_TYPES),
                           lambda t: f"Type {t}: {LRINVAL_TYPES[t]}")
     y_range = 340
@@ -421,7 +428,7 @@ def config_window():
 
     clock = pygame.time.Clock()
     while True:
-        fusion = fusion_method is not None
+        fusion = fusion_method in FUSION_METHODS
         # LR invalidation fuses a single mode, so it has no second mode.
         uses_second = fusion and fusion_method != "lrinval"
         uses_lrinval = fusion_method == "lrinval"
@@ -470,11 +477,16 @@ def config_window():
                             load_msg = "No modes available - check the config."
                             continue
                         sensor = camera1.getSensor()
+                        _, imager = camera1.getImagerType()
+                        LONG_RANGE_MODES.clear()
                         for m in available_modes:
                             md = tof.DepthSensorModeDetails()
                             sensor.getModeDetails(m, md)
                             mode_res[m] = (md.baseResolutionWidth,
                                            md.baseResolutionHeight)
+                            if tof.isLongRangeMode(imager, m,
+                                                   md.numberOfFrequencies):
+                                LONG_RANGE_MODES.add(m)
                         start_mode = available_modes[0]
                         primary_dd = Dropdown((30, 158, width - 60, 34),
                                               available_modes, mode_label)
@@ -492,6 +504,17 @@ def config_window():
                                 k: pm.get(k, "0") for k in PARAM_KEYS}
                         edit_mode = start_mode
                         load_params_into_inputs(edit_mode)
+                        _, algorithms = camera1.getSupportedDepthAlgorithms()
+                        feature_cycle = [
+                            f for f in FEATURE_CYCLE
+                            if (f is None and
+                                tof.DepthAlgorithm.None_ in algorithms) or
+                            (f in FUSION_METHODS and
+                             tof.DepthAlgorithm.ModeFusion in algorithms) or
+                            (f == LENS_SCATTER and
+                             tof.DepthAlgorithm.LensScatter in algorithms)]
+                        fusion_method = (feature_cycle[0] if feature_cycle
+                                         else None)
                         load_msg = "Loaded: " + config_dd.selected[0]
                         loaded = True
                     continue
@@ -505,10 +528,10 @@ def config_window():
                 if uses_lrinval and lrinval_dd.rect.collidepoint(p):
                     lrinval_dd.handle(p)
                     continue
-                if fusion_btn.collidepoint(p):
-                    fusion_method = FUSION_CYCLE[
-                        (FUSION_CYCLE.index(fusion_method) + 1)
-                        % len(FUSION_CYCLE)]
+                if fusion_btn.collidepoint(p) and feature_cycle:
+                    fusion_method = feature_cycle[
+                        (feature_cycle.index(fusion_method) + 1)
+                        % len(feature_cycle)]
                     continue
                 if auto_btn.collidepoint(p):
                     auto = not auto
@@ -557,11 +580,15 @@ def config_window():
             screen.blit(small.render("Primary Mode", True, (200, 200, 200)),
                         (30, 140))
             primary_dd.draw_header(screen, small)
-            fusion_text = (FUSION_METHODS[fusion_method][0] if fusion
-                           else "OFF")
+            if fusion:
+                fusion_text = FUSION_METHODS[fusion_method][0] + " fusion"
+            elif fusion_method == LENS_SCATTER:
+                fusion_text = "Lens Scatter"
+            else:
+                fusion_text = "OFF"
             draw_button(screen, small, fusion_btn,
-                        f"Mode Fusion: {fusion_text}  (click to change)",
-                        active=fusion)
+                        f"Depth Feature: {fusion_text}  (click to change)",
+                        active=fusion_method is not None)
             if uses_second:
                 screen.blit(small.render("Second Mode", True, (200, 200, 200)),
                             (30, second_dd.rect.y - 18))
@@ -836,7 +863,7 @@ def main():
     # mode's config (and thus its fusion context) reflects them.
     apply_param_overrides(camera1)
 
-    if fusion_method:
+    if fusion_method in FUSION_METHODS:
         # The camera configures the frame capture for the chosen method; the
         # primary mode leads.
         fusion_config = tof.ModeFusionConfig()
@@ -850,6 +877,11 @@ def main():
         if status != tof.Status.Ok:
             sys.exit(-1)
     else:
+        if fusion_method == LENS_SCATTER:
+            status = camera1.setLensScatterCompensation(True)
+            print("camera1.setLensScatterCompensation(True)", status)
+            if status != tof.Status.Ok:
+                sys.exit(-1)
         status = camera1.setMode(sel_mode)
         print("camera1.setMode()", status)
     if status != tof.Status.Ok:
@@ -867,6 +899,8 @@ def main():
     # 2) Running window: live stream with the depth-range selector.
     if fusion_method == "lrinval":
         title = f"{sel_mode} (LR invalidation, type {lrinval_type})"
+    elif fusion_method == LENS_SCATTER:
+        title = f"{sel_mode} (lens scatter)"
     elif fusion_method:
         title = (f"{sel_mode} + {second_mode} "
                  f"({FUSION_METHODS[fusion_method][0]} fused)")
