@@ -66,6 +66,14 @@
 #endif //defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
 namespace adiviewer {
+#ifdef WITH_RGB_SUPPORT
+// RGB point colour: Valid points in their colour, Occluded ones black.
+inline bool hasRgbColour(uint8_t status) {
+    return status == static_cast<uint8_t>(aditof::XYZColorStatus::Valid) ||
+           status == static_cast<uint8_t>(aditof::XYZColorStatus::Occluded);
+}
+#endif
+
 struct ImageDimensions {
     ImageDimensions() = default;
     constexpr ImageDimensions(int w, int h) : Width(w), Height(h) {}
@@ -190,7 +198,7 @@ class ADIView {
 #ifdef WITH_RGB_SUPPORT
     /**
      * @brief Recolour point cloud vertices (x y z r g b per pixel) from the
-     * frame's xyz_color. Points without a valid colour keep theirs.
+     * frame's xyz_color. Points without an RGB colour keep theirs.
      */
     void colourPointCloudFromRgb(float *vertices, int width, int height);
 #endif
