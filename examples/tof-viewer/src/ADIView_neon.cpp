@@ -563,9 +563,7 @@ void ADIView::_displayPointCloudImage_NEON() {
                     cntr += 3;
 #ifdef WITH_RGB_SUPPORT
                 } else if (m_pccolour == 3 && xyzColor != nullptr &&
-                           xyzColor[(i / 3) * 4 + 3] ==
-                               static_cast<uint8_t>(
-                                   aditof::XYZColorStatus::Valid)) {
+                           hasRgbColour(xyzColor[(i / 3) * 4 + 3])) {
                     const uint8_t *c = xyzColor + (i / 3) * 4;
                     fRed = c[0] / 255.0f;
                     fGreen = c[1] / 255.0f;

@@ -1126,9 +1126,7 @@ void ADIView::_displayPointCloudImage() {
                     cntr += 3;
 #ifdef WITH_RGB_SUPPORT
                 } else if (m_pccolour == 3 && xyzColor != nullptr &&
-                           xyzColor[(i / 3) * 4 + 3] ==
-                               static_cast<uint8_t>(
-                                   aditof::XYZColorStatus::Valid)) {
+                           hasRgbColour(xyzColor[(i / 3) * 4 + 3])) {
                     const uint8_t *c = xyzColor + (i / 3) * 4;
                     fRed = c[0] / 255.0f;
                     fGreen = c[1] / 255.0f;
@@ -1406,7 +1404,7 @@ void ADIView::colourPointCloudFromRgb(float *vertices, int width, int height) {
     const size_t pixelCount = static_cast<size_t>(width) * height;
     for (size_t idx = 0; idx < pixelCount; ++idx) {
         const uint8_t *c = xyzColor + idx * 4;
-        if (c[3] != static_cast<uint8_t>(aditof::XYZColorStatus::Valid)) {
+        if (!hasRgbColour(c[3])) {
             continue;
         }
         float *colour = vertices + idx * 6 + 3;
