@@ -13,6 +13,21 @@ setup_gpio() {
     [[ "$direction" == "out" ]] && echo "$value" > /sys/class/gpio/gpio$gpio/value
 }
 
+# Export + configure (as output) + drive a sysfs GPIO identified by its board pin label
+set_named_gpio() {
+    local gpio_name=$1
+    local gpio_num=$2
+    local gpio_value=$3
+    local gpio_path="/sys/class/gpio/${gpio_name}"
+
+    if [ ! -d "$gpio_path" ]; then
+        echo "$gpio_num" > /sys/class/gpio/export
+        sleep 1
+    fi
+    [ "$(cat ${gpio_path}/direction 2>/dev/null)" != "out" ] && echo out > "${gpio_path}/direction"
+    echo "$gpio_value" > "${gpio_path}/value"
+}
+
 # ToF power sequence for CONFIG 1 (ADSD3500 only) and CONFIG 2 (RGB + ADSD3500/ADSD3100)
 run_tof_power_sequence() {
     # --- Dynamically fetch GPIO labels ---
@@ -120,10 +135,41 @@ run_tof_power_sequence() {
     echo "ToF power sequence completed."
 }
 
-# ToF power sequence for CONFIG 3 (ADTF3066 + RGB)
+# ToF power sequence for CONFIG 3 (RGB + ADSD3500/ADTF3066):
+# enable GMSL power (PAC.00) then POC power (PH.06), same order as
 run_tof_rgb_over_gmsl_power_sequence() {
-    # TODO: power sequence for ADTF3066 + RGB is not yet defined.
-    echo "Power sequence for CONFIG 3 (ADTF3066 + RGB) is not yet implemented. Skipping."
+    echo "Disabling GMSL power (PAC.00) and POC power (PH.06)..."
+    set_named_gpio "PAC.00" "650" 0
+    set_named_gpio "PH.06" "561" 0
+
+    echo "Waiting 5 seconds..."
+    sleep 5
+
+    echo "Enabling GMSL power (PAC.00)..."
+    set_named_gpio "PAC.00" "650" 1
+
+    echo "Waiting 2 seconds..."
+    sleep 2
+
+    echo "Enabling POC power (PH.06)..."
+    set_named_gpio "PH.06" "561" 1
+
+    echo "Waiting 2 seconds..."
+    sleep 2
+
+    echo "Running tof-power-en.py --gmsl..."
+    python3 /usr/share/systemd/tof-power-en.py --gmsl
+
+    echo "Waiting 5 seconds..."
+    sleep 5
+
+    echo "Running gmsl3_init_max96723a_max96726a.py..."
+    python3 /usr/share/systemd/gmsl3_init_max96723a_max96726a.py --mipi-freq-rgb 2500 --mipi-freq-tof 1500
+
+    echo "Waiting 5 seconds..."
+    sleep 5
+
+    echo "ToF+RGB over GMSL power sequence completed."
 }
 
 main() {
@@ -138,7 +184,7 @@ main() {
     # Identify the board configuration from module badges:
     #   CONFIG 1: Dual ADSD3500 only            -> module0=adi_dual_adsd3500_adsd3100
     #   CONFIG 2: RGB + Dual ADSD3500/ADSD3100  -> module0=arducam_ar0234, module1=adi_dual_adsd3500_adsd3100
-    #   CONFIG 3: ADSD3500/ADTF3066 + RGB       -> module0=adi_adsd3500_adtf3066, module1=arducam_ar0234
+    #   CONFIG 3: RGB + ADSD3500/ADTF3066       -> module0=arducam_ar0234, module1=adi_adsd3500_adtf3066
     CONFIG=0
     MODULE=""
 
@@ -148,7 +194,7 @@ main() {
     elif echo "$BADGE0" | grep -q "arducam_ar0234" && echo "$BADGE1" | grep -q "adi_dual_adsd3500_adsd3100"; then
         CONFIG=2
         MODULE="$BADGE0 + $BADGE1"
-    elif echo "$BADGE0" | grep -q "adi_adsd3500_adtf3066" && echo "$BADGE1" | grep -q "arducam_ar0234"; then
+    elif echo "$BADGE0" | grep -q "arducam_ar0234" && echo "$BADGE1" | grep -q "adi_adsd3500_adtf3066"; then
         CONFIG=3
         MODULE="$BADGE0 + $BADGE1"
     fi
