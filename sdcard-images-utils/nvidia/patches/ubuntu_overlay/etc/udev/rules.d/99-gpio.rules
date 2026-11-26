@@ -1,6 +1,7 @@
 ACTION=="add", KERNEL=="PP.00",   SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/PP.00/value"
 ACTION=="add", KERNEL=="PP.01",   SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/PP.01/value"
 ACTION=="add", KERNEL=="PAC.00",  SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/PAC.00/value"
+ACTION=="add", KERNEL=="PH.06",   SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/PH.06/value"
 ACTION=="add", KERNEL=="gpio708", SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/gpio708/value"
 ACTION=="add", KERNEL=="gpio709", SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/gpio709/value"
 ACTION=="add", KERNEL=="gpio710", SUBSYSTEM=="gpio", RUN+="/bin/chmod 666 /sys/class/gpio/gpio710/value"
