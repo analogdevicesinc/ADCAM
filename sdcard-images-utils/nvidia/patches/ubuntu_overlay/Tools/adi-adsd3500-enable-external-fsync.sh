@@ -31,8 +31,11 @@ run_external_fsync_sequence() {
 }
 
 run_external_fsync_sequence_config3() {
-    # TODO: external fsync sequence for ADSD3500/ADTF3066 + RGB is not yet defined.
-    echo "External fsync sequence for CONFIG 3 (ADSD3500/ADTF3066 + RGB) is not yet implemented. Skipping."
+    echo "Selecting GMSL_TOF_FSYNC as the active FSYNC target..."
+    python3 /usr/share/systemd/gmsl3_init_max96723a_max96726a.py --select-fsync-target GMSL_TOF_FSYNC
+
+    discover_adsd3500_nodes
+    v4l2-ctl --set-ctrl="fsync_trigger=${MODE_EXT_FSYNC}" -d "$SUBDEV_PATH"
 }
 
 main() {
@@ -47,7 +50,7 @@ main() {
     # Identify the board configuration from module badges:
     #   CONFIG 1: Dual ADSD3500 only            -> module0=adi_dual_adsd3500_adsd3100
     #   CONFIG 2: RGB + Dual ADSD3500/ADSD3100  -> module0=arducam_ar0234, module1=adi_dual_adsd3500_adsd3100
-    #   CONFIG 3: ADSD3500/ADTF3066 + RGB       -> module0=adi_adsd3500_adtf3066, module1=arducam_ar0234
+    #   CONFIG 3: RGB + ADSD3500/ADTF3066       -> module0=arducam_ar0234, module1=adi_adsd3500_adtf3066
     CONFIG=0
     MODULE=""
 
@@ -57,7 +60,7 @@ main() {
     elif echo "$BADGE0" | grep -q "arducam_ar0234" && echo "$BADGE1" | grep -q "adi_dual_adsd3500_adsd3100"; then
         CONFIG=2
         MODULE="$BADGE0 + $BADGE1"
-    elif echo "$BADGE0" | grep -q "adi_adsd3500_adtf3066" && echo "$BADGE1" | grep -q "arducam_ar0234"; then
+    elif echo "$BADGE0" | grep -q "arducam_ar0234" && echo "$BADGE1" | grep -q "adi_adsd3500_adtf3066"; then
         CONFIG=3
         MODULE="$BADGE0 + $BADGE1"
     fi
