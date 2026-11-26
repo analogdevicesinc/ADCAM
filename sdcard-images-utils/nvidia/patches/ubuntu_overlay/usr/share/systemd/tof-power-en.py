@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 MAX7327 SMBus/I2C helper (function-style API)
@@ -32,6 +31,7 @@ O14 -> EN_VSYS      # renamed from EN_SYS to EN_VSYS
 O15 -> O15          # placeholder; rename if you have a proper label
 """
 
+import argparse
 import os
 import time
 
@@ -41,10 +41,39 @@ try:
 except ImportError:  # pragma: no cover
     from smbus import SMBus
 
+# Bump on every edit - logged on every run so a stale copy on the target is obvious.
+SCRIPT_VERSION = "2026-10-27.2"
+
+# GMSL serializer helper (reads back the live GPIO_IN level on each camera reset
+# tunnel; resets are driven via direct Jetson GPIOs wired to the deserializer's
+# MFP9/MFP10, tunneled to the MAX96723A serializer's GPIO0/GPIO1)
+from config_1_max96723A_max96726A_init import (
+    SERIALIZER_ADDR_CANDIDATES,
+    _detect_serializer_addr,
+    read_gpio_tunnel_status,
+    set_serializer_gpio_output,
+    get_serializer_gpio_output,
+)
+
 
 # === SoC gpio ===
-GPIO_CAM_RESET_N = "PAC.00"
-EXPORT_GPIO_NUM = "486"
+# Two distinct hardware configurations - NOT interchangeable:
+#
+# --mipi (direct/local MIPI bring-up, bypassing the GMSL tunnel): a single
+# shared reset GPIO.
+# sysfs export always creates /sys/class/gpio/gpio<N>, never a label-named directory.
+MIPI_GPIO_CAM_RESET_N = "PAC.00"
+MIPI_EXPORT_GPIO_NUM = "486"
+
+# --gmsl (this board's tunneled configuration): two independent Jetson GPIOs,
+# one per camera reset tunnel - named after the SERIALIZER pin each one actually
+# drives (per config_1_max96723A_max96726A_init.py's GPIO_TUNNELS: tunnel "mfp0"
+# pairs deserializer MFP9 with serializer GMSL_RGBISP_RST; tunnel "mfp1" pairs
+# deserializer MFP10 with serializer GMSL_TOFISP_RST_L).
+RGBISP_RST_GPIO = "PP.00"          # GPIO3_PP.00, deserializer MFP9, tunnel "mfp0"
+RGBISP_RST_EXPORT_GPIO_NUM = "604"
+TOFISP_RST_L_GPIO = "PP.01"        # GPIO3_PP.01, deserializer MFP10, tunnel "mfp1"
+TOFISP_RST_L_EXPORT_GPIO_NUM = "605"
 
 # ==== I2C configuration ===
 I2C_BUS_NUM = 2        # Adjust if your board uses a different bus
@@ -231,15 +260,32 @@ def export_and_configure_gpio(gpio_dir_name, export_gpio_num):
         with open("/sys/class/gpio/export", "w") as f:
             f.write(export_gpio_num)
 
-        # Set direction to "out"
+        # udev needs a brief moment after export to finish setting up direction/value
+        # (sysfs GPIO export race) - retry with a short backoff instead of failing on
+        # the very first open()
         direction_path = os.path.join(gpio_path, "direction")
-        with open(direction_path, "w") as f:
-            f.write("out")
+        last_exc = None
+        for _ in range(20):
+            try:
+                with open(direction_path, "w") as f:
+                    f.write("out")
+                break
+            except PermissionError as exc:
+                last_exc = exc
+                time.sleep(0.05)
+        else:
+            raise last_exc
 
 def write_gpio_value(gpio_number, value):
     gpio_path = os.path.join('/sys/class/gpio/{}/value'.format(gpio_number))
     with open(gpio_path, 'w') as f:
         f.write(str(value))
+
+def read_gpio_value(gpio_number):
+    """Read back a sysfs GPIO's current value (0/1); mirrors write_gpio_value()."""
+    gpio_path = os.path.join('/sys/class/gpio/{}/value'.format(gpio_number))
+    with open(gpio_path, 'r') as f:
+        return int(f.read().strip())
 
 def snapshot_by_labels():
     """
@@ -256,87 +302,226 @@ def close_bus():
     _bus.close()
 
 
+def run_mipi_power_sequence():
+    """Run the MIPI camera power-on sequence."""
+    # Optional: start from all LOW
+    write_all(0x0000)
+
+    export_and_configure_gpio(MIPI_GPIO_CAM_RESET_N, MIPI_EXPORT_GPIO_NUM)
+    print("Starting ToF power sequence...")
+    # Pull ADSD3500 reset low
+    write_gpio_value(MIPI_GPIO_CAM_RESET_N, LOW)
+
+    # --- Initial configuration ---
+    # Set NET_HOST_IO_SEL = 1
+    set_port_expander(ADDR_LOW, NET_HOST_IO_SEL, HIGH)
+
+    # Set HOST_IO_DIR = 1
+    set_port_expander(ADDR_HIGH, HOST_IO_DIR, HIGH)
+
+    # Set FSYNC_DIR = 1
+    set_port_expander(ADDR_HIGH, FSYNC_DIR, HIGH)
+
+    # EN_1P8 = 0
+    set_port_expander(ADDR_LOW, EN_1P8, LOW)
+
+    # EN_0P8 = 0
+    set_port_expander(ADDR_LOW, EN_0P8, LOW)
+
+    time.sleep(0.2)
+
+    # I2CM_SEL = 0
+    set_port_expander(ADDR_LOW, I2CM_SEL, LOW)
+
+    # ISP_BS0 = 0
+    set_port_expander(ADDR_LOW, ISP_BS0, LOW)
+
+    # ISP_BS1 = 0
+    set_port_expander(ADDR_LOW, ISP_BS1, LOW)
+
+    # ISP_BS4 = 0
+    set_port_expander(ADDR_HIGH, ISP_BS4, LOW)
+
+    # ISP_BS5 = 0
+    set_port_expander(ADDR_HIGH, ISP_BS5, LOW)
+
+    # EN_1P8 = 1
+    set_port_expander(ADDR_LOW, EN_1P8, HIGH)
+
+    time.sleep(0.2)
+
+    # EN_0P8 = 1
+    set_port_expander(ADDR_LOW, EN_0P8, HIGH)
+
+    time.sleep(0.2)
+
+    # EN_VSYS = 1 (renamed from EN_SYS)
+    set_port_expander(ADDR_HIGH, EN_VSYS, HIGH)
+
+    # EN_VAUX_LS = 1
+    set_port_expander(ADDR_HIGH, EN_VAUX_LS, HIGH)
+
+    # EN_VAUX = 1
+    set_port_expander(ADDR_HIGH, EN_VAUX, HIGH)
+
+    time.sleep(0.2)
+
+    # Pull ADSD3500 reset high
+    write_gpio_value(MIPI_GPIO_CAM_RESET_N, HIGH)
+    print("ToF power sequence completed.")
+    print()
+
+    # Read back states
+    low_val = read_port_byte(ADDR_LOW)
+    high_val = read_port_byte(ADDR_HIGH)
+
+    print(f"Slave Address 0x{ADDR_LOW:02X} -> Data: 0x{low_val:02X}")
+    print(f"Slave Address 0x{ADDR_HIGH:02X} -> Data: 0x{high_val:02X}")
+    print()
+
+    # Print final snapshot (each on a new line)
+    print("Final Port Expander State:")
+    snapshot_by_labels()
+
+
+def run_gmsl_power_sequence():
+    """Run the GMSL (dual-camera) power-on sequence: bring up the GMSL link +
+    GPIOs, hold every reset/enable low, then release them in the documented
+    order with the required settle delays.
+
+    |  Step                                    |  Timing                        |
+    |-------------------------------------------|---------------------------------|
+    |  Configure GMSL and GPIOs                 |  Complete before downstream items|
+    |  Hold IMU_RESET_L, TOFISP_RST_L,           |                                  |
+    |  RGBISP_RST low                           |                                  |
+    |  Hold EN_RGB, EN_RGBISP, EN_TOF,           |                                  |
+    |  EN_TOFISP, RUN_VAUX low                  |                                  |
+    |  IMU_RESET_L = 1                          |  Wait 5 ms before IMU access     |
+    |  RUN_VAUX = 1 (currently disabled, see     |  Wait 10 ms prior                |
+    |  GMSL_RUN_VAUX below)                      |                                  |
+    |  EN_TOFISP = 1                            |  Wait 15 ms prior                |
+    |  EN_TOF = 1                               |  Wait 5 ms prior                 |
+    |  TOFISP_RST_L = 1                         |  Wait 3 ms before ADSD3500 access|
+    |  EN_RGBISP = 1 & EN_RGB = 1                |  Wait 15 ms prior                |
+    |  RGBISP_RST = 1 (currently disabled, see   |  10 ms before RGB ISP access      |
+    |  RGBISP_RST_GPIO below)                    |                                  |
+    |  TOFISP_BS0 = 1 (host boot; 0 = self boot) |  Before EN_TOFISP = 1             |
+    """
+    # Export/drive the two tunnel-driven camera resets LOW *before* GMSL bring-up,
+    # so the serializer-side pins already read LOW the instant the tunnel goes live.
+    export_and_configure_gpio(RGBISP_RST_GPIO, RGBISP_RST_EXPORT_GPIO_NUM)
+    export_and_configure_gpio(TOFISP_RST_L_GPIO, TOFISP_RST_L_EXPORT_GPIO_NUM)
+    write_gpio_value(RGBISP_RST_GPIO, LOW)
+    write_gpio_value(TOFISP_RST_L_GPIO, LOW)
+
+    # Assumes config_1_max96723A_max96726A_init.py's full bring-up already ran and
+    # the link is up - this script only sets/gets the serializer's GPIOs over it.
+    with SMBus(I2C_BUS_NUM) as bus:
+        serializer_addr = _detect_serializer_addr(bus, SERIALIZER_ADDR_CANDIDATES)
+
+        # Hold resets low
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_IMU_RESET_L", LOW)
+        write_gpio_value(TOFISP_RST_L_GPIO, LOW)
+        # write_gpio_value(RGBISP_RST_GPIO, LOW)
+
+        # Hold enables low
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_EN_RGB", LOW)
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_EN_RGBISP", LOW)
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_EN_TOF", LOW)
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_EN_TOFISP", LOW)
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_RUN_VAUX", LOW)
+
+        # IMU_RESET_L = 1, then settle 5ms before any IMU access
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_IMU_RESET_L", HIGH)
+        time.sleep(0.005)
+
+        # RUN_VAUX = 1 (10ms settle required beforehand) - disabled, confirmed hardware
+        # brownout: drops the serializer off the bus (see GPIO10 comment in
+        # config_1_max96723A_max96726A_init.py's SERIALIZER_GPIO_PIN_TABLE)
+        input("Next: enable run_vaux. Press to continue...")
+        time.sleep(0.010)
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_RUN_VAUX", HIGH)
+
+        # GMSL_TOFISP_BS0: set high for host boot and low for self boot
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_TOFISP_BS0", LOW)
+
+        #===================== TOF =======================#
+        # EN_TOFISP = 1 (15ms settle required beforehand)
+        time.sleep(0.015)
+        input("Next: enable tofisp supplies. Press to continue...")
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_EN_TOFISP", HIGH)
+
+        # EN_TOF = 1 (5ms settle required beforehand)
+        time.sleep(0.005)
+        input("Next: enable tof supplies. Press to continue...")
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_EN_TOF", HIGH)
+
+        # TOFISP_RST_L = 1, then settle 3ms before ADSD3500 access
+        input("Next: release 3500 RST. Press to continue...")
+        write_gpio_value(TOFISP_RST_L_GPIO, HIGH)
+        time.sleep(0.003)
+
+        #===================== RGB =======================#
+        # EN_RGBISP = 1 & EN_RGB = 1 (15ms settle required beforehand)
+
+        time.sleep(0.015)
+        input("Next: enable RGBISP. Press to continue...")
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_EN_RGBISP", HIGH)
+
+        input("Next: enable RGB. Press to continue...")
+        set_serializer_gpio_output(bus, serializer_addr, "GMSL_EN_RGB", HIGH)
+
+        input("Next: release RGBISP reset. Press to continue...")
+        # RGBISP_RST = 1, then settle 10ms before RGB ISP access
+        write_gpio_value(RGBISP_RST_GPIO, HIGH)
+        time.sleep(0.010)
+
+        read_gpio_tunnel_status(bus, serializer_addr, "mfp0")
+        read_gpio_tunnel_status(bus, serializer_addr, "mfp1")
+
+        # Read back the serializer's own GPIO_OUT bit (over I2C/GMSL) for every
+        # enable/reset pin driven via set_serializer_gpio_output() above.
+        for name in ("GMSL_IMU_RESET_L", "GMSL_EN_TOFISP", "GMSL_TOFISP_BS0",
+                     "GMSL_EN_TOF", "GMSL_EN_RGBISP", "GMSL_EN_RGB", "TOFISP_GMSL_INTERRUPT"):
+            value = get_serializer_gpio_output(bus, serializer_addr, name)
+            print("{} = {}".format(name, "HIGH" if value else "LOW"))
+
+    print("RGBISP_RST ({}) = {}".format(RGBISP_RST_GPIO, read_gpio_value(RGBISP_RST_GPIO)))
+    print("TOFISP_RST_L ({}) = {}".format(TOFISP_RST_L_GPIO, read_gpio_value(TOFISP_RST_L_GPIO)))
+    print("GMSL power sequence completed.")
+
+
 # ===== Main sequence (updated per your earlier request) =====
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Configure ToF camera power")
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument(
+        "--mipi",
+        dest="mode",
+        action="store_const",
+        const="mipi",
+        default="mipi",
+        help="use the MIPI power sequence (default)",
+    )
+    mode_group.add_argument(
+        "--gmsl",
+        dest="mode",
+        action="store_const",
+        const="gmsl",
+        help="use the GMSL power sequence",
+    )
+    args = parser.parse_args()
+    print("tof-power-en-gmsl3_v2.py version {}".format(SCRIPT_VERSION))
+
     try:
-        # Optional: start from all LOW
-        write_all(0x0000)
-
-        export_and_configure_gpio(GPIO_CAM_RESET_N, EXPORT_GPIO_NUM)
-        print("Starting ToF power sequence...")
-        #Pull ADSD3500 reset low
-        write_gpio_value(GPIO_CAM_RESET_N, LOW)
-
-        # --- Initial configuration ---
-        # Set NET_HOST_IO_SEL = 1
-        set_port_expander(ADDR_LOW, NET_HOST_IO_SEL, HIGH)
-
-        # Set HOST_IO_DIR = 1
-        set_port_expander(ADDR_HIGH, HOST_IO_DIR, HIGH)
-
-        # Set FSYNC_DIR = 1
-        set_port_expander(ADDR_HIGH, FSYNC_DIR, HIGH)
-
-        # EN_1P8 = 0
-        set_port_expander(ADDR_LOW, EN_1P8, LOW)
-
-        # EN_0P8 = 0
-        set_port_expander(ADDR_LOW, EN_0P8, LOW)
-
-        time.sleep(0.2)
-
-        # I2CM_SEL = 0
-        set_port_expander(ADDR_LOW, I2CM_SEL, LOW)
-
-        # ISP_BS0 = 0
-        set_port_expander(ADDR_LOW, ISP_BS0, LOW)
-
-        # ISP_BS1 = 0
-        set_port_expander(ADDR_LOW, ISP_BS1, LOW)
-
-        # ISP_BS4 = 0
-        set_port_expander(ADDR_HIGH, ISP_BS4, LOW)
-
-        # ISP_BS5 = 0
-        set_port_expander(ADDR_HIGH, ISP_BS5, LOW)
-
-        # EN_1P8 = 1
-        set_port_expander(ADDR_LOW, EN_1P8, HIGH)
-
-        time.sleep(0.2)
-
-        # EN_0P8 = 1
-        set_port_expander(ADDR_LOW, EN_0P8, HIGH)
-
-        time.sleep(0.2)
-
-        # EN_VSYS = 1 (renamed from EN_SYS)
-        set_port_expander(ADDR_HIGH, EN_VSYS, HIGH)
-
-        # EN_VAUX_LS = 1
-        set_port_expander(ADDR_HIGH, EN_VAUX_LS, HIGH)
-
-        # EN_VAUX = 1
-        set_port_expander(ADDR_HIGH, EN_VAUX, HIGH)
-
-        time.sleep(0.2)
-
-        #Pull ADSD3500 reset high
-        write_gpio_value(GPIO_CAM_RESET_N, HIGH)
-        print("ToF power sequence completed.")
-        print()
-
-        # Read back states
-        low_val = read_port_byte(ADDR_LOW)
-        high_val = read_port_byte(ADDR_HIGH)
-
-        print(f"Slave Address 0x{ADDR_LOW:02X} -> Data: 0x{low_val:02X}")
-        print(f"Slave Address 0x{ADDR_HIGH:02X} -> Data: 0x{high_val:02X}")
-        print()
-
-        # Print final snapshot (each on a new line)
-        print("Final Port Expander State:")
-        snapshot_by_labels()
+        if args.mode == "mipi":
+            print("Running MIPI power sequence")
+            run_mipi_power_sequence()
+        elif args.mode == "gmsl":
+            run_gmsl_power_sequence()
+        else:
+            print(f"Unknown power sequence: {args.mode}")
+            raise SystemExit(1)
 
     finally:
         close_bus()
