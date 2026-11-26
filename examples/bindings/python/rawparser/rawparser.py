@@ -252,9 +252,11 @@ def generate_pcloud(xyz_frame, directory, base_filename, index, height, width, x
     point_cloud.points = o3d.utility.Vector3dVector(xyz_frame)
     if xyz_color is not None:
         rgba = np.asarray(xyz_color, dtype=np.uint8).reshape(-1, 4)
-        # Grey where the point has no colour (A is the XYZColorStatus)
+        # Grey where the point has no colour, black where the RGB camera
+        # cannot see it (A is the XYZColorStatus), as in the ToF viewer
         colors = np.full((rgba.shape[0], 3), 0.5)
-        valid = rgba[:, 3] == int(tof.XYZColorStatus.Valid)
+        valid = np.isin(rgba[:, 3], (int(tof.XYZColorStatus.Valid),
+                                     int(tof.XYZColorStatus.Occluded)))
         colors[valid] = rgba[valid, :3] / 255.0
         point_cloud.colors = o3d.utility.Vector3dVector(colors)
     o3d.io.write_point_cloud(safe_join(directory, f'pointcloud_{base_filename}_{index}{PLY_EXT}'), point_cloud)
