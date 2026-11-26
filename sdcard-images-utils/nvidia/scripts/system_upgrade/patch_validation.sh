@@ -828,9 +828,24 @@ function main() {
     echo -e "${BLUE}  HARDWARE DEVICE VALIDATION${NC}"
     echo -e "${BLUE}================================================================${NC}\n"
 
-    # Run hardware device validations
-    validate_i2c_devices || echo -e "${YELLOW}I2C device check encountered issues${NC}"
-    validate_gpio_labels || echo -e "${YELLOW}GPIO label check encountered issues${NC}"
+    # validate_i2c_devices/validate_gpio_labels check the MAX7327 port-expander
+    # I2C addresses (0x58/0x68) and MIPI-only GPIO labels - only applicable to
+    # CONFIG 1/2 (direct MIPI) boards, not CONFIG 3 (GMSL tunnel, different
+    # I2C/GPIO topology). Detect the board badge the same way tof-power-en.sh does.
+    local badge0_path="/proc/device-tree/tegra-camera-platform/modules/module0/badge"
+    local badge1_path="/proc/device-tree/tegra-camera-platform/modules/module1/badge"
+    local badge0="" badge1=""
+    [[ -f "${badge0_path}" ]] && badge0=$(strings "${badge0_path}")
+    [[ -f "${badge1_path}" ]] && badge1=$(strings "${badge1_path}")
+
+    if echo "${badge0}" | grep -q "arducam_ar0234" && echo "${badge1}" | grep -q "adi_adsd3500_adtf3066"; then
+        print_warning "CONFIG 3 (RGB + ADSD3500/ADTF3066) detected; skipping CONFIG 1/2-only I2C/GPIO checks"
+        log_message "INFO" "Skipped validate_i2c_devices/validate_gpio_labels: CONFIG 3 board"
+    else
+        # Run hardware device validations
+        validate_i2c_devices || echo -e "${YELLOW}I2C device check encountered issues${NC}"
+        validate_gpio_labels || echo -e "${YELLOW}GPIO label check encountered issues${NC}"
+    fi
     validate_tof_service || echo -e "${YELLOW}ToF service check encountered issues${NC}"
 
     # Generate report and print summary

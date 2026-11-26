@@ -292,7 +292,9 @@ apply_ubuntu_overlay() {
         log_info "Installing systemd scripts..."
         mkdir -p /usr/share/systemd
         cp -v "${ROOTDIR}/ubuntu_overlay/usr/share/systemd/"*.sh /usr/share/systemd/ 2>/dev/null || log_warning "No systemd scripts found"
+        cp -v "${ROOTDIR}/ubuntu_overlay/usr/share/systemd/"*.py /usr/share/systemd/ 2>/dev/null || log_warning "No systemd python scripts found"
         chmod +x /usr/share/systemd/*.sh 2>/dev/null || true
+        chmod +x /usr/share/systemd/*.py 2>/dev/null || true
     fi
 
     # Copy udev rules
