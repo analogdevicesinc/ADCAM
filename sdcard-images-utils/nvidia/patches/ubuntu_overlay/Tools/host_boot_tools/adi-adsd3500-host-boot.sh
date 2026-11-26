@@ -107,6 +107,8 @@ run_host_boot_sequence() {
 run_host_boot_sequence_config3() {
     echo "Running adsd3500_gmsl_host_boot.py..."
     python3 /usr/share/systemd/adsd3500_gmsl_host_boot.py
+    load_firmware
+    echo "Host boot completed"
 }
 
 main() {
@@ -148,6 +150,7 @@ main() {
             ;;
         3)
             echo "Matched MODULE: $MODULE (CONFIG $CONFIG)"
+            discover_adsd3500_nodes
             run_host_boot_sequence_config3
             ;;
     esac
