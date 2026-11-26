@@ -47,10 +47,9 @@ SCRIPT_VERSION = "2026-10-27.2"
 # GMSL serializer helper (reads back the live GPIO_IN level on each camera reset
 # tunnel; resets are driven via direct Jetson GPIOs wired to the deserializer's
 # MFP9/MFP10, tunneled to the MAX96723A serializer's GPIO0/GPIO1)
-from config_1_max96723A_max96726A_init import (
+from gmsl3_init_max96723a_max96726a import (
     SERIALIZER_ADDR_CANDIDATES,
     _detect_serializer_addr,
-    read_gpio_tunnel_status,
     set_serializer_gpio_output,
     get_serializer_gpio_output,
 )
@@ -475,9 +474,6 @@ def run_gmsl_power_sequence():
         # RGBISP_RST = 1, then settle 10ms before RGB ISP access
         write_gpio_value(RGBISP_RST_GPIO, HIGH)
         time.sleep(0.010)
-
-        read_gpio_tunnel_status(bus, serializer_addr, "mfp0")
-        read_gpio_tunnel_status(bus, serializer_addr, "mfp1")
 
         # Read back the serializer's own GPIO_OUT bit (over I2C/GMSL) for every
         # enable/reset pin driven via set_serializer_gpio_output() above.

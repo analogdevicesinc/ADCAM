@@ -9,11 +9,15 @@ level (HIGH = host boot, LOW = self boot).
 """
 
 import os
+import sys
 import time
 
 from smbus2 import SMBus
 
-from config_1_max96723A_max96726A_init import (
+# gmsl3_init_max96723a_max96726a.py is installed alongside tof-power-en.py,
+# not in this script's own directory - add it to sys.path before importing.
+sys.path.insert(0, "/usr/share/systemd")
+from gmsl3_init_max96723a_max96726a import (
     SERIALIZER_ADDR_CANDIDATES,
     _detect_serializer_addr,
     set_serializer_gpio_output,
