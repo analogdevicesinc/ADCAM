@@ -105,8 +105,8 @@ run_host_boot_sequence() {
 }
 
 run_host_boot_sequence_config3() {
-    # TODO: host boot sequence for ADSD3500/ADTF3066 + RGB is not yet defined.
-    echo "Host boot sequence for CONFIG 3 (ADSD3500/ADTF3066 + RGB) is not yet implemented. Skipping."
+    echo "Running adsd3500_gmsl_host_boot.py..."
+    python3 /usr/share/systemd/adsd3500_gmsl_host_boot.py
 }
 
 main() {
@@ -121,7 +121,7 @@ main() {
     # Identify the board configuration from module badges:
     #   CONFIG 1: Dual ADSD3500 only            -> module0=adi_dual_adsd3500_adsd3100
     #   CONFIG 2: RGB + Dual ADSD3500/ADSD3100  -> module0=arducam_ar0234, module1=adi_dual_adsd3500_adsd3100
-    #   CONFIG 3: ADSD3500/ADTF3066 + RGB       -> module0=adi_adsd3500_adtf3066, module1=arducam_ar0234
+    #   CONFIG 3: RGB + ADSD3500/ADTF3066       -> module0=arducam_ar0234, module1=adi_adsd3500_adtf3066
     CONFIG=0
     MODULE=""
 
@@ -131,7 +131,7 @@ main() {
     elif echo "$BADGE0" | grep -q "arducam_ar0234" && echo "$BADGE1" | grep -q "adi_dual_adsd3500_adsd3100"; then
         CONFIG=2
         MODULE="$BADGE0 + $BADGE1"
-    elif echo "$BADGE0" | grep -q "adi_adsd3500_adtf3066" && echo "$BADGE1" | grep -q "arducam_ar0234"; then
+    elif echo "$BADGE0" | grep -q "arducam_ar0234" && echo "$BADGE1" | grep -q "adi_adsd3500_adtf3066"; then
         CONFIG=3
         MODULE="$BADGE0 + $BADGE1"
     fi
