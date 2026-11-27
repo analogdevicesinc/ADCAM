@@ -1,0 +1,107 @@
+From c91a32e4cbe314e8d0a9886aac0dc0b4c370f7bb Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Fri, 27 Nov 2026 11:40:34 +0530
+Subject: [PATCH] tegra234 overlay: switch arducam mode0 to 60fps, add mode1
+ YUV 1920x1200
+
+Change mode0 (1920x1080 crop) from 30fps to 60fps (pix_clk_hz
+180000000->150000000, framerate/exp_time updated accordingly).
+Add mode1: 1920x1200 crop, 60fps, YUV uyvy 16-bit.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ ...p3768-adsd3500-adtf3066-arducam-ar0234.dts | 61 ++++++++++++++++---
+ 1 file changed, 51 insertions(+), 10 deletions(-)
+
+diff --git a/overlay/tegra234-p3767-camera-p3768-adsd3500-adtf3066-arducam-ar0234.dts b/overlay/tegra234-p3767-camera-p3768-adsd3500-adtf3066-arducam-ar0234.dts
+index 5b05101..048ddbe 100644
+--- a/overlay/tegra234-p3767-camera-p3768-adsd3500-adtf3066-arducam-ar0234.dts
++++ b/overlay/tegra234-p3767-camera-p3768-adsd3500-adtf3066-arducam-ar0234.dts
+@@ -195,7 +195,7 @@
+ 
+ 							use_sensor_mode_id = "true";
+ 							/* reset-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>; */
+-							mode0 {/*mode SENSOR_MODE_1920X1080_CROP_30FPS*/
++							mode0 {/* SENSOR_MODE_1920X1080_CROP_60FPS */
+ 								mclk_khz = "24000";
+ 								num_lanes = "2";
+ 								tegra_sinterface = "serial_b";
+@@ -215,25 +215,66 @@
+ 								line_length = "2200";
+ 								inherent_gain = "1";
+ 								mclk_multiplier = "6.1875";
+-								pix_clk_hz = "180000000";
++								pix_clk_hz = "150000000";
+ 
+ 								gain_factor = "10";
+-								min_gain_val = "10"; /* dB */
+-								max_gain_val = "300"; /* dB */
+-								step_gain_val = "3"; /* 0.3 */
++								min_gain_val = "10";
++								max_gain_val = "300";
++								step_gain_val = "3";
+ 								default_gain = "10";
+ 								min_hdr_ratio = "1";
+ 								max_hdr_ratio = "1";
+ 								framerate_factor = "1000000";
+-								min_framerate = "30000000";
+-								max_framerate = "30000000";
++								min_framerate = "60000000";
++								max_framerate = "60000000";
+ 								step_framerate = "1";
+-								default_framerate = "30000000";
++								default_framerate = "60000000";
+ 								exposure_factor = "1000000";
+ 								min_exp_time = "59";
+-								max_exp_time = "33333";
++								max_exp_time = "16666";
+ 								step_exp_time = "1";
+-								default_exp_time = "33333";
++								default_exp_time = "16666";
++								embedded_metadata_height = "1";
++							};
++							mode1 {/* SENSOR_MODE_1920X1200_CROP_60FPS */
++								mclk_khz = "24000";
++								num_lanes = "2";
++								tegra_sinterface = "serial_b";
++								phy_mode = "DPHY";
++								discontinuous_clk = "no";
++								dpcm_enable = "false";
++								cil_settletime = "0";
++								lane_polarity = "6";
++
++								active_w = "1920";
++								active_h = "1200";
++								mode_type = "yuv";
++								pixel_phase = "uyvy";
++								csi_pixel_bit_depth = "16";
++								dynamic_pixel_bit_depth = "16";
++								readout_orientation = "0";
++								line_length = "2200";
++								inherent_gain = "1";
++								mclk_multiplier = "6.1875";
++								pix_clk_hz = "150000000";
++
++								gain_factor = "10";
++								min_gain_val = "10";
++								max_gain_val = "300";
++								step_gain_val = "3";
++								default_gain = "10";
++								min_hdr_ratio = "1";
++								max_hdr_ratio = "1";
++								framerate_factor = "1000000";
++								min_framerate = "60000000";
++								max_framerate = "60000000";
++								step_framerate = "1";
++								default_framerate = "60000000";
++								exposure_factor = "1000000";
++								min_exp_time = "59";
++								max_exp_time = "16666";
++								step_exp_time = "1";
++								default_exp_time = "16666";
+ 								embedded_metadata_height = "1";
+ 							};
+ 							ports {
+-- 
+2.25.1
+
