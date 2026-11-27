@@ -1,0 +1,64 @@
+From ebde28ccef01a3cf4fc88329f2e5e5eabfd28c2e Mon Sep 17 00:00:00 2001
+From: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+Date: Fri, 27 Nov 2026 12:27:46 +0530
+Subject: [PATCH] media: i2c: sg2-mipi-ar0234-5200: add 60 FPS sensor modes
+
+- Replace the 1920x1080 30 FPS mode with 1920x1080 60 FPS support.
+- Add a new 1920x1200 60 FPS sensor mode.
+- Update the mode table and frame format definitions for both 60 FPS modes.
+
+Signed-off-by: Sivasubramanaiyan Padmanaban <sivasubramaniyan.padmanaban@analog.com>
+---
+ .../SG_MIPI_CAM/sg2-mipi-ar0234-5200-tbls.h   | 24 ++++++++++++-------
+ 1 file changed, 16 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/media/i2c/SG_MIPI_CAM/sg2-mipi-ar0234-5200-tbls.h b/drivers/media/i2c/SG_MIPI_CAM/sg2-mipi-ar0234-5200-tbls.h
+index e92c8331..c63524dc 100644
+--- a/drivers/media/i2c/SG_MIPI_CAM/sg2-mipi-ar0234-5200-tbls.h
++++ b/drivers/media/i2c/SG_MIPI_CAM/sg2-mipi-ar0234-5200-tbls.h
+@@ -35,19 +35,26 @@ static sensor_reg sensor_stop[] = {
+ 	{SENSOR_TABLE_END, 0x00}
+ };
+ 
+-static sensor_reg sensor_1920x1080_30fps_2lane_linear[] = {
+-	// {SENSOR_TABLE_WAIT_MS, 100},
+-	{SENSOR_TABLE_END, 0x00},
++static sensor_reg sensor_1920x1080_60fps_2lane_linear[] = {
++        // {SENSOR_TABLE_WAIT_MS, 100},
++        {SENSOR_TABLE_END, 0x00},
++};
++
++static sensor_reg sensor_1920x1200_60fps_2lane_linear[] = {
++        // {SENSOR_TABLE_WAIT_MS, 100},
++        {SENSOR_TABLE_END, 0x00},
+ };
+ 
+ enum {
+-	SENSOR_1920X1080_30FPS_2LANE_LINEAR,
+-	SENSOR_MODE_START_STREAM,
+-	SENSOR_MODE_STOP_STREAM,
++        SENSOR_1920X1080_60FPS_2LANE_LINEAR,
++        SENSOR_1920X1200_60FPS_2LANE_LINEAR,
++        SENSOR_MODE_START_STREAM,
++        SENSOR_MODE_STOP_STREAM,
+ };
+ 
+ static sensor_reg *mode_table[] = {
+-	[SENSOR_1920X1080_30FPS_2LANE_LINEAR] = sensor_1920x1080_30fps_2lane_linear,
++        [SENSOR_1920X1080_60FPS_2LANE_LINEAR] = sensor_1920x1080_60fps_2lane_linear,
++        [SENSOR_1920X1200_60FPS_2LANE_LINEAR] = sensor_1920x1200_60fps_2lane_linear,
+ 	[SENSOR_MODE_START_STREAM] = sensor_start,
+ 	[SENSOR_MODE_STOP_STREAM] = sensor_stop,
+ };
+@@ -61,6 +68,7 @@ static const int sensor_60fps[] = {
+ };
+ 
+ static const struct camera_common_frmfmt sensor_frmfmt[] = {
+-	{{1920, 1080}, sensor_30fps, 1, 0, SENSOR_1920X1080_30FPS_2LANE_LINEAR},
++        {{1920, 1080}, sensor_60fps, 1, 0, SENSOR_1920X1080_60FPS_2LANE_LINEAR},
++        {{1920, 1200}, sensor_60fps, 1, 0, SENSOR_1920X1200_60FPS_2LANE_LINEAR},
+ };
+ #endif /* __AR0234_5200_I2C_TABLES__ */
+-- 
+2.25.1
+
