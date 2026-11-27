@@ -176,6 +176,8 @@ There are two options for pointing these libraries:
 └── libtofi_config.so
 ```
 
+Lens scatter compensation uses its own build of the two libraries. Place it in a **lens_scatter** folder inside the libraries folder (e.g. `../libs/lens_scatter/`); it is installed to `lens_scatter/` next to libaditof. Both libraries are loaded at run time and can be overridden with the **ADITOF_TOFI_LIBDIR** and **ADITOF_TOFI_LENS_SCATTER_LIBDIR** environment variables. Without the lens scatter build, lens scatter compensation is unavailable and the tof-viewer and pygame example do not offer it.
+
 ### 2. Cloning the Repo
 
 ```console
