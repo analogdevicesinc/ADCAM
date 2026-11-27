@@ -6,12 +6,18 @@ depth frame, AB frame and confidence frame(if qmp mode) are  saved as `.png` whi
 An `.mp4` file is also generated showing  both AB and depth frames.
 metadata is saved as a text file.
 
+Recordings made with the RGB camera also give:
+- `rgb_<name>_<n>.jpg`: the RGB image as the depth camera sees it
+- a coloured `.ply`: points take their RGB colour; points hidden from the RGB camera by a nearer surface are black, and points without a colour (no depth, outside the RGB view) are grey, as in the ToF viewer
+
 Usage:
 - put raw recording files in the same directory of the `rawparser.py`
 - run `python rawparser.py [RAW_RECORDING_FILENAME]`
 - optional `-r MIN MAX` / `--range MIN MAX`: fixed linear depth color range in mm. Without it,
   each frame is histogram-equalised: depths shared by many pixels (e.g. a face) get more
   colours, so mm-level detail is visible. The colorbar shows the real depth in mm at each tick.
+  The automatic range ignores scattered ghost and flying pixels and small far clusters cut off
+  from the scene, which are common in long-range modes.
 
 Depth PNGs use the same jet colormap as the pygame streaming example: the range is spread
 across the colormap (invalid pixels at the bottom color) and a colorbar with the min/mid/max

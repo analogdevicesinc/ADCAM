@@ -7,26 +7,40 @@
 
 ```
 Usage:
-      data_collect CONFIG
-      data_collect [--f <folder>] [--n <ncapture>] [--m <mode>] [--wt <warmup>] [--ccb FILE] [--ip <ip>] [-s | --split] [-t | --netlinktest] CONFIG
+      data_collect
+      data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--m <mode>] [--ccb FILE] [--ip <ip>] [-scf <save-configuration-file>] [-lcf <load-configuration-file>]
+      data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--m <mode>] [--lens-scatter] [-lcf <load-configuration-file>]
+      data_collect [--f <folder>] [--fps <frame rate>] [--n <ncapture>] [--fuse <firstMode>[,<secondMode>]] [--fusion-method <srlr|lrinval|twolr>] [--lrinval-type <1-4>] [-lcf <load-configuration-file>]
       data_collect (-h | --help)
-
-    Arguments:
-      CONFIG            Name of a configuration file (with .json extension)
 
     Options:
       -h --help          Show this screen.
       --f <folder>       Output folder (max name 512) [default: ./]
+      --fps <frame rate>   Frame rate in frames per second [default: 10]
       --n <ncapture>     Capture frame num. [default: 1]
       --m <mode>         Mode to capture data in. [default: 0]
-      --wt <warmup>      Warmup Time (sec) [default: 0]
+      --lens-scatter     Lens scatter compensation (non-PCM mode).
+                         Not with --fuse or --ip.
+      --fuse <firstMode>[,<secondMode>]
+                         Start mode fusion. Overrides --m.
+                         Not supported with --ip.
+      --fusion-method <srlr|lrinval|twolr>
+                         srlr: one SR (0, 1, 3, 6) + one LR (7, 8) mode,
+                               e.g. --fuse 0,7; frames arrive at fps/2
+                         lrinval: one SR or LR mode, e.g. --fuse 7
+                         twolr: two LR modes (7, 8) of equal
+                                resolution, e.g. --fuse 7,7; frames
+                                arrive at fps/2
+                         [default: srlr]
+      --lrinval-type <1-4>
+                         lrinval criterion: 1 AB, 2 edge conf, 3 conf,
+                         4 radial. [default: 1]
       --ccb <FILE>       The path to store CCB content
       --ip <ip>          Camera IP
-      --split            Save each frame into a separate file (Debug)
-      --netlinktest      Puts server on target in test mode (Debug)
-      --singlethread     Store the frame to file using same tread
+      --scf <save-configuration-file>    Save current configuration to json file
+      --lcf <load-configuration-file>    Load configuration from json file
 
-    Note: --m argument supports both index and string (0/sr-native) 
+    Note: --m argument supports index (0, 1, etc.)
 
     Valid mode (--m) options are:
         0: short-range native
@@ -36,17 +50,17 @@ Usage:
         4: pcm-native
         5: long-range mixed
         6: short-range mixed
-``` 
+```
 
 ## Run
-To run the example, run data_collect.exe with config_adsd3500_adsd3100.json file (which contains paths to .ini files used for camera configuration) and other options in command line inputs. Some example commands can be seen below. Microsoft power shell is used as command shell.
+To run the example, run data_collect with the options above. Some example commands can be seen below.
 
 ```
-./data_collect.exe "config_adsd3500_adsd3100.json"
-./data_collect.exe --f "../data_output" "config_adsd3500_adsd3100.json"
-./data_collect.exe --f "../data_output" --m 10 "config_adsd3500_adsd3100.json"
-./data_collect.exe --f "../data_output" --n 50 "config_adsd3500_adsd3100.json"
-./data_collect.exe --f "../data_output" --m 10 --n 4 "config_adsd3500_adsd3100.json"
+./data_collect
+./data_collect --f ../data_output
+./data_collect --f ../data_output --m 1
+./data_collect --f ../data_output --n 50
+./data_collect --f ../data_output --m 1 --n 4 --fps 30
 ```
 
 ## Mode fusion
@@ -55,6 +69,14 @@ To run the example, run data_collect.exe with config_adsd3500_adsd3100.json file
 ```
 ./data_collect --fuse 0,7 --fps 20 --n 100 --f ../data_output
 ```
+
+`--fusion-method` chooses how the frames are fused (default `srlr`):
+
+| Method | Modes | Example |
+|---|---|---|
+| `srlr` | one short-range + one long-range mode (HDR depth); frames arrive at fps/2 | `./data_collect --fuse 0,7 --fps 20 --n 100` |
+| `lrinval` | one short- or long-range mode, invalidates pixels by the `--lrinval-type` criterion: 1 AB, 2 edge confidence, 3 confidence, 4 radial (default 1) | `./data_collect --fuse 7 --fusion-method lrinval --lrinval-type 1 --n 100` |
+| `twolr` | two long-range modes of the same resolution (flying-pixel rejection); frames arrive at fps/2 | `./data_collect --fuse 7,7 --fusion-method twolr --fps 20 --n 100` |
 
 ## Lens scatter compensation
 `--lens-scatter` captures the `--m` mode with lens scatter compensation (non-PCM modes): the ADSD3500 outputs raw frames and depth is computed on the GPU by the lens scatter depth compute library. It is not supported with `--fuse` or `--ip`.

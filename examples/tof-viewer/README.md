@@ -50,6 +50,25 @@ As depicted above, both the Active Brightness and Depth views are available. If 
 Press "Stop" button to stop displaying images and the Viewer will stop the camera.
 To Quit the application, go to the upper left corner and click under "Options". Then click "Quit".
 
+## Depth Features
+
+After selecting the mode, the "Depth Feature" drop-down chooses how depth is computed. Only the features the installed depth compute libraries support are listed.
+
+* **None**: normal streaming.
+* **Mode Fusion**: frames of two modes (or one, for LR Invalidation) are fused by the depth compute library. "Fusion Method" selects:
+    * **SR/LR**: one Short Range + one Long Range mode (HDR depth); pick the long-range mode in "Second Mode".
+    * **LR Invalidation**: one Short or Long Range mode; "LR Invalidation Type" sets the criterion (1 AB threshold, 2 edge confidence, 3 confidence, 4 radial depth).
+    * **Two LR Frames**: two Long Range modes of the same resolution, flying-pixel rejection.
+* **Lens Scatter**: raw frames with lens scatter compensation computed on the host (non-PCM modes).
+
+Mode Fusion and Lens Scatter cannot be used together. With Mode Fusion, the depth parameters panel has a "Mode Fusion" section with the selected method's parameters (e.g. `ABFusionEnabled` for SR/LR, `lrInvalType`, `lrInvalThreshold`, `lrInvalRadialMin`/`Max` for LR Invalidation). Edited parameters are applied on "Start Streaming".
+
+## RGB Camera
+
+With the RGB camera connected, the RGB pane shows the RGB image as the depth camera sees it: each depth pixel is mapped into the RGB image with the RGB-depth calibration at a fixed 1 m. Pixels outside the RGB camera's field of view are black.
+
+The point cloud takes each point's RGB colour, using its own depth. Points that a nearer surface hides from the RGB camera are drawn black; points without an RGB colour (no depth, outside the RGB view) keep their depth colour.
+
 ## Recording and Playback
 
 **Recording**
